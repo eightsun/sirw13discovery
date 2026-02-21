@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { createClient } from '@/lib/supabase/client'
@@ -27,6 +27,41 @@ interface WargaFormProps {
   defaultEmail?: string
 }
 
+// Helper untuk localStorage
+const DRAFT_KEY = 'sirw13-warga-draft'
+
+const saveDraft = (data: any, kendaraan: any[], usaha: any[]) => {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ data, kendaraan, usaha, timestamp: Date.now() }))
+  } catch (e) {
+    console.error('Error saving draft:', e)
+  }
+}
+
+const loadDraft = () => {
+  try {
+    const draft = localStorage.getItem(DRAFT_KEY)
+    if (draft) {
+      const parsed = JSON.parse(draft)
+      // Hanya gunakan draft yang kurang dari 24 jam
+      if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+        return parsed
+      }
+    }
+  } catch (e) {
+    console.error('Error loading draft:', e)
+  }
+  return null
+}
+
+const clearDraft = () => {
+  try {
+    localStorage.removeItem(DRAFT_KEY)
+  } catch (e) {
+    console.error('Error clearing draft:', e)
+  }
+}
+
 export default function WargaForm({ mode, wargaId, initialData, isOnboarding = false, defaultEmail }: WargaFormProps) {
   const router = useRouter()
   const supabase = createClient()
@@ -36,6 +71,7 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
   const [rtList, setRtList] = useState<RT[]>([])
   const [jalanList, setJalanList] = useState<Jalan[]>([])
   const [kepalaKeluargaList, setKepalaKeluargaList] = useState<KepalaKeluargaOption[]>([])
+  const [draftLoaded, setDraftLoaded] = useState(false)
   
   // Kendaraan state
   const [kendaraanList, setKendaraanList] = useState<Kendaraan[]>([])
@@ -54,14 +90,22 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
     nama_usaha: '',
     deskripsi_usaha: '',
     alamat_usaha: '',
-    no_whatsapp_usaha: ''
+    no_whatsapp_usaha: '',
+    link_instagram: '',
+    link_tiktok: '',
+    link_website: '',
+    link_twitter: ''
   })
+
+  // Load draft on mount (only for create mode)
+  const draft = mode === 'create' && !initialData ? loadDraft() : null
   
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<WargaFormInput>({
     defaultValues: {
@@ -84,8 +128,38 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
       minat_olahraga: [],
       email: defaultEmail || '',
       ...initialData,
+      // Load from draft if available
+      ...(draft?.data || {}),
     },
   })
+
+  // Load kendaraan & usaha from draft
+  useEffect(() => {
+    if (mode === 'create' && draft && !draftLoaded) {
+      if (draft.kendaraan?.length > 0) {
+        setKendaraanList(draft.kendaraan)
+      }
+      if (draft.usaha?.length > 0) {
+        setUsahaList(draft.usaha)
+      }
+      setDraftLoaded(true)
+    }
+  }, [mode, draft, draftLoaded])
+
+  // Watch all form values for auto-save
+  const watchAllFields = watch()
+
+  // Auto-save draft (debounced)
+  useEffect(() => {
+    if (mode !== 'create') return
+    
+    const timeoutId = setTimeout(() => {
+      const currentData = getValues()
+      saveDraft(currentData, kendaraanList, usahaList)
+    }, 1000) // Save after 1 second of no changes
+
+    return () => clearTimeout(timeoutId)
+  }, [watchAllFields, kendaraanList, usahaList, mode, getValues])
 
   const selectedRT = watch('rt_id')
   const hubunganKeluarga = watch('hubungan_keluarga')
@@ -184,7 +258,7 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
       return
     }
     setUsahaList([...usahaList, { ...newUsaha, id: `temp-${Date.now()}`, warga_id: wargaId || '', created_at: '', updated_at: '' } as Usaha])
-    setNewUsaha({ nama_usaha: '', deskripsi_usaha: '', alamat_usaha: '', no_whatsapp_usaha: '' })
+    setNewUsaha({ nama_usaha: '', deskripsi_usaha: '', alamat_usaha: '', no_whatsapp_usaha: '', link_instagram: '', link_tiktok: '', link_website: '', link_twitter: '' })
   }
 
   // Remove usaha
@@ -256,6 +330,10 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
             deskripsi_usaha: u.deskripsi_usaha,
             alamat_usaha: u.alamat_usaha,
             no_whatsapp_usaha: u.no_whatsapp_usaha,
+            link_instagram: u.link_instagram,
+            link_tiktok: u.link_tiktok,
+            link_website: u.link_website,
+            link_twitter: u.link_twitter,
           }))
           await supabase.from('usaha').insert(usahaToInsert)
         }
@@ -271,6 +349,9 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
           }
         }
       }
+
+      // Clear draft setelah berhasil simpan
+      clearDraft()
 
       // Redirect berdasarkan mode
       if (isOnboarding) {
@@ -1110,18 +1191,19 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
           <div className="mb-3">
             <label className="form-label fw-bold">
               <FiBriefcase className="me-2" />
-              Kepemilikan Usaha
+              Kepemilikan Usaha <span className="text-muted fw-normal">(Opsional)</span>
             </label>
             
             {usahaList.length > 0 && (
               <div className="table-responsive mb-3">
-                <table className="table table-sm table-bordered">
+                <table className="table table-sm table-bordered table-usaha">
                   <thead className="table-light">
                     <tr>
                       <th>Nama Usaha</th>
-                      <th>Deskripsi</th>
+                      <th className="desc-col">Deskripsi</th>
                       <th>Alamat</th>
                       <th>WhatsApp</th>
+                      <th className="social-col">Social Media</th>
                       <th style={{ width: '50px' }}></th>
                     </tr>
                   </thead>
@@ -1132,6 +1214,13 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
                         <td>{u.deskripsi_usaha || '-'}</td>
                         <td>{u.alamat_usaha || '-'}</td>
                         <td>{u.no_whatsapp_usaha || '-'}</td>
+                        <td className="small">
+                          {u.link_instagram && <div>📷 @{u.link_instagram.replace(/.*instagram.com\/|@/g, '')}</div>}
+                          {u.link_tiktok && <div>🎵 @{u.link_tiktok.replace(/.*tiktok.com\/@?|@/g, '')}</div>}
+                          {u.link_website && <div>🌐 {u.link_website.replace(/https?:\/\//g, '').slice(0, 20)}...</div>}
+                          {u.link_twitter && <div>𝕏 @{u.link_twitter.replace(/.*twitter.com\/|.*x.com\/|@/g, '')}</div>}
+                          {!u.link_instagram && !u.link_tiktok && !u.link_website && !u.link_twitter && '-'}
+                        </td>
                         <td>
                           <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => handleRemoveUsaha(idx)}>
                             <FiTrash2 />
@@ -1144,7 +1233,8 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
               </div>
             )}
 
-            <div className="row g-2 align-items-end">
+            {/* Form Input Usaha - Baris 1 */}
+            <div className="row g-2 mb-2">
               <div className="col-md-3">
                 <label className="form-label small">Nama Usaha *</label>
                 <input
@@ -1155,12 +1245,12 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
                   onChange={e => setNewUsaha({ ...newUsaha, nama_usaha: e.target.value })}
                 />
               </div>
-              <div className="col-md-3">
-                <label className="form-label small">Deskripsi</label>
+              <div className="col-md-4">
+                <label className="form-label small">Deskripsi Usaha</label>
                 <input
                   type="text"
                   className="form-control form-control-sm"
-                  placeholder="Jenis usaha"
+                  placeholder="Jenis/kategori usaha"
                   value={newUsaha.deskripsi_usaha || ''}
                   onChange={e => setNewUsaha({ ...newUsaha, deskripsi_usaha: e.target.value })}
                 />
@@ -1170,7 +1260,7 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
                 <input
                   type="text"
                   className="form-control form-control-sm"
-                  placeholder="Alamat"
+                  placeholder="Alamat lokasi usaha"
                   value={newUsaha.alamat_usaha || ''}
                   onChange={e => setNewUsaha({ ...newUsaha, alamat_usaha: e.target.value })}
                 />
@@ -1184,6 +1274,62 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
                   value={newUsaha.no_whatsapp_usaha || ''}
                   onChange={e => setNewUsaha({ ...newUsaha, no_whatsapp_usaha: e.target.value })}
                 />
+              </div>
+            </div>
+            
+            {/* Form Input Usaha - Baris 2: Social Media */}
+            <div className="row g-2 align-items-end">
+              <div className="col-md-3">
+                <label className="form-label small">Instagram</label>
+                <div className="input-group input-group-sm social-input">
+                  <span className="input-group-text">📷</span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="username atau link"
+                    value={newUsaha.link_instagram || ''}
+                    onChange={e => setNewUsaha({ ...newUsaha, link_instagram: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="col-md-3">
+                <label className="form-label small">TikTok</label>
+                <div className="input-group input-group-sm social-input">
+                  <span className="input-group-text">🎵</span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="username atau link"
+                    value={newUsaha.link_tiktok || ''}
+                    onChange={e => setNewUsaha({ ...newUsaha, link_tiktok: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="col-md-3">
+                <label className="form-label small">Website</label>
+                <div className="input-group input-group-sm social-input">
+                  <span className="input-group-text">🌐</span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="https://..."
+                    value={newUsaha.link_website || ''}
+                    onChange={e => setNewUsaha({ ...newUsaha, link_website: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="col-md-2">
+                <label className="form-label small">Twitter/X</label>
+                <div className="input-group input-group-sm social-input">
+                  <span className="input-group-text">𝕏</span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="username"
+                    value={newUsaha.link_twitter || ''}
+                    onChange={e => setNewUsaha({ ...newUsaha, link_twitter: e.target.value })}
+                  />
+                </div>
               </div>
               <div className="col-md-1">
                 <button type="button" className="btn btn-sm btn-success" onClick={handleAddUsaha}>
