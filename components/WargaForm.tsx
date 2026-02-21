@@ -113,7 +113,15 @@ export default function WargaForm({ mode, wargaId, initialData }: WargaFormProps
         .eq('hubungan_keluarga', 'kepala_keluarga')
         .eq('is_active', true)
         .order('nama_lengkap')
-      setKepalaKeluargaList(kkData || [])
+      
+      // Map data untuk menyesuaikan tipe
+      const mappedKK: KepalaKeluargaOption[] = (kkData || []).map((kk: any) => ({
+        id: kk.id,
+        nama_lengkap: kk.nama_lengkap,
+        nomor_rumah: kk.nomor_rumah,
+        jalan: kk.jalan ? { nama_jalan: kk.jalan.nama_jalan } : null
+      }))
+      setKepalaKeluargaList(mappedKK)
 
       // Fetch kendaraan & usaha jika mode edit
       if (mode === 'edit' && wargaId) {
