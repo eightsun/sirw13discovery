@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
@@ -22,7 +23,8 @@ interface Stats {
 }
 
 export default function DashboardPage() {
-  const { userData, role, loading: userLoading } = useUser()
+  const router = useRouter()
+  const { userData, role, loading: userLoading, isPengurus } = useUser()
   const [stats, setStats] = useState<Stats>({
     totalWarga: 0,
     totalKK: 0,
@@ -37,6 +39,13 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   
   const supabase = createClient()
+
+  // Redirect user baru untuk lengkapi profil (kecuali pengurus)
+  useEffect(() => {
+    if (!userLoading && userData && !userData.warga_id && !isPengurus) {
+      router.push('/profil/lengkapi')
+    }
+  }, [userLoading, userData, isPengurus, router])
 
   useEffect(() => {
     const fetchStats = async () => {
