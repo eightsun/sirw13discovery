@@ -23,9 +23,11 @@ interface WargaFormProps {
   mode: 'create' | 'edit'
   wargaId?: string
   initialData?: Partial<Warga>
+  isOnboarding?: boolean
+  defaultEmail?: string
 }
 
-export default function WargaForm({ mode, wargaId, initialData }: WargaFormProps) {
+export default function WargaForm({ mode, wargaId, initialData, isOnboarding = false, defaultEmail }: WargaFormProps) {
   const router = useRouter()
   const supabase = createClient()
   
@@ -80,6 +82,7 @@ export default function WargaForm({ mode, wargaId, initialData }: WargaFormProps
       kota_kabupaten: 'Kabupaten Bandung Barat',
       kode_pos: '40552',
       minat_olahraga: [],
+      email: defaultEmail || '',
       ...initialData,
     },
   })
@@ -256,9 +259,25 @@ export default function WargaForm({ mode, wargaId, initialData }: WargaFormProps
           }))
           await supabase.from('usaha').insert(usahaToInsert)
         }
+
+        // Jika onboarding, update users.warga_id
+        if (isOnboarding && mode === 'create') {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            await supabase
+              .from('users')
+              .update({ warga_id: savedWargaId })
+              .eq('id', user.id)
+          }
+        }
       }
 
-      router.push('/warga')
+      // Redirect berdasarkan mode
+      if (isOnboarding) {
+        router.push('/dashboard')
+      } else {
+        router.push('/warga')
+      }
       router.refresh()
     } catch (err: any) {
       console.error('Error saving warga:', err)
