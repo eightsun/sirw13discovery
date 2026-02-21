@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
+import { useStore } from '@/store/useStore'
 import { getInitials, getRoleLabel } from '@/utils/helpers'
 import { 
   FiMenu, 
@@ -23,20 +24,22 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
   const router = useRouter()
   const supabase = createClient()
   const { user, userData, role, loading } = useUser()
+  const { resetUserState } = useStore()
   const [loggingOut, setLoggingOut] = useState(false)
 
   const handleLogout = async () => {
     try {
       setLoggingOut(true)
-      const { error } = await supabase.auth.signOut()
-      if (error) {
-        console.error('Logout error:', error)
-      }
-      // Force redirect dengan window.location untuk clear semua state
+      // Reset store first
+      resetUserState()
+      // Clear localStorage
+      localStorage.removeItem('sirw13-storage')
+      // Sign out from Supabase
+      await supabase.auth.signOut()
+      // Force redirect
       window.location.href = '/login'
     } catch (error) {
       console.error('Error logging out:', error)
-      // Tetap redirect meskipun error
       window.location.href = '/login'
     }
   }
