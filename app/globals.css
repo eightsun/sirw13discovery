@@ -488,3 +488,68 @@ body {
 .fade-in {
   animation: fadeIn 0.3s ease-in;
 }
+
+/* Form Section Headers */
+.card-header.bg-primary {
+  background: linear-gradient(135deg, #4e73df 0%, #224abe 100%) !important;
+}
+
+.card-header.bg-primary h6 {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.card-header.bg-primary .m-0 {
+  display: flex;
+  align-items: center;
+}
+
+.card-header.bg-primary svg {
+  font-size: 1.1rem;
+}
+
+/* Form Card Styling */
+.card {
+  border: none;
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 1rem 1.25rem;
+  border-bottom: none;
+}
+
+/* Form Usaha Table */
+.table-usaha th,
+.table-usaha td {
+  vertical-align: middle;
+}
+
+.table-usaha .desc-col {
+  min-width: 200px;
+}
+
+.table-usaha .social-col {
+  min-width: 150px;
+}
+
+/* Social Media Input Group */
+.social-input {
+  font-size: 0.875rem;
+}
+
+.social-input .input-group-text {
+  width: 40px;
+  justify-content: center;
+  background: #f8f9fc;
+  border-color: #d1d3e2;
+}
+
+.social-input input {
+  font-size: 0.875rem;
+}
