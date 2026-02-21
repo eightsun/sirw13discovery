@@ -11,6 +11,14 @@ import {
   FiUsers, FiAlertCircle, FiPlus, FiTrash2, FiTruck, FiBriefcase
 } from 'react-icons/fi'
 
+// Type untuk dropdown kepala keluarga
+interface KepalaKeluargaOption {
+  id: string
+  nama_lengkap: string
+  nomor_rumah: string
+  jalan?: { nama_jalan: string } | null
+}
+
 interface WargaFormProps {
   mode: 'create' | 'edit'
   wargaId?: string
@@ -25,7 +33,7 @@ export default function WargaForm({ mode, wargaId, initialData }: WargaFormProps
   const [error, setError] = useState<string | null>(null)
   const [rtList, setRtList] = useState<RT[]>([])
   const [jalanList, setJalanList] = useState<Jalan[]>([])
-  const [kepalaKeluargaList, setKepalaKeluargaList] = useState<Warga[]>([])
+  const [kepalaKeluargaList, setKepalaKeluargaList] = useState<KepalaKeluargaOption[]>([])
   
   // Kendaraan state
   const [kendaraanList, setKendaraanList] = useState<Kendaraan[]>([])
@@ -882,7 +890,7 @@ export default function WargaForm({ mode, wargaId, initialData }: WargaFormProps
                   <option value="">- Pilih Kepala Keluarga -</option>
                   {kepalaKeluargaList.map(kk => (
                     <option key={kk.id} value={kk.id}>
-                      {kk.nama_lengkap} ({(kk.jalan as any)?.nama_jalan} No. {kk.nomor_rumah})
+                      {kk.nama_lengkap} ({kk.jalan?.nama_jalan || '-'} No. {kk.nomor_rumah})
                     </option>
                   ))}
                 </select>
