@@ -993,7 +993,7 @@ export default function WargaForm({ mode, wargaId, initialData }: WargaFormProps
                       <th>Tipe</th>
                       <th>Tahun</th>
                       <th>Warna</th>
-                      <th width="50"></th>
+                      <th style={{ width: '50px' }}></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1103,7 +1103,7 @@ export default function WargaForm({ mode, wargaId, initialData }: WargaFormProps
                       <th>Deskripsi</th>
                       <th>Alamat</th>
                       <th>WhatsApp</th>
-                      <th width="50"></th>
+                      <th style={{ width: '50px' }}></th>
                     </tr>
                   </thead>
                   <tbody>
