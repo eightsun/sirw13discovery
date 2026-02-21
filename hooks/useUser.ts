@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { User as SupabaseUser } from '@supabase/supabase-js'
 import { User, UserRole } from '@/types'
@@ -25,7 +25,7 @@ export function useUser(): UseUserReturn {
 
   const supabase = createClient()
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -33,7 +33,13 @@ export function useUser(): UseUserReturn {
       // Get auth user
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
       
-      if (authError) throw authError
+      if (authError) {
+        console.error('Auth error:', authError)
+        setUser(null)
+        setUserData(null)
+        setLoading(false)
+        return
+      }
       
       setUser(authUser)
 
@@ -41,19 +47,20 @@ export function useUser(): UseUserReturn {
         // Get user profile from users table
         const { data: profile, error: profileError } = await supabase
           .from('users')
-          .select(`
-            *,
-            warga:warga_id (*),
-            rt:rt_id (*)
-          `)
+          .select('*')
           .eq('id', authUser.id)
           .single()
 
-        if (profileError && profileError.code !== 'PGRST116') {
-          throw profileError
+        if (profileError) {
+          console.error('Profile error:', profileError)
+          // Jika tidak ada profile, set default
+          if (profileError.code === 'PGRST116') {
+            setUserData(null)
+          }
+        } else {
+          console.log('User profile loaded:', profile)
+          setUserData(profile as User)
         }
-
-        setUserData(profile as User)
       } else {
         setUserData(null)
       }
@@ -63,7 +70,7 @@ export function useUser(): UseUserReturn {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase])
 
   useEffect(() => {
     fetchUserData()
@@ -71,6 +78,7 @@ export function useUser(): UseUserReturn {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event)
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
           await fetchUserData()
         }
@@ -80,7 +88,7 @@ export function useUser(): UseUserReturn {
     return () => {
       subscription.unsubscribe()
     }
-  }, [])
+  }, [fetchUserData])
 
   const role = userData?.role || null
 
