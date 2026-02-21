@@ -28,13 +28,16 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
   const handleLogout = async () => {
     try {
       setLoggingOut(true)
-      await supabase.auth.signOut()
-      router.push('/login')
-      router.refresh()
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('Logout error:', error)
+      }
+      // Force redirect dengan window.location untuk clear semua state
+      window.location.href = '/login'
     } catch (error) {
       console.error('Error logging out:', error)
-    } finally {
-      setLoggingOut(false)
+      // Tetap redirect meskipun error
+      window.location.href = '/login'
     }
   }
 
