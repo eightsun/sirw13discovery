@@ -233,6 +233,10 @@ export interface Usaha {
   deskripsi_usaha?: string;
   alamat_usaha?: string;
   no_whatsapp_usaha?: string;
+  link_instagram?: string;
+  link_tiktok?: string;
+  link_website?: string;
+  link_twitter?: string;
   created_at: string;
   updated_at: string;
 }
@@ -334,6 +338,10 @@ export interface UsahaFormInput {
   deskripsi_usaha?: string;
   alamat_usaha?: string;
   no_whatsapp_usaha?: string;
+  link_instagram?: string;
+  link_tiktok?: string;
+  link_website?: string;
+  link_twitter?: string;
 }
 
 export interface LoginFormInput {
