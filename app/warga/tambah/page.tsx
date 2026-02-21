@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useUser } from '@/hooks/useUser'
 import WargaForm from '@/components/WargaForm'
 import Link from 'next/link'
