@@ -45,7 +45,7 @@ export function useUser(): UseUserReturn {
       }
 
       // Get user profile from users table
-      const { data: profile, error: profileError } = await supabase
+      let { data: profile, error: profileError } = await supabase
         .from('users')
         .select('*')
         .eq('id', authUser.id)
@@ -59,14 +59,62 @@ export function useUser(): UseUserReturn {
           loading: false, 
           initialized: true 
         })
-      } else {
-        setUserState({ 
-          user: authUser, 
-          userData: profile as User, 
-          loading: false, 
-          initialized: true 
-        })
+        fetchingRef.current = false
+        return
       }
+
+      // ============================================
+      // AUTO-LINK: Jika user belum punya warga_id,
+      // cek apakah ada data warga dengan email sama
+      // ============================================
+      if (!profile.warga_id && authUser.email) {
+        console.log('Checking for matching warga with email:', authUser.email)
+        
+        // Cari warga dengan email yang sama (tanpa filter is_active dulu)
+        const { data: matchingWarga, error: wargaError } = await supabase
+          .from('warga')
+          .select('id, nama_lengkap, email')
+          .ilike('email', authUser.email)
+          .limit(1)
+
+        console.log('Warga query result:', matchingWarga, 'Error:', wargaError)
+
+        if (matchingWarga && matchingWarga.length > 0 && !wargaError) {
+          const warga = matchingWarga[0]
+          console.log('Found matching warga:', warga.id, warga.nama_lengkap)
+          
+          // Update users.warga_id
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({ warga_id: warga.id })
+            .eq('id', authUser.id)
+
+          if (!updateError) {
+            // Re-fetch profile untuk dapat data terbaru
+            const { data: updatedProfile } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', authUser.id)
+              .single()
+            
+            if (updatedProfile) {
+              profile = updatedProfile
+              console.log('Auto-linked user with warga_id:', updatedProfile.warga_id)
+            }
+          } else {
+            console.error('Error updating warga_id:', updateError)
+          }
+        } else {
+          console.log('No matching warga found for email:', authUser.email)
+        }
+      }
+
+      setUserState({ 
+        user: authUser, 
+        userData: profile as User, 
+        loading: false, 
+        initialized: true 
+      })
     } catch (err) {
       console.error('Error fetching user:', err)
       setUserState({ loading: false, initialized: true })
@@ -88,6 +136,8 @@ export function useUser(): UseUserReturn {
         if (event === 'SIGNED_OUT') {
           resetUserState()
         } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          // Reset initialized untuk force re-fetch dengan auto-link
+          setUserState({ initialized: false })
           fetchUserData()
         }
       }

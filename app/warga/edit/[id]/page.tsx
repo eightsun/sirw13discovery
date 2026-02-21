@@ -118,6 +118,7 @@ export default function EditWargaPage() {
           no_hp: warga.no_hp,
           email: warga.email || undefined,
           status_kependudukan: warga.status_kependudukan,
+          tanggal_mulai_tinggal: warga.tanggal_mulai_tinggal || undefined,
           lama_tinggal_tahun: warga.lama_tinggal_tahun || undefined,
           lama_tinggal_bulan: warga.lama_tinggal_bulan || undefined,
           status_rumah: warga.status_rumah,

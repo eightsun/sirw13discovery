@@ -48,6 +48,7 @@ export type StatusRumah =
   | 'milik_sendiri'
   | 'sewa'
   | 'kontrak'
+  | 'sewa_kontrak'
   | 'menumpang'
   | 'dinas';
 
@@ -151,6 +152,7 @@ export interface Warga {
   
   // B. STATUS KEPENDUDUKAN
   status_kependudukan: StatusKependudukan;
+  tanggal_mulai_tinggal?: string;
   lama_tinggal_tahun?: number;
   lama_tinggal_bulan?: number;
   status_rumah: StatusRumah;
@@ -279,8 +281,9 @@ export interface WargaFormInput {
   
   // B. STATUS KEPENDUDUKAN
   status_kependudukan: StatusKependudukan;
-  lama_tinggal_tahun?: number;
-  lama_tinggal_bulan?: number;
+  tanggal_mulai_tinggal?: string;
+  lama_tinggal_tahun?: number;  // Deprecated, kept for backward compatibility
+  lama_tinggal_bulan?: number;  // Deprecated, kept for backward compatibility
   status_rumah: StatusRumah;
   
   // C. ALAMAT DOMISILI

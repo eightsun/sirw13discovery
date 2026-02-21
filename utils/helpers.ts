@@ -140,6 +140,7 @@ export function getStatusRumahLabel(status: string): string {
     milik_sendiri: 'Milik Sendiri',
     sewa: 'Sewa',
     kontrak: 'Kontrak',
+    sewa_kontrak: 'Sewa/Kontrak',
     menumpang: 'Menumpang',
     dinas: 'Dinas',
   }
@@ -319,4 +320,45 @@ export function formatLamaTinggal(tahun?: number, bulan?: number): string {
   if (tahun && tahun > 0) parts.push(`${tahun} tahun`)
   if (bulan && bulan > 0) parts.push(`${bulan} bulan`)
   return parts.join(' ') || '-'
+}
+
+// Calculate lama tinggal dari tanggal_mulai_tinggal
+export function calculateLamaTinggal(tanggalMulai?: string, tahunLama?: number, bulanLama?: number): string {
+  // Jika ada tanggal_mulai_tinggal, hitung dari situ
+  if (tanggalMulai) {
+    const start = new Date(tanggalMulai)
+    const now = new Date()
+    
+    let years = now.getFullYear() - start.getFullYear()
+    let months = now.getMonth() - start.getMonth()
+    
+    if (months < 0) {
+      years--
+      months += 12
+    }
+    
+    // Adjust for day of month
+    if (now.getDate() < start.getDate()) {
+      months--
+      if (months < 0) {
+        years--
+        months += 12
+      }
+    }
+    
+    const parts: string[] = []
+    if (years > 0) parts.push(`${years} tahun`)
+    if (months > 0) parts.push(`${months} bulan`)
+    
+    if (parts.length === 0) {
+      // Kurang dari 1 bulan
+      const days = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+      return `${days} hari`
+    }
+    
+    return parts.join(' ')
+  }
+  
+  // Fallback ke format lama jika tidak ada tanggal
+  return formatLamaTinggal(tahunLama, bulanLama)
 }

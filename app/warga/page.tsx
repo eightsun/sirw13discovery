@@ -1,7 +1,4 @@
 'use client'
-
-export const dynamic = 'force-dynamic'
-
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -20,6 +17,7 @@ import {
 export default function WargaListPage() {
   const { userData, role, isRW, isRT, isPengurus, loading: userLoading } = useUser()
   const [wargaList, setWargaList] = useState<Warga[]>([])
+  const [userWarga, setUserWarga] = useState<Warga | null>(null) // Data warga user yang login
   const [rtList, setRtList] = useState<RT[]>([])
   const [jalanList, setJalanList] = useState<Jalan[]>([])
   const [loading, setLoading] = useState(true)
@@ -32,6 +30,20 @@ export default function WargaListPage() {
   const [filterStatus, setFilterStatus] = useState<string>('')
   
   const supabase = createClient()
+
+  // Fetch data warga user yang login (untuk ambil no_kk)
+  const fetchUserWarga = async () => {
+    if (userData?.warga_id) {
+      const { data } = await supabase
+        .from('warga')
+        .select('id, no_kk')
+        .eq('id', userData.warga_id)
+        .single()
+      setUserWarga(data)
+      return data
+    }
+    return null
+  }
 
   // Fetch data warga
   const fetchWarga = async () => {
@@ -51,7 +63,25 @@ export default function WargaListPage() {
 
       // Filter berdasarkan role
       if (role === 'warga' && userData?.warga_id) {
-        query = query.eq('id', userData.warga_id)
+        // Ambil data user dulu untuk dapat no_kk
+        const currentUserWarga = await fetchUserWarga()
+        
+        if (currentUserWarga?.no_kk) {
+          // Tampilkan semua warga dalam 1 KK
+          query = supabase
+            .from('warga')
+            .select(`
+              *,
+              rt:rt_id (id, nomor_rt),
+              jalan:jalan_id (id, nama_jalan)
+            `)
+            .eq('is_active', true)
+            .eq('no_kk', currentUserWarga.no_kk)
+            .order('nama_lengkap')
+        } else {
+          // Jika tidak ada no_kk, hanya tampilkan data diri sendiri
+          query = query.eq('id', userData.warga_id)
+        }
       } else if (isRT && userData?.rt_id) {
         query = query.eq('rt_id', userData.rt_id)
       }
@@ -116,10 +146,15 @@ export default function WargaListPage() {
     })
   }, [wargaList, searchQuery, filterRT, filterJalan, filterStatus])
 
-  // Masking untuk RT lain
+  // Masking untuk warga di luar KK (tidak berlaku karena sudah difilter, tapi jaga-jaga)
   const shouldMask = (warga: Warga): boolean => {
     if (isRW) return false
-    if (role === 'warga') return warga.id !== userData?.warga_id
+    if (role === 'warga') {
+      // Tidak mask jika data diri sendiri atau 1 KK
+      if (warga.id === userData?.warga_id) return false
+      if (userWarga?.no_kk && warga.no_kk === userWarga.no_kk) return false
+      return true
+    }
     if (isRT) return warga.rt_id !== userData?.rt_id
     return false
   }

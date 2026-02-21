@@ -114,6 +114,7 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
       status_pernikahan: 'belum_kawin',
       status_kependudukan: 'penduduk_tetap',
       status_rumah: 'milik_sendiri',
+      tanggal_mulai_tinggal: '',
       alamat_ktp_sama: true,
       status_ktp: 'ada_aktif',
       status_kk: 'sesuai_domisili',
@@ -165,6 +166,24 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
   const hubunganKeluarga = watch('hubungan_keluarga')
   const alamatKTPSama = watch('alamat_ktp_sama')
   const minatOlahraga = watch('minat_olahraga') || []
+
+  // Set dropdown values after master data is loaded (for edit mode)
+  useEffect(() => {
+    if (mode === 'edit' && initialData) {
+      // Set nilai setelah rtList ter-load
+      if (rtList.length > 0 && initialData.rt_id) {
+        setValue('rt_id', initialData.rt_id)
+      }
+      // Set nilai setelah jalanList ter-load
+      if (jalanList.length > 0 && initialData.jalan_id) {
+        setValue('jalan_id', initialData.jalan_id)
+      }
+      // Set nilai setelah kepalaKeluargaList ter-load
+      if (kepalaKeluargaList.length > 0 && initialData.kepala_keluarga_id) {
+        setValue('kepala_keluarga_id', initialData.kepala_keluarga_id)
+      }
+    }
+  }, [mode, initialData, rtList, jalanList, kepalaKeluargaList, setValue])
 
   // Fetch master data
   useEffect(() => {
@@ -221,10 +240,8 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
     fetchMasterData()
   }, [mode, wargaId])
 
-  // Filter jalan berdasarkan RT
-  const filteredJalan = jalanList.filter(
-    jalan => !selectedRT || jalan.rt_id === selectedRT
-  )
+  // Tampilkan semua jalan (tidak difilter berdasarkan RT)
+  const filteredJalan = jalanList
 
   // Handle minat olahraga checkbox
   const handleMinatChange = (value: string) => {
@@ -627,34 +644,13 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
             </div>
 
             <div className="col-md-6 mb-3">
-              <label className="form-label">Lama Tinggal di Alamat Domisili</label>
-              <div className="row">
-                <div className="col-6">
-                  <div className="input-group">
-                    <input
-                      type="number"
-                      className="form-control"
-                      min="0"
-                      placeholder="0"
-                      {...register('lama_tinggal_tahun', { valueAsNumber: true })}
-                    />
-                    <span className="input-group-text">Tahun</span>
-                  </div>
-                </div>
-                <div className="col-6">
-                  <div className="input-group">
-                    <input
-                      type="number"
-                      className="form-control"
-                      min="0"
-                      max="11"
-                      placeholder="0"
-                      {...register('lama_tinggal_bulan', { valueAsNumber: true })}
-                    />
-                    <span className="input-group-text">Bulan</span>
-                  </div>
-                </div>
-              </div>
+              <label className="form-label">Tanggal Mulai Menempati</label>
+              <input
+                type="date"
+                className="form-control"
+                {...register('tanggal_mulai_tinggal')}
+              />
+              <small className="text-muted">Tanggal sejak mulai tinggal di alamat ini</small>
             </div>
 
             <div className="col-md-6 mb-3">
@@ -665,12 +661,8 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
                   <label className="form-check-label" htmlFor="sr_milik">Milik Sendiri</label>
                 </div>
                 <div className="form-check form-check-inline">
-                  <input className="form-check-input" type="radio" value="sewa" id="sr_sewa" {...register('status_rumah')} />
-                  <label className="form-check-label" htmlFor="sr_sewa">Sewa</label>
-                </div>
-                <div className="form-check form-check-inline">
-                  <input className="form-check-input" type="radio" value="kontrak" id="sr_kontrak" {...register('status_rumah')} />
-                  <label className="form-check-label" htmlFor="sr_kontrak">Kontrak</label>
+                  <input className="form-check-input" type="radio" value="sewa_kontrak" id="sr_sewa_kontrak" {...register('status_rumah')} />
+                  <label className="form-check-label" htmlFor="sr_sewa_kontrak">Sewa/Kontrak</label>
                 </div>
                 <div className="form-check form-check-inline">
                   <input className="form-check-input" type="radio" value="menumpang" id="sr_numpang" {...register('status_rumah')} />

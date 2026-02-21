@@ -21,7 +21,7 @@ import {
   getStatusPindahLabel,
   getJenisKendaraanLabel,
   getMinatOlahragaLabel,
-  formatLamaTinggal,
+  calculateLamaTinggal,
   maskName,
   maskNIK
 } from '@/utils/helpers'
@@ -36,6 +36,7 @@ export default function DetailWargaPage() {
   
   const { userData, isRW, isRT, isPengurus, loading: userLoading } = useUser()
   const [warga, setWarga] = useState<Warga | null>(null)
+  const [userWarga, setUserWarga] = useState<Warga | null>(null) // Data warga user yang login
   const [anggotaKeluarga, setAnggotaKeluarga] = useState<Warga[]>([])
   const [kendaraanList, setKendaraanList] = useState<Kendaraan[]>([])
   const [usahaList, setUsahaList] = useState<Usaha[]>([])
@@ -43,6 +44,21 @@ export default function DetailWargaPage() {
   const [error, setError] = useState<string | null>(null)
   
   const supabase = createClient()
+
+  // Fetch data warga user yang login (untuk cek KK)
+  useEffect(() => {
+    const fetchUserWarga = async () => {
+      if (userData?.warga_id) {
+        const { data } = await supabase
+          .from('warga')
+          .select('id, no_kk')
+          .eq('id', userData.warga_id)
+          .single()
+        setUserWarga(data)
+      }
+    }
+    fetchUserWarga()
+  }, [userData?.warga_id])
 
   useEffect(() => {
     const fetchWarga = async () => {
@@ -106,14 +122,31 @@ export default function DetailWargaPage() {
   // Check if data should be masked
   const shouldMask = (): boolean => {
     if (!warga) return true
+    // Pengurus RW bisa lihat semua
     if (isRW) return false
+    // Melihat data diri sendiri
     if (userData?.warga_id === wargaId) return false
+    // Pengurus RT bisa lihat warga di RT-nya
     if (isRT && userData?.rt_id === warga.rt_id) return false
+    // Dalam 1 KK (Kartu Keluarga) yang sama
+    if (userWarga?.no_kk && warga.no_kk && userWarga.no_kk === warga.no_kk) return false
     return true
   }
 
+  // Check if user can edit this warga
+  const canEditWarga = (): boolean => {
+    if (!warga) return false
+    // Pengurus bisa edit semua
+    if (isPengurus) return true
+    // Edit data diri sendiri
+    if (userData?.warga_id === wargaId) return true
+    // Anggota 1 KK bisa edit data keluarga
+    if (userWarga?.no_kk && warga.no_kk && userWarga.no_kk === warga.no_kk) return true
+    return false
+  }
+
   const masked = shouldMask()
-  const canEdit = isPengurus || userData?.warga_id === wargaId
+  const canEdit = canEditWarga()
 
   if (loading || userLoading) {
     return (
@@ -257,7 +290,7 @@ export default function DetailWargaPage() {
                   </tr>
                   <tr>
                     <td className="text-muted">Lama Tinggal</td>
-                    <td>{formatLamaTinggal(warga.lama_tinggal_tahun, warga.lama_tinggal_bulan)}</td>
+                    <td>{calculateLamaTinggal(warga.tanggal_mulai_tinggal, warga.lama_tinggal_tahun, warga.lama_tinggal_bulan)}</td>
                   </tr>
                   <tr>
                     <td className="text-muted">Status Rumah</td>
