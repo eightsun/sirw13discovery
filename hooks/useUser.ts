@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { User as SupabaseUser } from '@supabase/supabase-js'
+import { useStore } from '@/store/useStore'
 import { User, UserRole } from '@/types'
 
 interface UseUserReturn {
-  user: SupabaseUser | null
+  user: any | null
   userData: User | null
   role: UserRole | null
   loading: boolean
@@ -18,69 +18,77 @@ interface UseUserReturn {
 }
 
 export function useUser(): UseUserReturn {
-  const [user, setUser] = useState<SupabaseUser | null>(null)
-  const [userData, setUserData] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
-
+  const { userState, setUserState, resetUserState } = useStore()
   const supabase = createClient()
+  const fetchingRef = useRef(false)
 
-  const fetchUserData = useCallback(async () => {
+  const fetchUserData = async () => {
+    // Prevent concurrent fetches
+    if (fetchingRef.current) return
+    fetchingRef.current = true
+
     try {
-      setLoading(true)
-      setError(null)
+      setUserState({ loading: true })
 
       // Get auth user
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
       
-      if (authError) {
-        console.error('Auth error:', authError)
-        setUser(null)
-        setUserData(null)
-        setLoading(false)
+      if (authError || !authUser) {
+        setUserState({ 
+          user: null, 
+          userData: null, 
+          loading: false, 
+          initialized: true 
+        })
+        fetchingRef.current = false
         return
       }
-      
-      setUser(authUser)
 
-      if (authUser) {
-        // Get user profile from users table
-        const { data: profile, error: profileError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', authUser.id)
-          .single()
+      // Get user profile from users table
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .single()
 
-        if (profileError) {
-          console.error('Profile error:', profileError)
-          // Jika tidak ada profile, set default
-          if (profileError.code === 'PGRST116') {
-            setUserData(null)
-          }
-        } else {
-          console.log('User profile loaded:', profile)
-          setUserData(profile as User)
-        }
+      if (profileError) {
+        console.error('Profile error:', profileError)
+        setUserState({ 
+          user: authUser, 
+          userData: null, 
+          loading: false, 
+          initialized: true 
+        })
       } else {
-        setUserData(null)
+        setUserState({ 
+          user: authUser, 
+          userData: profile as User, 
+          loading: false, 
+          initialized: true 
+        })
       }
     } catch (err) {
-      setError(err as Error)
       console.error('Error fetching user:', err)
+      setUserState({ loading: false, initialized: true })
     } finally {
-      setLoading(false)
+      fetchingRef.current = false
     }
-  }, [supabase])
+  }
 
   useEffect(() => {
-    fetchUserData()
+    // Only fetch if not initialized or no user data
+    if (!userState.initialized) {
+      fetchUserData()
+    }
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event)
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-          await fetchUserData()
+        console.log('Auth event:', event)
+        if (event === 'SIGNED_OUT') {
+          resetUserState()
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          fetchUserData()
         }
       }
     )
@@ -88,9 +96,9 @@ export function useUser(): UseUserReturn {
     return () => {
       subscription.unsubscribe()
     }
-  }, [fetchUserData])
+  }, [])
 
-  const role = userData?.role || null
+  const role = userState.userData?.role || null
 
   // Helper flags
   const rwRoles: UserRole[] = ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw']
@@ -102,11 +110,11 @@ export function useUser(): UseUserReturn {
   const isPengurus = role ? pengurusRoles.includes(role) : false
 
   return {
-    user,
-    userData,
+    user: userState.user,
+    userData: userState.userData,
     role,
-    loading,
-    error,
+    loading: userState.loading,
+    error: null,
     isRW,
     isRT,
     isPengurus,
