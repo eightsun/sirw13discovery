@@ -40,12 +40,12 @@ export default function DashboardPage() {
   
   const supabase = createClient()
 
-  // Redirect user baru untuk lengkapi profil (kecuali pengurus)
+  // Redirect SEMUA user yang belum punya data warga (termasuk pengurus)
   useEffect(() => {
-    if (!userLoading && userData && !userData.warga_id && !isPengurus) {
+    if (!userLoading && userData && !userData.warga_id) {
       router.push('/profil/lengkapi')
     }
-  }, [userLoading, userData, isPengurus, router])
+  }, [userLoading, userData, router])
 
   useEffect(() => {
     const fetchStats = async () => {
