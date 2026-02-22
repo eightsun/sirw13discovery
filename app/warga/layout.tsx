@@ -9,11 +9,11 @@ export default function WargaLayout({
 }: {
   children: React.ReactNode
 }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div className="d-flex">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className={`content-wrapper flex-grow-1`}>
         <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
         <main className="main-content">

@@ -13,7 +13,8 @@ import {
   FiCreditCard,
   FiCalendar,
   FiMessageSquare,
-  FiBarChart2
+  FiBarChart2,
+  FiX
 } from 'react-icons/fi'
 
 interface MenuItem {
@@ -28,7 +29,12 @@ interface MenuSection {
   items: MenuItem[]
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean
+  onClose?: () => void
+}
+
+export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname()
   const { role, isRW, isPengurus } = useUser()
 
@@ -153,54 +159,74 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="sidebar">
-      <Link href="/dashboard" className="sidebar-brand">
-        🏘️ SIRW13
-      </Link>
+    <>
+      {/* Overlay for mobile */}
+      {isOpen && (
+        <div 
+          className="sidebar-overlay d-md-none"
+          onClick={onClose}
+        />
+      )}
       
-      <hr className="sidebar-divider" />
-      
-      <nav>
-        {menuSections.map((section, sectionIndex) => {
-          const filteredItems = filterMenuItems(section.items)
-          
-          if (filteredItems.length === 0) return null
-          
-          return (
-            <div key={sectionIndex}>
-              <div className="sidebar-heading">{section.title}</div>
-              
-              {filteredItems.map((item, itemIndex) => (
-                <div className="nav-item" key={itemIndex}>
-                  <Link 
-                    href={item.href} 
-                    className={`nav-link ${isActive(item.href) ? 'active' : ''}`}
-                  >
-                    <span className="nav-icon">{item.icon}</span>
-                    <span>{item.label}</span>
-                  </Link>
-                </div>
-              ))}
-              
-              {sectionIndex < menuSections.length - 1 && (
-                <hr className="sidebar-divider" />
-              )}
-            </div>
-          )
-        })}
-      </nav>
-      
-      <hr className="sidebar-divider" />
-      
-      <div className="px-3 py-2">
-        <small className="text-white-50">
-          RW 013 Desa Banjarsari
-          <br />
-          Kec. Manyar, Kab. Gresik
-          <br />
-          Permata Discovery
-        </small>
-      </div>
-    </aside>
+      <aside className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
+        {/* Close button for mobile */}
+        <button 
+          className="btn btn-link text-white position-absolute d-md-none"
+          style={{ top: '10px', right: '10px', zIndex: 1001 }}
+          onClick={onClose}
+        >
+          <FiX size={24} />
+        </button>
+        
+        <Link href="/dashboard" className="sidebar-brand" onClick={onClose}>
+          🏘️ SIRW13
+        </Link>
+        
+        <hr className="sidebar-divider" />
+        
+        <nav>
+          {menuSections.map((section, sectionIndex) => {
+            const filteredItems = filterMenuItems(section.items)
+            
+            if (filteredItems.length === 0) return null
+            
+            return (
+              <div key={sectionIndex}>
+                <div className="sidebar-heading">{section.title}</div>
+                
+                {filteredItems.map((item, itemIndex) => (
+                  <div className="nav-item" key={itemIndex}>
+                    <Link 
+                      href={item.href} 
+                      className={`nav-link ${isActive(item.href) ? 'active' : ''}`}
+                      onClick={onClose}
+                    >
+                      <span className="nav-icon">{item.icon}</span>
+                      <span>{item.label}</span>
+                    </Link>
+                  </div>
+                ))}
+                
+                {sectionIndex < menuSections.length - 1 && (
+                  <hr className="sidebar-divider" />
+                )}
+              </div>
+            )
+          })}
+        </nav>
+        
+        <hr className="sidebar-divider" />
+        
+        <div className="px-3 py-2">
+          <small className="text-white-50">
+            RW 013 Desa Banjarsari
+            <br />
+            Kec. Manyar, Kab. Gresik
+            <br />
+            Permata Discovery
+          </small>
+        </div>
+      </aside>
+    </>
   )
 }

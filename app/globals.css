@@ -181,16 +181,15 @@ body {
 /* Cards */
 .card {
   border: none;
-  border-radius: 0.5rem;
-  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
+  border-radius: 0.35rem;
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
   margin-bottom: 1.5rem;
-  overflow: hidden;
 }
 
 .card-header {
   background-color: #f8f9fc;
   border-bottom: 1px solid #e3e6f0;
-  padding: 1rem 1.25rem;
+  padding: 0.75rem 1.25rem;
 }
 
 .card-header h6 {
@@ -452,6 +451,11 @@ body {
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .sidebar.sidebar-open {
+    transform: translateX(0);
   }
   
   .sidebar.show {
@@ -465,6 +469,21 @@ body {
   .content-wrapper.sidebar-collapsed {
     margin-left: 0;
   }
+  
+  .main-content {
+    padding: 1rem;
+  }
+}
+
+/* Sidebar Overlay for Mobile */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
 }
 
 /* Utility Classes */
@@ -490,34 +509,39 @@ body {
   animation: fadeIn 0.3s ease-in;
 }
 
-/* ================================================== */
-/* Form Section Headers - DIPERBAIKI */
-/* ================================================== */
+/* Form Section Headers */
 .card-header.bg-primary {
-  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
-  padding: 1rem 1.25rem !important;
-  border-bottom: none !important;
+  background: linear-gradient(135deg, #4e73df 0%, #224abe 100%) !important;
 }
 
-.card-header.bg-primary h6,
-.card-header.bg-primary .m-0,
-.card-header.bg-primary .fw-bold {
-  font-size: 1rem !important;
-  font-weight: 800 !important;
-  letter-spacing: 1.5px !important;
-  text-transform: uppercase !important;
-  color: #ffffff !important;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4) !important;
-  margin: 0 !important;
-  display: flex !important;
-  align-items: center !important;
+.card-header.bg-primary h6 {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-.card-header.bg-primary svg,
-.card-header.bg-primary .me-2 {
-  font-size: 1.2rem !important;
-  margin-right: 0.75rem !important;
-  filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.3));
+.card-header.bg-primary .m-0 {
+  display: flex;
+  align-items: center;
+}
+
+.card-header.bg-primary svg {
+  font-size: 1.1rem;
+}
+
+/* Form Card Styling */
+.card {
+  border: none;
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 1rem 1.25rem;
+  border-bottom: none;
 }
 
 /* Form Usaha Table */
