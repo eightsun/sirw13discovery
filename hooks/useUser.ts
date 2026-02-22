@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useStore } from '@/store/useStore'
 import { User, UserRole } from '@/types'
+import { AuthChangeEvent, Session } from '@supabase/supabase-js'
 
 interface UseUserReturn {
   user: any | null
@@ -131,7 +132,7 @@ export function useUser(): UseUserReturn {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: AuthChangeEvent, session: Session | null) => {
         console.log('Auth event:', event)
         if (event === 'SIGNED_OUT') {
           resetUserState()
