@@ -60,7 +60,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           href: '/warga/tambah', 
           label: 'Tambah Warga', 
           icon: <FiUserPlus />,
-          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'ketua_rt', 'sekretaris_rt']
+          // Akses dicek di halaman: Pengurus ATAU Kepala Keluarga
         },
       ],
     },

@@ -30,14 +30,40 @@ function TambahWargaContent() {
       // Pengurus selalu bisa tambah
       if (isPengurus) {
         setCanAdd(true)
+        setLoading(false)
+        return
       }
       
-      // Jika ada kepala_keluarga_id, cek apakah user adalah kepala keluarga tersebut
-      if (kepalaKeluargaId && userData?.warga_id === kepalaKeluargaId) {
-        setCanAdd(true)
+      // Cek apakah user adalah Kepala Keluarga
+      if (userData?.warga_id) {
+        // Cek apakah user terdaftar sebagai kepala keluarga di tabel rumah
+        const { data: rumahData } = await supabase
+          .from('rumah')
+          .select('id, kepala_keluarga_id')
+          .eq('kepala_keluarga_id', userData.warga_id)
+          .single()
+        
+        if (rumahData) {
+          // User adalah Kepala Keluarga, izinkan akses
+          setCanAdd(true)
+          
+          // Jika tidak ada kepala_keluarga_id di URL, set dari user
+          if (!kepalaKeluargaId) {
+            // Fetch data warga user sebagai kepala keluarga
+            const { data: wargaData } = await supabase
+              .from('warga')
+              .select('*')
+              .eq('id', userData.warga_id)
+              .single()
+            
+            if (wargaData) {
+              setKepalaKeluarga(wargaData)
+            }
+          }
+        }
       }
       
-      // Fetch data kepala keluarga jika ada
+      // Jika ada kepala_keluarga_id di URL, cek apakah user adalah kepala keluarga tersebut
       if (kepalaKeluargaId) {
         const { data } = await supabase
           .from('warga')
