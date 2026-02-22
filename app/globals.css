@@ -194,8 +194,12 @@ body {
 
 .card-header h6 {
   font-weight: 700;
-  color: var(--primary-color);
   margin: 0;
+}
+
+/* Default card header has primary colored text */
+.card-header:not(.bg-primary):not(.text-white) h6 {
+  color: var(--primary-color);
 }
 
 .card-body {
@@ -512,23 +516,36 @@ body {
 /* Form Section Headers */
 .card-header.bg-primary {
   background: linear-gradient(135deg, #4e73df 0%, #224abe 100%) !important;
+  color: white !important;
 }
 
-.card-header.bg-primary h6 {
+.card-header.bg-primary h6,
+.card-header.bg-primary .fw-bold {
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+  color: white !important;
+  text-shadow: none;
 }
 
 .card-header.bg-primary .m-0 {
   display: flex;
   align-items: center;
+  color: white !important;
 }
 
 .card-header.bg-primary svg {
   font-size: 1.1rem;
+  color: white !important;
+}
+
+/* Ensure text-white class works */
+.card-header.text-white,
+.card-header.text-white h6,
+.card-header.text-white .fw-bold,
+.card-header.text-white .m-0 {
+  color: white !important;
 }
 
 /* Form Card Styling */
@@ -537,11 +554,6 @@ body {
   box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
   border-radius: 0.5rem;
   overflow: hidden;
-}
-
-.card-header {
-  padding: 1rem 1.25rem;
-  border-bottom: none;
 }
 
 /* Form Usaha Table */
