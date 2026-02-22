@@ -94,7 +94,7 @@ export default function BayarIPLPage() {
 
         if (tagihanError) throw tagihanError
 
-        setTagihanList((tagihanData || []).map(t => ({ ...t, selected: false })))
+        setTagihanList((tagihanData || []).map((t: TagihanIPL) => ({ ...t, selected: false })))
 
       } catch (err) {
         console.error('Error fetching data:', err)
