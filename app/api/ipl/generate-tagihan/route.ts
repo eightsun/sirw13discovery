@@ -40,6 +40,16 @@ export async function POST(request: NextRequest) {
     // Convert to first day of month
     const bulanDate = `${bulan}-01`
 
+    // Define type for rumah with relations
+    type RumahWithRelations = {
+      id: string
+      blok: string | null
+      is_occupied: boolean
+      jalan: { nama_jalan: string } | null
+      nomor_rumah: string
+      rt: { nomor_rt: string } | null
+    }
+
     // Get all rumah
     const { data: rumahList, error: rumahError } = await supabase
       .from('rumah')
@@ -51,6 +61,7 @@ export async function POST(request: NextRequest) {
         nomor_rumah,
         rt:rt_id (nomor_rt)
       `)
+      .returns<RumahWithRelations[]>()
 
     if (rumahError) {
       throw new Error(`Failed to fetch rumah: ${rumahError.message}`)
