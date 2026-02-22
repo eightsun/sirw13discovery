@@ -13,7 +13,7 @@ import {
 interface PembayaranWithDetails extends PembayaranIPL {
   rumah: Rumah & {
     jalan: { nama_jalan: string }
-    rt: { nomor_rt: string }
+    rt: { id: string; nomor_rt: string }
     kepala_keluarga: { nama_lengkap: string }
   }
   pembayar?: { email: string; nama_lengkap: string }
@@ -74,9 +74,9 @@ export default function VerifikasiIPLPage() {
       if (fetchError) throw fetchError
 
       // Client-side filter for RT
-      let filteredData = data || []
+      let filteredData: PembayaranWithDetails[] = data || []
       if (isRT && !isRW && userData?.rt_id) {
-        filteredData = filteredData.filter(p => 
+        filteredData = filteredData.filter((p: PembayaranWithDetails) => 
           p.rumah?.rt?.id === userData.rt_id
         )
       }
