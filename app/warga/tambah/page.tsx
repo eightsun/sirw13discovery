@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useUser } from '@/hooks/useUser'
 import { createClient } from '@/lib/supabase/client'
@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { FiArrowLeft } from 'react-icons/fi'
 import { Warga } from '@/types'
 
-export default function TambahWargaPage() {
+function TambahWargaContent() {
   const searchParams = useSearchParams()
   const { userData, isPengurus, loading: userLoading } = useUser()
   const [kepalaKeluarga, setKepalaKeluarga] = useState<Warga | null>(null)
@@ -145,5 +145,19 @@ export default function TambahWargaPage() {
         initialData={initialData}
       />
     </div>
+  )
+}
+
+export default function TambahWargaPage() {
+  return (
+    <Suspense fallback={
+      <div className="text-center py-5">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    }>
+      <TambahWargaContent />
+    </Suspense>
   )
 }
