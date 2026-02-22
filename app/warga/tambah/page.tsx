@@ -37,11 +37,17 @@ function TambahWargaContent() {
       // Cek apakah user adalah Kepala Keluarga
       if (userData?.warga_id) {
         // Cek apakah user terdaftar sebagai kepala keluarga di tabel rumah
-        const { data: rumahData } = await supabase
+        const { data: rumahData, error: rumahError } = await supabase
           .from('rumah')
           .select('id, kepala_keluarga_id')
           .eq('kepala_keluarga_id', userData.warga_id)
-          .single()
+          .maybeSingle()
+        
+        console.log('Check rumah for kepala keluarga:', { 
+          warga_id: userData.warga_id, 
+          rumahData, 
+          rumahError 
+        })
         
         if (rumahData) {
           // User adalah Kepala Keluarga, izinkan akses

@@ -410,6 +410,39 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
               .eq('id', user.id)
           }
         }
+
+        // Jika kepala keluarga, buat/update rumah
+        if (data.hubungan_keluarga === 'kepala_keluarga' && data.jalan_id && data.nomor_rumah) {
+          // Cek apakah rumah sudah ada
+          const { data: existingRumah } = await supabase
+            .from('rumah')
+            .select('id, kepala_keluarga_id')
+            .eq('jalan_id', data.jalan_id)
+            .eq('nomor_rumah', data.nomor_rumah)
+            .single()
+
+          if (existingRumah) {
+            // Update kepala_keluarga_id jika belum diset
+            if (!existingRumah.kepala_keluarga_id) {
+              await supabase
+                .from('rumah')
+                .update({ kepala_keluarga_id: savedWargaId })
+                .eq('id', existingRumah.id)
+            }
+          } else {
+            // Buat rumah baru
+            const rumahData = {
+              jalan_id: data.jalan_id,
+              nomor_rumah: data.nomor_rumah,
+              rt_id: data.rt_id,
+              blok: data.perumahan?.includes('Barat') ? 'Barat' : 'Timur',
+              kepala_keluarga_id: savedWargaId,
+              is_occupied: true,
+            }
+            
+            await supabase.from('rumah').insert(rumahData)
+          }
+        }
       }
 
       // Clear draft setelah berhasil simpan
