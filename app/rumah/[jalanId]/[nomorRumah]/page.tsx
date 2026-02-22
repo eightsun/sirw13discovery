@@ -298,7 +298,7 @@ export default function DetailRumahPage() {
               <table className="table table-borderless table-sm mb-0">
                 <tbody>
                   <tr>
-                    <td width="40%" className="text-muted">Alamat</td>
+                    <td style={{ width: '40%' }} className="text-muted">Alamat</td>
                     <td><strong>{jalan?.nama_jalan} No. {nomorRumah}</strong></td>
                   </tr>
                   <tr>
@@ -323,7 +323,7 @@ export default function DetailRumahPage() {
               <table className="table table-borderless table-sm mb-0">
                 <tbody>
                   <tr>
-                    <td width="40%" className="text-muted">Kelurahan/Desa</td>
+                    <td style={{ width: '40%' }} className="text-muted">Kelurahan/Desa</td>
                     <td>{firstWarga?.kelurahan || 'Banjarsari'}</td>
                   </tr>
                   <tr>
@@ -462,7 +462,7 @@ export default function DetailRumahPage() {
           <table className="table table-borderless table-sm mb-0">
             <tbody>
               <tr>
-                <td width="30%" className="text-muted">Lama Tinggal (KK Pertama)</td>
+                <td style={{ width: '30%' }} className="text-muted">Lama Tinggal (KK Pertama)</td>
                 <td>
                   {firstWarga ? calculateLamaTinggal(firstWarga.tanggal_mulai_tinggal, firstWarga.lama_tinggal_tahun, firstWarga.lama_tinggal_bulan) : '-'}
                 </td>

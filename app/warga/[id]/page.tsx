@@ -219,7 +219,7 @@ export default function DetailWargaPage() {
               <table className="table table-borderless table-sm mb-0">
                 <tbody>
                   <tr>
-                    <td width="40%" className="text-muted">Nama Lengkap</td>
+                    <td style={{ width: '40%' }} className="text-muted">Nama Lengkap</td>
                     <td><strong>{masked ? maskName(warga.nama_lengkap) : warga.nama_lengkap}</strong></td>
                   </tr>
                   <tr>
@@ -285,7 +285,7 @@ export default function DetailWargaPage() {
               <table className="table table-borderless table-sm mb-0">
                 <tbody>
                   <tr>
-                    <td width="40%" className="text-muted">Status Kependudukan</td>
+                    <td style={{ width: '40%' }} className="text-muted">Status Kependudukan</td>
                     <td>{getStatusKependudukanLabel(warga.status_kependudukan)}</td>
                   </tr>
                   <tr>
@@ -313,7 +313,7 @@ export default function DetailWargaPage() {
               <table className="table table-borderless table-sm mb-0">
                 <tbody>
                   <tr>
-                    <td width="40%" className="text-muted">Jalan</td>
+                    <td style={{ width: '40%' }} className="text-muted">Jalan</td>
                     <td>{(warga.jalan as Jalan)?.nama_jalan || '-'}</td>
                   </tr>
                   <tr>
@@ -366,7 +366,7 @@ export default function DetailWargaPage() {
                 <table className="table table-borderless table-sm mb-0">
                   <tbody>
                     <tr>
-                      <td width="40%" className="text-muted">Alamat</td>
+                      <td style={{ width: '40%' }} className="text-muted">Alamat</td>
                       <td>{warga.alamat_ktp || '-'}</td>
                     </tr>
                     <tr>
@@ -409,7 +409,7 @@ export default function DetailWargaPage() {
               <table className="table table-borderless table-sm mb-0">
                 <tbody>
                   <tr>
-                    <td width="40%" className="text-muted">KTP Elektronik</td>
+                    <td style={{ width: '40%' }} className="text-muted">KTP Elektronik</td>
                     <td>
                       <span className={`badge ${warga.status_ktp === 'ada_aktif' ? 'bg-success' : 'bg-warning'}`}>
                         {getStatusKTPLabel(warga.status_ktp)}
@@ -455,7 +455,7 @@ export default function DetailWargaPage() {
               <table className="table table-borderless table-sm mb-0">
                 <tbody>
                   <tr>
-                    <td width="40%" className="text-muted">Hubungan</td>
+                    <td style={{ width: '40%' }} className="text-muted">Hubungan</td>
                     <td><strong>{getHubunganKeluargaLabel(warga.hubungan_keluarga)}</strong></td>
                   </tr>
                   {warga.kepala_keluarga && (
@@ -515,7 +515,7 @@ export default function DetailWargaPage() {
                 <table className="table table-borderless table-sm mb-0">
                   <tbody>
                     <tr>
-                      <td width="40%" className="text-muted">Nama Kontak</td>
+                      <td style={{ width: '40%' }} className="text-muted">Nama Kontak</td>
                       <td>{warga.nama_kontak_darurat}</td>
                     </tr>
                     <tr>

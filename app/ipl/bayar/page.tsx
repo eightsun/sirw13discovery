@@ -423,7 +423,7 @@ export default function BayarIPLPage() {
                     <table className="table table-hover">
                       <thead>
                         <tr>
-                          <th width="50">Pilih</th>
+                          <th style={{ width: '50px' }}>Pilih</th>
                           <th>Bulan</th>
                           <th className="text-end">Tagihan</th>
                           <th className="text-end">Terbayar</th>
