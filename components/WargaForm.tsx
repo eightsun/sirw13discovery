@@ -411,7 +411,7 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
           }
         }
 
-        // Jika kepala keluarga, buat/update rumah
+        // Jika kepala keluarga, buat/update rumah DAN update rumah_id di warga
         if (data.hubungan_keluarga === 'kepala_keluarga' && data.jalan_id && data.nomor_rumah) {
           // Cek apakah rumah sudah ada
           const { data: existingRumah } = await supabase
@@ -419,9 +419,12 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
             .select('id, kepala_keluarga_id')
             .eq('jalan_id', data.jalan_id)
             .eq('nomor_rumah', data.nomor_rumah)
-            .single()
+            .maybeSingle()
+
+          let rumahId: string | null = null
 
           if (existingRumah) {
+            rumahId = existingRumah.id
             // Update kepala_keluarga_id jika belum diset
             if (!existingRumah.kepala_keluarga_id) {
               await supabase
@@ -440,7 +443,39 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
               is_occupied: true,
             }
             
-            await supabase.from('rumah').insert(rumahData)
+            const { data: newRumah } = await supabase
+              .from('rumah')
+              .insert(rumahData)
+              .select('id')
+              .single()
+            
+            if (newRumah) {
+              rumahId = newRumah.id
+            }
+          }
+
+          // Update rumah_id di tabel warga
+          if (rumahId && savedWargaId) {
+            await supabase
+              .from('warga')
+              .update({ rumah_id: rumahId })
+              .eq('id', savedWargaId)
+          }
+        }
+
+        // Jika bukan kepala keluarga (anggota keluarga), ambil rumah_id dari kepala keluarga
+        if (data.hubungan_keluarga !== 'kepala_keluarga' && data.kepala_keluarga_id) {
+          const { data: kkData } = await supabase
+            .from('warga')
+            .select('rumah_id')
+            .eq('id', data.kepala_keluarga_id)
+            .single()
+          
+          if (kkData?.rumah_id && savedWargaId) {
+            await supabase
+              .from('warga')
+              .update({ rumah_id: kkData.rumah_id })
+              .eq('id', savedWargaId)
           }
         }
       }

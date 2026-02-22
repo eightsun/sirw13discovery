@@ -129,9 +129,14 @@ export default function IPLPage() {
           .order('bulan', { ascending: false })
 
         // Apply access control based on role
-        if (!isPengurus && userRumahId) {
+        if (!isPengurus) {
           // Warga biasa: hanya lihat tagihan rumahnya
-          query = query.eq('rumah_id', userRumahId)
+          if (userRumahId) {
+            query = query.eq('rumah_id', userRumahId)
+          } else {
+            // Tidak ada rumah_id, tampilkan empty (filter dengan ID yang tidak ada)
+            query = query.eq('rumah_id', '00000000-0000-0000-0000-000000000000')
+          }
         } else if (isRTLevel && userRtIdLocal) {
           // Pengurus RT: hanya lihat tagihan di RT-nya
           // Need to filter by rumah's rt_id
@@ -153,14 +158,18 @@ export default function IPLPage() {
         setTagihan(data || [])
 
         // Fetch pembayaran pending
-        if (!isPengurus && userRumahId) {
-          const { data: pendingData } = await supabase
-            .from('pembayaran_ipl')
-            .select('id, rumah_id, bulan_dibayar, jumlah_dibayar, status')
-            .eq('rumah_id', userRumahId)
-            .eq('status', 'pending')
-          
-          setPembayaranPending(pendingData || [])
+        if (!isPengurus) {
+          if (userRumahId) {
+            const { data: pendingData } = await supabase
+              .from('pembayaran_ipl')
+              .select('id, rumah_id, bulan_dibayar, jumlah_dibayar, status')
+              .eq('rumah_id', userRumahId)
+              .eq('status', 'pending')
+            
+            setPembayaranPending(pendingData || [])
+          } else {
+            setPembayaranPending([])
+          }
         } else if (isPengurus) {
           // Pengurus bisa lihat semua pending (sesuai akses RT-nya)
           let pendingQuery = supabase
