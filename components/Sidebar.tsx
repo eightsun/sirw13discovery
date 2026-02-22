@@ -169,6 +169,8 @@ export default function Sidebar() {
         <small className="text-white-50">
           RW 013 Desa Banjarsari
           <br />
+          Kec. Manyar, Kab. Gresik
+          <br />
           Permata Discovery
         </small>
       </div>

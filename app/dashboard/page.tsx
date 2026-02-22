@@ -1,7 +1,4 @@
 'use client'
-
-export const dynamic = 'force-dynamic'
-
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -165,6 +162,26 @@ export default function DashboardPage() {
           {greeting()}, {userData?.nama_lengkap || 'Pengguna'}! 
           {role && <span className="badge bg-primary ms-2">{getRoleLabel(role)}</span>}
         </p>
+      </div>
+
+      {/* Welcome Card */}
+      <div className="card border-start border-primary border-4 mb-4">
+        <div className="card-body">
+          <div className="d-flex align-items-center">
+            <div className="me-3">
+              <span style={{ fontSize: '2rem' }}>🏘️</span>
+            </div>
+            <div>
+              <h6 className="fw-bold text-primary mb-1">
+                Selamat Datang di SIRW13
+              </h6>
+              <p className="mb-0 text-muted">
+                Sistem Informasi RW 013 Permata Discovery - Desa Banjarsari, Kec. Manyar, Kab. Gresik.
+                Kelola data warga, kendaraan, usaha, dan administrasi dengan mudah.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards Row 1 */}
@@ -375,30 +392,6 @@ export default function DashboardPage() {
                   <a href="#" className="btn btn-outline-info w-100 py-3">
                     📢 Pengumuman
                   </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Info Card */}
-      <div className="row">
-        <div className="col-12">
-          <div className="card border-start border-primary border-4">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="me-3">
-                  <span style={{ fontSize: '2rem' }}>🏘️</span>
-                </div>
-                <div>
-                  <h6 className="fw-bold text-primary mb-1">
-                    Selamat Datang di SIRW13
-                  </h6>
-                  <p className="mb-0 text-muted">
-                    Sistem Informasi RW 013 Permata Discovery - Desa Banjarsari, Kec. Ngamprah, Kab. Bandung Barat.
-                    Kelola data warga, kendaraan, usaha, dan administrasi dengan mudah.
-                  </p>
                 </div>
               </div>
             </div>

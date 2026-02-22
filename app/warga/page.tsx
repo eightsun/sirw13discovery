@@ -11,7 +11,7 @@ import {
   getStatusRumahLabel
 } from '@/utils/helpers'
 import { 
-  FiPlus, FiSearch, FiFilter, FiEye, FiEdit, FiTrash2, FiRefreshCw, FiDownload
+  FiPlus, FiSearch, FiFilter, FiEye, FiEdit, FiTrash2, FiRefreshCw, FiDownload, FiHome
 } from 'react-icons/fi'
 
 export default function WargaListPage() {
@@ -364,6 +364,15 @@ export default function WargaListPage() {
                             >
                               <FiEye />
                             </Link>
+                            {warga.jalan_id && warga.nomor_rumah && (
+                              <Link 
+                                href={`/rumah/${encodeURIComponent(warga.jalan_id)}/${encodeURIComponent(warga.nomor_rumah)}`}
+                                className="btn btn-outline-info"
+                                title="Lihat Rumah"
+                              >
+                                <FiHome />
+                              </Link>
+                            )}
                             {(isPengurus || warga.id === userData?.warga_id) && (
                               <Link 
                                 href={`/warga/edit/${warga.id}`}

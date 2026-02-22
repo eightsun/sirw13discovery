@@ -97,8 +97,8 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
     link_twitter: ''
   })
 
-  // Load draft on mount (only for create mode)
-  const draft = mode === 'create' && !initialData ? loadDraft() : null
+  // Load draft on mount (for create mode, including tambah anggota)
+  const draft = mode === 'create' ? loadDraft() : null
   
   const {
     register,
@@ -123,14 +123,18 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
       hubungan_keluarga: 'kepala_keluarga',
       perumahan: 'Permata Discovery',
       kelurahan: 'Banjarsari',
-      kecamatan: 'Ngamprah',
-      kota_kabupaten: 'Kabupaten Bandung Barat',
-      kode_pos: '40552',
+      kecamatan: 'Manyar',
+      kota_kabupaten: 'Kabupaten Gresik',
+      kode_pos: '61151',
       minat_olahraga: [],
       email: defaultEmail || '',
       ...initialData,
-      // Load from draft if available
-      ...(draft?.data || {}),
+      // Load from draft if available, but don't override with empty values
+      ...(draft?.data ? Object.fromEntries(
+        Object.entries(draft.data).filter(([_, value]) => 
+          value !== '' && value !== null && value !== undefined
+        )
+      ) : {}),
     },
   })
 
@@ -161,6 +165,31 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
 
     return () => clearTimeout(timeoutId)
   }, [watchAllFields, kendaraanList, usahaList, mode, getValues])
+
+  // Save draft when tab is hidden or page is closed
+  useEffect(() => {
+    if (mode !== 'create') return
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        const currentData = getValues()
+        saveDraft(currentData, kendaraanList, usahaList)
+      }
+    }
+
+    const handleBeforeUnload = () => {
+      const currentData = getValues()
+      saveDraft(currentData, kendaraanList, usahaList)
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [mode, getValues, kendaraanList, usahaList])
 
   const selectedRT = watch('rt_id')
   const hubunganKeluarga = watch('hubungan_keluarga')
@@ -288,6 +317,22 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
       setLoading(true)
       setError(null)
 
+      // Validasi NIK - cek hanya warga aktif
+      if (mode === 'create' && data.nik) {
+        const { data: existingNIK } = await supabase
+          .from('warga')
+          .select('id, nama_lengkap')
+          .eq('nik', data.nik)
+          .eq('is_active', true)
+          .single()
+        
+        if (existingNIK) {
+          setError(`NIK ${data.nik} sudah terdaftar atas nama ${existingNIK.nama_lengkap}`)
+          setLoading(false)
+          return
+        }
+      }
+
       // Prepare warga data
       const wargaData = {
         ...data,
@@ -379,10 +424,10 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
       router.refresh()
     } catch (err: any) {
       console.error('Error saving warga:', err)
-      if (err.message?.includes('duplicate')) {
-        setError('NIK sudah terdaftar')
+      if (err.message?.includes('duplicate') || err.message?.includes('unique') || err.code === '23505') {
+        setError('NIK sudah terdaftar. Jika data sebelumnya sudah dihapus, silakan hubungi pengurus RW.')
       } else {
-        setError('Gagal menyimpan data. Silakan coba lagi.')
+        setError(err.message || 'Gagal menyimpan data. Silakan coba lagi.')
       }
     } finally {
       setLoading(false)

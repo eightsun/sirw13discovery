@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -10,9 +10,10 @@ import {
   getHubunganKeluargaLabel, 
   getJenisKelaminLabel,
   getStatusKependudukanLabel,
-  calculateLamaTinggal
+  calculateLamaTinggal,
+  formatDate
 } from '@/utils/helpers'
-import { FiArrowLeft, FiUser, FiEdit } from 'react-icons/fi'
+import { FiArrowLeft, FiUser, FiEdit, FiUserPlus, FiUsers, FiHome } from 'react-icons/fi'
 
 interface KKGroup {
   kepala: Warga
@@ -62,6 +63,7 @@ export default function DetailRumahPage() {
           .eq('jalan_id', jalanId)
           .eq('nomor_rumah', nomorRumah)
           .eq('is_active', true)
+          .order('hubungan_keluarga')
           .order('nama_lengkap')
 
         if (wargaError) throw wargaError
@@ -81,7 +83,7 @@ export default function DetailRumahPage() {
   }, [jalanId, nomorRumah])
 
   // Group warga by KK
-  const kkGroups: KKGroup[] = (() => {
+  const kkGroups: KKGroup[] = useMemo(() => {
     const groups = new Map<string, KKGroup>()
     
     // First pass: find all kepala keluarga
@@ -132,7 +134,45 @@ export default function DetailRumahPage() {
     })
 
     return Array.from(groups.values())
-  })()
+  }, [wargaList])
+
+  // Statistik Rumah
+  const stats = useMemo(() => {
+    const today = new Date()
+    
+    const totalJiwa = wargaList.length
+    const lakiLaki = wargaList.filter(w => w.jenis_kelamin === 'L').length
+    const perempuan = wargaList.filter(w => w.jenis_kelamin === 'P').length
+    
+    // Hitung umur untuk dewasa (>=17) dan anak (<17)
+    const dewasa = wargaList.filter(w => {
+      if (!w.tanggal_lahir) return true // Anggap dewasa jika tidak ada tanggal lahir
+      const birthDate = new Date(w.tanggal_lahir)
+      const age = today.getFullYear() - birthDate.getFullYear()
+      return age >= 17
+    }).length
+    
+    const anak = totalJiwa - dewasa
+    
+    return { totalJiwa, lakiLaki, perempuan, dewasa, anak, totalKK: kkGroups.length }
+  }, [wargaList, kkGroups])
+
+  // Cek apakah user adalah kepala keluarga di rumah ini
+  const isKepalaKeluargaRumahIni = useMemo(() => {
+    if (!userData?.warga_id) return false
+    return wargaList.some(w => 
+      w.id === userData.warga_id && w.hubungan_keluarga === 'kepala_keluarga'
+    )
+  }, [wargaList, userData])
+
+  // Cek apakah user tinggal di rumah ini
+  const isTinggalDiRumahIni = useMemo(() => {
+    if (!userData?.warga_id) return false
+    return wargaList.some(w => w.id === userData.warga_id)
+  }, [wargaList, userData])
+
+  // Bisa tambah anggota jika pengurus atau kepala keluarga di rumah ini
+  const canAddAnggota = isPengurus || isKepalaKeluargaRumahIni
 
   // Get first warga for common data
   const firstWarga = wargaList[0]
@@ -176,19 +216,83 @@ export default function DetailRumahPage() {
             </h1>
             <p className="text-muted mb-0">
               <span className="badge bg-primary me-2">RT {rt?.nomor_rt || '-'}</span>
-              <span className="badge bg-info me-2">{kkGroups.length} KK</span>
-              <span className="badge bg-success">{wargaList.length} Penghuni</span>
+              <span className="badge bg-info me-2">{stats.totalKK} KK</span>
+              <span className="badge bg-success">{stats.totalJiwa} Penghuni</span>
             </p>
+          </div>
+        </div>
+        {canAddAnggota && (
+          <Link 
+            href={`/warga/tambah?jalan_id=${jalanId}&nomor_rumah=${nomorRumah}&rt_id=${rt?.id || ''}`}
+            className="btn btn-primary"
+          >
+            <FiUserPlus className="me-2" />
+            Tambah Anggota
+          </Link>
+        )}
+      </div>
+
+      {/* Statistik Rumah */}
+      <div className="row mb-4">
+        <div className="col-md-2 col-4 mb-3">
+          <div className="card text-center h-100">
+            <div className="card-body py-3">
+              <h4 className="text-primary mb-0">{stats.totalJiwa}</h4>
+              <small className="text-muted">Total Jiwa</small>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-2 col-4 mb-3">
+          <div className="card text-center h-100">
+            <div className="card-body py-3">
+              <h4 className="text-info mb-0">{stats.totalKK}</h4>
+              <small className="text-muted">Kartu Keluarga</small>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-2 col-4 mb-3">
+          <div className="card text-center h-100">
+            <div className="card-body py-3">
+              <h4 className="text-primary mb-0">{stats.lakiLaki}</h4>
+              <small className="text-muted">Laki-laki</small>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-2 col-4 mb-3">
+          <div className="card text-center h-100">
+            <div className="card-body py-3">
+              <h4 className="text-danger mb-0">{stats.perempuan}</h4>
+              <small className="text-muted">Perempuan</small>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-2 col-4 mb-3">
+          <div className="card text-center h-100">
+            <div className="card-body py-3">
+              <h4 className="text-success mb-0">{stats.dewasa}</h4>
+              <small className="text-muted">Dewasa (≥17)</small>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-2 col-4 mb-3">
+          <div className="card text-center h-100">
+            <div className="card-body py-3">
+              <h4 className="text-warning mb-0">{stats.anak}</h4>
+              <small className="text-muted">Anak (&lt;17)</small>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Info Rumah */}
-      <div className="row">
+      <div className="row mb-4">
         <div className="col-lg-6 mb-4">
           <div className="card h-100">
             <div className="card-header bg-primary text-white">
-              <h6 className="m-0 fw-bold">Informasi Alamat</h6>
+              <h6 className="m-0 fw-bold">
+                <FiHome className="me-2" />
+                Informasi Alamat
+              </h6>
             </div>
             <div className="card-body">
               <table className="table table-borderless table-sm mb-0">
@@ -213,22 +317,22 @@ export default function DetailRumahPage() {
         <div className="col-lg-6 mb-4">
           <div className="card h-100">
             <div className="card-header bg-primary text-white">
-              <h6 className="m-0 fw-bold">Wilayah</h6>
+              <h6 className="m-0 fw-bold">Wilayah Administratif</h6>
             </div>
             <div className="card-body">
               <table className="table table-borderless table-sm mb-0">
                 <tbody>
                   <tr>
-                    <td width="40%" className="text-muted">Kelurahan</td>
-                    <td>{firstWarga?.kelurahan || '-'}</td>
+                    <td width="40%" className="text-muted">Kelurahan/Desa</td>
+                    <td>{firstWarga?.kelurahan || 'Banjarsari'}</td>
                   </tr>
                   <tr>
                     <td className="text-muted">Kecamatan</td>
-                    <td>{firstWarga?.kecamatan || '-'}</td>
+                    <td>{firstWarga?.kecamatan || 'Manyar'}</td>
                   </tr>
                   <tr>
                     <td className="text-muted">Kota/Kabupaten</td>
-                    <td>{firstWarga?.kota_kabupaten || '-'}</td>
+                    <td>{firstWarga?.kota_kabupaten || 'Kabupaten Gresik'}</td>
                   </tr>
                 </tbody>
               </table>
@@ -242,12 +346,24 @@ export default function DetailRumahPage() {
         <div className="card mb-4" key={kk.kepala.id}>
           <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h6 className="m-0 fw-bold">
+              <FiUsers className="me-2" />
               Kartu Keluarga {kkIndex + 1}
               {kk.no_kk !== '-' && <small className="ms-2 fw-normal">- No. {kk.no_kk}</small>}
             </h6>
-            <span className="badge bg-light text-dark">
-              {1 + kk.anggota.length} Anggota
-            </span>
+            <div>
+              <span className="badge bg-light text-dark me-2">
+                {1 + kk.anggota.length} Anggota
+              </span>
+              {(isPengurus || kk.kepala.id === userData?.warga_id) && (
+                <Link 
+                  href={`/warga/tambah?kepala_keluarga_id=${kk.kepala.id}&jalan_id=${jalanId}&nomor_rumah=${nomorRumah}&rt_id=${rt?.id || ''}`}
+                  className="btn btn-sm btn-light"
+                  title="Tambah Anggota Keluarga"
+                >
+                  <FiUserPlus />
+                </Link>
+              )}
+            </div>
           </div>
           <div className="card-body">
             <div className="table-responsive">
@@ -258,14 +374,15 @@ export default function DetailRumahPage() {
                     <th>Nama Lengkap</th>
                     <th>Hubungan</th>
                     <th>L/P</th>
+                    <th>Tgl Lahir</th>
+                    <th>Pekerjaan</th>
                     <th>No HP</th>
-                    <th>Status</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {/* Kepala Keluarga */}
-                  <tr>
+                  <tr className="table-primary">
                     <td>1</td>
                     <td>
                       <strong>{kk.kepala.nama_lengkap}</strong>
@@ -279,22 +396,19 @@ export default function DetailRumahPage() {
                       </span>
                     </td>
                     <td>{getJenisKelaminLabel(kk.kepala.jenis_kelamin)}</td>
+                    <td><small>{kk.kepala.tanggal_lahir ? formatDate(kk.kepala.tanggal_lahir) : '-'}</small></td>
+                    <td><small>{kk.kepala.pekerjaan || '-'}</small></td>
                     <td><small>{kk.kepala.no_hp || '-'}</small></td>
-                    <td>
-                      <span className={`badge ${
-                        kk.kepala.status_kependudukan === 'penduduk_tetap' ? 'bg-success' : 'bg-info'
-                      }`}>
-                        {getStatusKependudukanLabel(kk.kepala.status_kependudukan).replace('Penduduk ', '')}
-                      </span>
-                    </td>
                     <td>
                       <div className="btn-group btn-group-sm">
                         <Link href={`/warga/${kk.kepala.id}`} className="btn btn-outline-primary" title="Lihat Detail">
                           <FiUser />
                         </Link>
-                        <Link href={`/warga/edit/${kk.kepala.id}`} className="btn btn-outline-warning" title="Edit">
-                          <FiEdit />
-                        </Link>
+                        {(isPengurus || kk.kepala.id === userData?.warga_id) && (
+                          <Link href={`/warga/edit/${kk.kepala.id}`} className="btn btn-outline-warning" title="Edit">
+                            <FiEdit />
+                          </Link>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -315,22 +429,19 @@ export default function DetailRumahPage() {
                         </span>
                       </td>
                       <td>{getJenisKelaminLabel(anggota.jenis_kelamin)}</td>
+                      <td><small>{anggota.tanggal_lahir ? formatDate(anggota.tanggal_lahir) : '-'}</small></td>
+                      <td><small>{anggota.pekerjaan || '-'}</small></td>
                       <td><small>{anggota.no_hp || '-'}</small></td>
-                      <td>
-                        <span className={`badge ${
-                          anggota.status_kependudukan === 'penduduk_tetap' ? 'bg-success' : 'bg-info'
-                        }`}>
-                          {getStatusKependudukanLabel(anggota.status_kependudukan).replace('Penduduk ', '')}
-                        </span>
-                      </td>
                       <td>
                         <div className="btn-group btn-group-sm">
                           <Link href={`/warga/${anggota.id}`} className="btn btn-outline-primary" title="Lihat Detail">
                             <FiUser />
                           </Link>
-                          <Link href={`/warga/edit/${anggota.id}`} className="btn btn-outline-warning" title="Edit">
-                            <FiEdit />
-                          </Link>
+                          {(isPengurus || kk.kepala.id === userData?.warga_id || anggota.id === userData?.warga_id) && (
+                            <Link href={`/warga/edit/${anggota.id}`} className="btn btn-outline-warning" title="Edit">
+                              <FiEdit />
+                            </Link>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -342,28 +453,28 @@ export default function DetailRumahPage() {
         </div>
       ))}
 
-      {/* Summary */}
+      {/* Lama Tinggal */}
       <div className="card">
         <div className="card-header bg-primary text-white">
-          <h6 className="m-0 fw-bold">Ringkasan</h6>
+          <h6 className="m-0 fw-bold">Informasi Tambahan</h6>
         </div>
         <div className="card-body">
-          <div className="row text-center">
-            <div className="col-4">
-              <h4 className="text-primary mb-0">{kkGroups.length}</h4>
-              <small className="text-muted">Kartu Keluarga</small>
-            </div>
-            <div className="col-4">
-              <h4 className="text-success mb-0">{wargaList.length}</h4>
-              <small className="text-muted">Total Penghuni</small>
-            </div>
-            <div className="col-4">
-              <h4 className="text-info mb-0">
-                {firstWarga ? calculateLamaTinggal(firstWarga.tanggal_mulai_tinggal, firstWarga.lama_tinggal_tahun, firstWarga.lama_tinggal_bulan) : '-'}
-              </h4>
-              <small className="text-muted">Lama Tinggal</small>
-            </div>
-          </div>
+          <table className="table table-borderless table-sm mb-0">
+            <tbody>
+              <tr>
+                <td width="30%" className="text-muted">Lama Tinggal (KK Pertama)</td>
+                <td>
+                  {firstWarga ? calculateLamaTinggal(firstWarga.tanggal_mulai_tinggal, firstWarga.lama_tinggal_tahun, firstWarga.lama_tinggal_bulan) : '-'}
+                </td>
+              </tr>
+              <tr>
+                <td className="text-muted">Status Kependudukan</td>
+                <td>
+                  {firstWarga ? getStatusKependudukanLabel(firstWarga.status_kependudukan) : '-'}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
