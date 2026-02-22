@@ -10,7 +10,7 @@ import {
   FiSettings, 
   FiDatabase,
   FiFileText,
-  FiDollarSign,
+  FiCreditCard,
   FiCalendar,
   FiMessageSquare,
   FiBarChart2
@@ -59,6 +59,33 @@ export default function Sidebar() {
       ],
     },
     {
+      title: 'IPL',
+      items: [
+        { 
+          href: '/ipl', 
+          label: 'Tagihan IPL', 
+          icon: <FiCreditCard />,
+        },
+        { 
+          href: '/ipl/bayar', 
+          label: 'Bayar IPL', 
+          icon: <FiCreditCard />,
+        },
+        { 
+          href: '/ipl/verifikasi', 
+          label: 'Verifikasi', 
+          icon: <FiFileText />,
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'ketua_rt', 'sekretaris_rt', 'bendahara_rt']
+        },
+        { 
+          href: '/admin/ipl/tarif', 
+          label: 'Pengaturan Tarif', 
+          icon: <FiSettings />,
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw']
+        },
+      ],
+    },
+    {
       title: 'Administrasi',
       items: [
         { 
@@ -70,7 +97,7 @@ export default function Sidebar() {
         { 
           href: '/keuangan', 
           label: 'Keuangan', 
-          icon: <FiDollarSign />,
+          icon: <FiCreditCard />,
           roles: ['ketua_rw', 'wakil_ketua_rw', 'bendahara_rw', 'ketua_rt', 'bendahara_rt']
         },
         { 

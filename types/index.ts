@@ -375,3 +375,121 @@ export interface SupabaseResponse<T> {
   data: T | null;
   error: Error | null;
 }
+
+// ==========================================
+// FASE 3: IPL Types
+// ==========================================
+
+// Interface untuk tabel Rumah
+export interface Rumah {
+  id: string;
+  jalan_id?: string;
+  jalan?: Jalan;
+  nomor_rumah: string;
+  rt_id?: string;
+  rt?: RT;
+  kepala_keluarga_id?: string;
+  kepala_keluarga?: Warga;
+  is_occupied: boolean;
+  blok: 'Timur' | 'Barat';
+  created_at: string;
+  updated_at: string;
+}
+
+// Interface untuk tabel Tarif IPL
+export interface TarifIPL {
+  id: number;
+  blok: 'Timur' | 'Barat' | 'Semua';
+  periode_mulai: string;
+  periode_selesai?: string;
+  tarif_berpenghuni: number;
+  tarif_tidak_berpenghuni?: number;
+  keterangan?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Interface untuk tabel Tagihan IPL
+export interface TagihanIPL {
+  id: string;
+  rumah_id: string;
+  rumah?: Rumah;
+  bulan: string; // Format: 'YYYY-MM-01'
+  jumlah_tagihan: number;
+  status: 'lunas' | 'belum_lunas' | 'sebagian';
+  jumlah_terbayar: number;
+  tanggal_lunas?: string;
+  keterangan?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Interface untuk tabel Pembayaran IPL
+export interface PembayaranIPL {
+  id: string;
+  rumah_id: string;
+  rumah?: Rumah;
+  jumlah_dibayar: number;
+  tanggal_bayar: string;
+  metode: 'transfer' | 'tunai' | 'lainnya';
+  bukti_url?: string;
+  bukti_file_id?: string;
+  dibayar_oleh?: string;
+  nama_pembayar?: string;
+  bulan_dibayar: string[]; // Array of dates ['2025-01-01', '2025-02-01']
+  status: 'pending' | 'verified' | 'rejected';
+  verified_by?: string;
+  verified_at?: string;
+  rejected_reason?: string;
+  catatan?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Form Input Types
+export interface TarifIPLFormInput {
+  blok: 'Timur' | 'Barat' | 'Semua';
+  periode_mulai: string;
+  periode_selesai?: string;
+  tarif_berpenghuni: number;
+  tarif_tidak_berpenghuni?: number;
+  keterangan?: string;
+}
+
+export interface PembayaranIPLFormInput {
+  rumah_id: string;
+  bulan_dibayar: string[];
+  jumlah_dibayar: number;
+  tanggal_bayar: string;
+  metode: 'transfer' | 'tunai' | 'lainnya';
+  bukti_url?: string;
+  bukti_file_id?: string;
+  nama_pembayar?: string;
+  catatan?: string;
+}
+
+// View/Summary Types
+export interface IPLSummary {
+  rumah_id: string;
+  nomor_rumah: string;
+  blok: string;
+  nama_jalan: string;
+  nomor_rt: string;
+  kepala_keluarga: string;
+  is_occupied: boolean;
+  total_tagihan: number;
+  total_terbayar: number;
+  sisa_tunggakan: number;
+  bulan_tunggakan: number;
+}
+
+export interface IPLDashboardStats {
+  total_rumah: number;
+  total_tagihan: number;
+  total_terbayar: number;
+  total_tunggakan: number;
+  persentase_lunas: number;
+  tunggakan_per_rt: { rt: string; jumlah: number }[];
+  pembayaran_pending: number;
+}
