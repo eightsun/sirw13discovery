@@ -67,6 +67,16 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to fetch rumah: ${rumahError.message}`)
     }
 
+    // Define type for tarif
+    type TarifIPL = {
+      id: string
+      blok: string
+      tarif_berpenghuni: number
+      tarif_tidak_berpenghuni: number | null
+      periode_mulai: string
+      periode_selesai: string | null
+    }
+
     // Get applicable tarif for this month
     const { data: tarifList, error: tarifError } = await supabase
       .from('tarif_ipl')
@@ -74,6 +84,7 @@ export async function POST(request: NextRequest) {
       .lte('periode_mulai', bulanDate)
       .or(`periode_selesai.is.null,periode_selesai.gte.${bulanDate}`)
       .order('periode_mulai', { ascending: false })
+      .returns<TarifIPL[]>()
 
     if (tarifError) {
       throw new Error(`Failed to fetch tarif: ${tarifError.message}`)
@@ -101,7 +112,7 @@ export async function POST(request: NextRequest) {
       .select('rumah_id')
       .eq('bulan', bulanDate)
 
-    const existingRumahIds = new Set(existingTagihan?.map(t => t.rumah_id) || [])
+    const existingRumahIds = new Set(existingTagihan?.map((t: { rumah_id: string }) => t.rumah_id) || [])
 
     // Prepare tagihan to insert
     const tagihanToInsert: any[] = []

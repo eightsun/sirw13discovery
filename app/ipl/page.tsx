@@ -140,7 +140,7 @@ export default function IPLPage() {
             .select('id')
             .eq('rt_id', userRtIdLocal)
           
-          const rumahIds = rumahInRT?.map(r => r.id) || []
+          const rumahIds = rumahInRT?.map((r: { id: string }) => r.id) || []
           if (rumahIds.length > 0) {
             query = query.in('rumah_id', rumahIds)
           }
