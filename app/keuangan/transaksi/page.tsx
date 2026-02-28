@@ -64,7 +64,9 @@ export default function TransaksiKasPage() {
       if (filterBulan) {
         const [year, month] = filterBulan.split('-')
         const startDate = `${year}-${month}-01`
-        const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0]
+        // Hitung hari terakhir bulan tersebut
+        const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate()
+        const endDate = `${year}-${month}-${lastDay.toString().padStart(2, '0')}`
         query = query.gte('tanggal', startDate).lte('tanggal', endDate)
       }
 
