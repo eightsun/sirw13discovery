@@ -71,7 +71,7 @@ export default function TambahPengajuanPage() {
       
       if (data) {
         // Sort berdasarkan kode secara numerik
-        const sorted = data.sort((a, b) => parseInt(a.kode) - parseInt(b.kode))
+        const sorted = data.sort((a: KategoriPengeluaran, b: KategoriPengeluaran) => parseInt(a.kode) - parseInt(b.kode))
         setKategoriList(sorted)
       }
     }
