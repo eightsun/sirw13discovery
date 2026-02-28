@@ -166,42 +166,70 @@ export default function PengajuanListPage() {
     setShowDeleteModal(true)
   }
 
+  // Helper function untuk extract path dari storage URL
+  const extractStoragePath = (url: string): string | null => {
+    if (!url) return null
+    // URL format: https://xxx.supabase.co/storage/v1/object/public/pengajuan/path/file.jpg
+    // Kita perlu extract: path/file.jpg
+    const match = url.match(/\/pengajuan\/(.+)$/)
+    return match ? match[1] : null
+  }
+
   const handleDelete = async () => {
     if (!deleteTarget) return
 
     try {
       setDeleting(true)
 
-      // Kumpulkan semua file URL yang perlu dihapus
-      const filesToDelete: string[] = []
+      // Kumpulkan semua file path yang perlu dihapus
+      const filePaths: string[] = []
       
-      if (deleteTarget.nota_invoice_url) filesToDelete.push(deleteTarget.nota_invoice_url)
-      if (deleteTarget.bukti_transfer_url) filesToDelete.push(deleteTarget.bukti_transfer_url)
-      if (deleteTarget.bukti_transaksi_url) filesToDelete.push(deleteTarget.bukti_transaksi_url)
+      // Helper untuk menambah path jika valid
+      const addPath = (url: string | undefined | null) => {
+        if (url) {
+          const path = extractStoragePath(url)
+          if (path) filePaths.push(path)
+        }
+      }
+
+      // Tambahkan semua file terkait pengajuan
+      addPath(deleteTarget.nota_invoice_url)
+      addPath(deleteTarget.bukti_transaksi_url)
+      addPath(deleteTarget.bukti_transfer_url)
+      addPath(deleteTarget.bukti_persetujuan_url)
       
       // Hapus file dari riwayat_status jika ada bukti_url
-      if (deleteTarget.riwayat_status) {
+      if (deleteTarget.riwayat_status && Array.isArray(deleteTarget.riwayat_status)) {
         deleteTarget.riwayat_status.forEach((r: { bukti_url?: string }) => {
-          if (r.bukti_url) filesToDelete.push(r.bukti_url)
+          addPath(r.bukti_url)
         })
       }
 
+      console.log('Files to delete:', filePaths)
+
       // Hapus file dari storage
-      if (filesToDelete.length > 0) {
+      if (filePaths.length > 0) {
         const { error: storageError } = await supabase.storage
           .from('pengajuan')
-          .remove(filesToDelete)
+          .remove(filePaths)
         
         if (storageError) {
-          console.error('Error deleting files:', storageError)
+          console.error('Error deleting files from storage:', storageError)
+          // Lanjut hapus data meski file gagal dihapus
+        } else {
+          console.log('Successfully deleted', filePaths.length, 'files from storage')
         }
       }
 
       // Hapus kas_transaksi terkait jika ada
-      await supabase
+      const { error: kasError } = await supabase
         .from('kas_transaksi')
         .delete()
         .eq('pengajuan_id', deleteTarget.id)
+      
+      if (kasError) {
+        console.error('Error deleting kas_transaksi:', kasError)
+      }
 
       // Hapus pengajuan
       const { error } = await supabase
@@ -214,6 +242,7 @@ export default function PengajuanListPage() {
       setShowDeleteModal(false)
       setDeleteTarget(null)
       fetchPengajuan()
+      alert('Pengajuan dan semua file terkait berhasil dihapus')
     } catch (error) {
       console.error('Error deleting pengajuan:', error)
       alert('Gagal menghapus pengajuan')
@@ -221,6 +250,7 @@ export default function PengajuanListPage() {
       setDeleting(false)
     }
   }
+
 
   return (
     <div className="fade-in">
@@ -432,6 +462,13 @@ export default function PengajuanListPage() {
                 </div>
                 <div className="alert alert-warning small mb-0">
                   <strong>⚠️ Perhatian:</strong>
+                  <p className="mb-1 mt-2">File yang akan dihapus:</p>
+                  <ul className="mb-1 ps-3">
+                    {deleteTarget.nota_invoice_url && <li>Nota/Invoice</li>}
+                    {deleteTarget.bukti_transaksi_url && <li>Bukti Transaksi</li>}
+                    {deleteTarget.bukti_transfer_url && <li>Bukti Transfer Bank</li>}
+                    {deleteTarget.bukti_persetujuan_url && <li>Bukti Persetujuan</li>}
+                  </ul>
                   <ul className="mb-0 ps-3 mt-1">
                     <li>Semua file dokumen pendukung akan dihapus</li>
                     <li>Jika sudah ada transaksi kas terkait, akan ikut terhapus</li>
