@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
 import { formatRupiah } from '@/utils/helpers'
 import { 
-  FiDollarSign, 
   FiTrendingUp, 
   FiTrendingDown, 
   FiFileText,
@@ -15,6 +14,11 @@ import {
   FiCheckCircle,
   FiAlertCircle
 } from 'react-icons/fi'
+
+// Custom Rupiah Icon
+const RupiahIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
+  <span className={className} style={{ fontSize: size * 0.7, fontWeight: 'bold' }}>Rp</span>
+)
 
 interface KasSummary {
   jenis_kas: 'rw' | 'rt'
@@ -207,10 +211,15 @@ export default function KeuanganDashboardPage() {
           </p>
         </div>
         {isPengurus && (
-          <Link href="/keuangan/pengajuan/tambah" className="btn btn-primary">
-            <FiPlus className="me-2" />
-            Pengajuan Baru
-          </Link>
+          <div style={{ position: 'relative', zIndex: 10 }}>
+            <Link 
+              href="/keuangan/pengajuan/tambah" 
+              className="btn btn-primary d-inline-flex align-items-center"
+            >
+              <FiPlus className="me-2" />
+              Pengajuan Baru
+            </Link>
+          </div>
         )}
       </div>
 
@@ -222,7 +231,7 @@ export default function KeuanganDashboardPage() {
               <div className="d-flex align-items-center">
                 <div className="flex-shrink-0 me-3">
                   <div className="bg-primary bg-opacity-10 rounded-circle p-3">
-                    <FiDollarSign className="text-primary" size={24} />
+                    <RupiahIcon className="text-primary" size={24} />
                   </div>
                 </div>
                 <div>
@@ -295,7 +304,7 @@ export default function KeuanganDashboardPage() {
           <div className="card h-100">
             <div className="card-header bg-primary text-white">
               <h6 className="mb-0 fw-bold">
-                <FiDollarSign className="me-2" />
+                <RupiahIcon className="me-2" />
                 Saldo Kas per Wilayah
               </h6>
             </div>
@@ -386,7 +395,7 @@ export default function KeuanganDashboardPage() {
           <div className="card">
             <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
               <h6 className="mb-0 fw-bold">
-                <FiDollarSign className="me-2" />
+                <RupiahIcon className="me-2" />
                 Transaksi Terbaru
               </h6>
               <Link href="/keuangan/transaksi" className="btn btn-sm btn-light">
