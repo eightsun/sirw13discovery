@@ -1,20 +1,18 @@
 'use client'
-
-export const dynamic = 'force-dynamic'
-
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { createClient } from '@/lib/supabase/client'
 import { RegisterFormInput } from '@/types'
-import { FiMail, FiLock, FiUser, FiUserPlus } from 'react-icons/fi'
+import { FiMail, FiLock, FiUser, FiUserPlus, FiCreditCard } from 'react-icons/fi'
 
 export default function RegisterPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
   
   const supabase = createClient()
   
@@ -32,13 +30,41 @@ export default function RegisterPage() {
       setIsLoading(true)
       setError(null)
 
-      // 1. Register user di Supabase Auth
+      // 1. Cek apakah NIK sudah terdaftar di tabel warga
+      const { data: existingWarga, error: wargaError } = await supabase
+        .from('warga')
+        .select('id, nama_lengkap, email, rumah_id')
+        .eq('nik', data.nik)
+        .eq('is_active', true)
+        .maybeSingle()
+
+      if (wargaError) {
+        console.error('Error checking NIK:', wargaError)
+      }
+
+      // 2. Jika NIK sudah ada, cek apakah sudah punya akun
+      if (existingWarga) {
+        // Cek apakah warga ini sudah punya user account
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('warga_id', existingWarga.id)
+          .maybeSingle()
+
+        if (existingUser) {
+          setError(`NIK ${data.nik} sudah terdaftar atas nama ${existingWarga.nama_lengkap} dan sudah memiliki akun. Silakan login.`)
+          return
+        }
+      }
+
+      // 3. Register user di Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
           data: {
             nama_lengkap: data.nama_lengkap,
+            nik: data.nik,
           },
         },
       })
@@ -53,16 +79,42 @@ export default function RegisterPage() {
       }
 
       if (authData.user) {
-        // 2. Buat entry di tabel users dengan role default 'warga'
+        // 4. Buat entry di tabel users
+        const userInsertData: {
+          id: string
+          email: string
+          nama_lengkap: string
+          role: string
+          is_active: boolean
+          warga_id?: string
+        } = {
+          id: authData.user.id,
+          email: data.email,
+          nama_lengkap: data.nama_lengkap,
+          role: 'warga',
+          is_active: true,
+        }
+
+        // 5. Jika NIK sudah ada di warga, link langsung
+        if (existingWarga) {
+          userInsertData.warga_id = existingWarga.id
+
+          // Update email di tabel warga jika belum ada
+          if (!existingWarga.email) {
+            await supabase
+              .from('warga')
+              .update({ email: data.email })
+              .eq('id', existingWarga.id)
+          }
+
+          setSuccessMessage(`Data Anda (${existingWarga.nama_lengkap}) berhasil ditemukan dan dihubungkan dengan akun baru.`)
+        } else {
+          setSuccessMessage('Pendaftaran berhasil! Silakan lengkapi data warga setelah login.')
+        }
+
         const { error: profileError } = await supabase
           .from('users')
-          .insert({
-            id: authData.user.id,
-            email: data.email,
-            nama_lengkap: data.nama_lengkap,
-            role: 'warga',
-            is_active: true,
-          })
+          .insert(userInsertData)
 
         if (profileError) {
           console.error('Error creating user profile:', profileError)
@@ -72,10 +124,10 @@ export default function RegisterPage() {
 
       setSuccess(true)
       
-      // Redirect ke login setelah 2 detik
+      // Redirect ke login setelah 3 detik
       setTimeout(() => {
         router.push('/login')
-      }, 2000)
+      }, 3000)
     } catch (err) {
       setError('Terjadi kesalahan. Silakan coba lagi.')
       console.error(err)
@@ -98,6 +150,8 @@ export default function RegisterPage() {
             </div>
             <h5 className="text-dark mb-3">Pendaftaran Berhasil!</h5>
             <p className="text-muted">
+              {successMessage}
+              <br /><br />
               Silakan cek email Anda untuk verifikasi akun.
               Anda akan dialihkan ke halaman login...
             </p>
@@ -134,7 +188,7 @@ export default function RegisterPage() {
                 type="text"
                 className={`form-control ${errors.nama_lengkap ? 'is-invalid' : ''}`}
                 id="nama_lengkap"
-                placeholder="Masukkan nama lengkap"
+                placeholder="Masukkan nama lengkap sesuai KTP"
                 {...register('nama_lengkap', {
                   required: 'Nama lengkap wajib diisi',
                   minLength: {
@@ -147,6 +201,33 @@ export default function RegisterPage() {
                 <div className="invalid-feedback">{errors.nama_lengkap.message}</div>
               )}
             </div>
+
+            <div className="mb-3">
+              <label htmlFor="nik" className="form-label">
+                <FiCreditCard className="me-2" />
+                NIK (Nomor KTP)
+              </label>
+              <input
+                type="text"
+                className={`form-control ${errors.nik ? 'is-invalid' : ''}`}
+                id="nik"
+                placeholder="Masukkan 16 digit NIK"
+                maxLength={16}
+                {...register('nik', {
+                  required: 'NIK wajib diisi',
+                  pattern: {
+                    value: /^[0-9]{16}$/,
+                    message: 'NIK harus 16 digit angka',
+                  },
+                })}
+              />
+              {errors.nik && (
+                <div className="invalid-feedback">{errors.nik.message}</div>
+              )}
+              <small className="text-muted">
+                Jika NIK Anda sudah terdaftar oleh pengurus, akun akan otomatis terhubung dengan data warga.
+              </small>
+            </div>
             
             <div className="mb-3">
               <label htmlFor="email" className="form-label">
@@ -157,7 +238,7 @@ export default function RegisterPage() {
                 type="email"
                 className={`form-control ${errors.email ? 'is-invalid' : ''}`}
                 id="email"
-                placeholder="Masukkan email"
+                placeholder="Masukkan email aktif"
                 {...register('email', {
                   required: 'Email wajib diisi',
                   pattern: {
@@ -180,7 +261,7 @@ export default function RegisterPage() {
                 type="password"
                 className={`form-control ${errors.password ? 'is-invalid' : ''}`}
                 id="password"
-                placeholder="Masukkan password"
+                placeholder="Minimal 6 karakter"
                 {...register('password', {
                   required: 'Password wajib diisi',
                   minLength: {

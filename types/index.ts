@@ -357,6 +357,7 @@ export interface RegisterFormInput {
   password: string;
   confirmPassword: string;
   nama_lengkap: string;
+  nik: string;
 }
 
 // ==========================================
