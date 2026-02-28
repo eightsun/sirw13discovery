@@ -169,7 +169,6 @@ export default function DetailPengajuanPage() {
           return
       }
 
-      // Update riwayat status
       const newRiwayat: RiwayatStatus[] = [
         ...pengajuan.riwayat_status,
         {
@@ -198,7 +197,6 @@ export default function DetailPengajuanPage() {
         updateData.tanggal_diproses = new Date().toISOString()
         updateData.catatan_proses = catatan
 
-        // Jika selesai, buat transaksi pengeluaran di kas
         if (approvalAction === 'selesai') {
           const kasData = {
             jenis_kas: 'rw',
@@ -214,13 +212,7 @@ export default function DetailPengajuanPage() {
             created_by: userData?.id
           }
 
-          const { error: kasError } = await supabase
-            .from('kas_transaksi')
-            .insert(kasData)
-
-          if (kasError) {
-            console.error('Error creating kas transaksi:', kasError)
-          }
+          await supabase.from('kas_transaksi').insert(kasData)
         }
       }
 
@@ -244,20 +236,16 @@ export default function DetailPengajuanPage() {
   const getSignedUrl = async (path: string) => {
     const { data } = await supabase.storage
       .from('pengajuan')
-      .createSignedUrl(path, 3600) // 1 hour
+      .createSignedUrl(path, 3600)
     return data?.signedUrl
   }
 
   const openFile = async (path: string | null | undefined) => {
     if (!path) return
-    
-    // Jika sudah URL lengkap, buka langsung
     if (path.startsWith('http')) {
       window.open(path, '_blank')
       return
     }
-    
-    // Jika path storage, generate signed URL
     const url = await getSignedUrl(path)
     if (url) window.open(url, '_blank')
   }
@@ -283,34 +271,67 @@ export default function DetailPengajuanPage() {
     )
   }
 
+  const showKetuaActions = isKetuaRW && pengajuan.status === 'diajukan'
+  const showBendaharaProses = isBendaharaRW && pengajuan.status === 'disetujui'
+  const showBendaharaSelesai = isBendaharaRW && pengajuan.status === 'diproses'
+  const showPemohonEdit = isPemohon && ['diajukan', 'direvisi'].includes(pengajuan.status)
+  const hasActions = showKetuaActions || showBendaharaProses || showBendaharaSelesai || showPemohonEdit
+
   return (
     <div className="fade-in p-4">
-      {/* Page Header */}
-      <div className="d-flex justify-content-between align-items-start mb-4">
+      {/* Header with Actions */}
+      <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
         <div>
           <Link href="/keuangan/pengajuan" className="btn btn-sm btn-outline-secondary mb-2">
             <FiArrowLeft className="me-1" /> Kembali
           </Link>
           <h1 className="page-title mb-1">Detail Pengajuan</h1>
-          <p className="text-muted mb-0">
-            {pengajuan.nomor_pengajuan}
-          </p>
+          <div className="d-flex align-items-center gap-2 flex-wrap">
+            <span className="text-muted">{pengajuan.nomor_pengajuan}</span>
+            {getStatusBadge(pengajuan.status)}
+          </div>
         </div>
-        <div>
-          {getStatusBadge(pengajuan.status)}
-        </div>
+        
+        {hasActions && (
+          <div className="d-flex flex-wrap gap-2">
+            {showKetuaActions && (
+              <>
+                <button className="btn btn-success d-flex align-items-center" onClick={() => handleApprovalClick('setujui')}>
+                  <FiCheck className="me-1" /> Setujui
+                </button>
+                <button className="btn btn-warning d-flex align-items-center" onClick={() => handleApprovalClick('revisi')}>
+                  <FiRefreshCw className="me-1" /> Revisi
+                </button>
+                <button className="btn btn-danger d-flex align-items-center" onClick={() => handleApprovalClick('tolak')}>
+                  <FiX className="me-1" /> Tolak
+                </button>
+              </>
+            )}
+            {showBendaharaProses && (
+              <button className="btn btn-info d-flex align-items-center" onClick={() => handleApprovalClick('proses')}>
+                <RupiahIcon className="me-1" /> Proses Pembayaran
+              </button>
+            )}
+            {showBendaharaSelesai && (
+              <button className="btn btn-success d-flex align-items-center" onClick={() => handleApprovalClick('selesai')}>
+                <FiCheckCircle className="me-1" /> Selesaikan
+              </button>
+            )}
+            {showPemohonEdit && (
+              <Link href={`/keuangan/pengajuan/${pengajuan.id}/edit`} className="btn btn-outline-primary d-flex align-items-center">
+                <FiEdit2 className="me-1" /> Edit Pengajuan
+              </Link>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="row g-4">
-        {/* Main Content */}
         <div className="col-lg-8">
           {/* Info Pemohon */}
           <div className="card mb-4">
             <div className="card-header bg-primary text-white">
-              <h6 className="mb-0 fw-bold">
-                <FiUser className="me-2" />
-                Informasi Pemohon
-              </h6>
+              <h6 className="mb-0 fw-bold"><FiUser className="me-2" />Informasi Pemohon</h6>
             </div>
             <div className="card-body">
               <div className="row">
@@ -324,7 +345,13 @@ export default function DetailPengajuanPage() {
                 </div>
                 <div className="col-md-6 mb-3">
                   <label className="text-muted small">Nomor WhatsApp</label>
-                  <p className="mb-0">{pengajuan.no_wa || '-'}</p>
+                  <p className="mb-0">
+                    {pengajuan.no_wa ? (
+                      <a href={`https://wa.me/${pengajuan.no_wa.replace(/^0/, '62')}`} target="_blank" rel="noopener noreferrer" className="text-success">
+                        {pengajuan.no_wa} <FiExternalLink size={12} />
+                      </a>
+                    ) : '-'}
+                  </p>
                 </div>
                 <div className="col-md-6 mb-3">
                   <label className="text-muted small">Email</label>
@@ -337,10 +364,7 @@ export default function DetailPengajuanPage() {
           {/* Detail Pengajuan */}
           <div className="card mb-4">
             <div className="card-header bg-primary text-white">
-              <h6 className="mb-0 fw-bold">
-                <FiFileText className="me-2" />
-                Detail Pengajuan
-              </h6>
+              <h6 className="mb-0 fw-bold"><FiFileText className="me-2" />Detail Pengajuan</h6>
             </div>
             <div className="card-body">
               <div className="row">
@@ -362,21 +386,11 @@ export default function DetailPengajuanPage() {
                 </div>
                 <div className="col-md-4 mb-3">
                   <label className="text-muted small">Tanggal Target</label>
-                  <p className="mb-0">
-                    {pengajuan.tanggal_target 
-                      ? new Date(pengajuan.tanggal_target).toLocaleDateString('id-ID')
-                      : '-'
-                    }
-                  </p>
+                  <p className="mb-0">{pengajuan.tanggal_target ? new Date(pengajuan.tanggal_target).toLocaleDateString('id-ID') : '-'}</p>
                 </div>
                 <div className="col-md-6 mb-3">
                   <label className="text-muted small">Kategori</label>
-                  <p className="mb-0">
-                    {pengajuan.kategori 
-                      ? `${pengajuan.kategori.kode}. ${pengajuan.kategori.nama}`
-                      : '-'
-                    }
-                  </p>
+                  <p className="mb-0">{pengajuan.kategori ? `${pengajuan.kategori.kode}. ${pengajuan.kategori.nama}` : '-'}</p>
                 </div>
                 <div className="col-md-6 mb-3">
                   <label className="text-muted small">Nilai Transaksi</label>
@@ -402,39 +416,18 @@ export default function DetailPengajuanPage() {
             </div>
           </div>
 
-          {/* Bukti Upload */}
+          {/* Dokumen Pendukung */}
           <div className="card mb-4">
             <div className="card-header bg-primary text-white">
-              <h6 className="mb-0 fw-bold">
-                <FiUpload className="me-2" />
-                Dokumen Pendukung
-              </h6>
+              <h6 className="mb-0 fw-bold"><FiUpload className="me-2" />Dokumen Pendukung</h6>
             </div>
             <div className="card-body">
               <div className="row g-3">
-                <div className="col-md-4">
+                <div className="col-md-6">
                   <div className="border rounded p-3 h-100">
-                    <label className="text-muted small d-block mb-2">Bukti Persetujuan</label>
-                    {pengajuan.bukti_persetujuan_url ? (
-                      <button 
-                        className="btn btn-sm btn-outline-primary"
-                        onClick={() => openFile(pengajuan.bukti_persetujuan_url)}
-                      >
-                        <FiDownload className="me-1" /> Lihat File
-                      </button>
-                    ) : (
-                      <span className="text-muted">Belum diupload</span>
-                    )}
-                  </div>
-                </div>
-                <div className="col-md-4">
-                  <div className="border rounded p-3 h-100">
-                    <label className="text-muted small d-block mb-2">Nota/Invoice</label>
+                    <label className="text-muted small d-block mb-2">Nota/Invoice/Quotation</label>
                     {pengajuan.nota_invoice_url ? (
-                      <button 
-                        className="btn btn-sm btn-outline-primary"
-                        onClick={() => openFile(pengajuan.nota_invoice_url)}
-                      >
+                      <button className="btn btn-sm btn-outline-primary" onClick={() => openFile(pengajuan.nota_invoice_url)}>
                         <FiDownload className="me-1" /> Lihat File
                       </button>
                     ) : (
@@ -442,14 +435,11 @@ export default function DetailPengajuanPage() {
                     )}
                   </div>
                 </div>
-                <div className="col-md-4">
+                <div className="col-md-6">
                   <div className="border rounded p-3 h-100">
-                    <label className="text-muted small d-block mb-2">Bukti Transfer</label>
+                    <label className="text-muted small d-block mb-2">Bukti Transfer Bank</label>
                     {pengajuan.bukti_transaksi_url ? (
-                      <button 
-                        className="btn btn-sm btn-outline-primary"
-                        onClick={() => openFile(pengajuan.bukti_transaksi_url)}
-                      >
+                      <button className="btn btn-sm btn-outline-primary" onClick={() => openFile(pengajuan.bukti_transaksi_url)}>
                         <FiDownload className="me-1" /> Lihat File
                       </button>
                     ) : (
@@ -461,14 +451,11 @@ export default function DetailPengajuanPage() {
             </div>
           </div>
 
-          {/* Reimbursement Info */}
+          {/* Reimbursement */}
           {(pengajuan.rekening_penerima || pengajuan.nama_pemilik_rekening || pengajuan.bank) && (
             <div className="card mb-4">
               <div className="card-header bg-primary text-white">
-                <h6 className="mb-0 fw-bold">
-                  <RupiahIcon className="me-2" />
-                  Informasi Reimbursement
-                </h6>
+                <h6 className="mb-0 fw-bold"><RupiahIcon className="me-2" />Informasi Reimbursement</h6>
               </div>
               <div className="card-body">
                 <div className="row">
@@ -490,128 +477,47 @@ export default function DetailPengajuanPage() {
           )}
         </div>
 
-        {/* Sidebar - Timeline & Actions */}
+        {/* Timeline */}
         <div className="col-lg-4">
-          {/* Action Buttons */}
-          <div className="card mb-4">
-            <div className="card-header bg-secondary text-white">
-              <h6 className="mb-0 fw-bold">Aksi</h6>
-            </div>
-            <div className="card-body">
-              {/* Ketua RW Actions */}
-              {isKetuaRW && pengajuan.status === 'diajukan' && (
-                <div className="d-grid gap-2">
-                  <button 
-                    className="btn btn-success"
-                    onClick={() => handleApprovalClick('setujui')}
-                  >
-                    <FiCheck className="me-2" /> Setujui
-                  </button>
-                  <button 
-                    className="btn btn-warning"
-                    onClick={() => handleApprovalClick('revisi')}
-                  >
-                    <FiRefreshCw className="me-2" /> Minta Revisi
-                  </button>
-                  <button 
-                    className="btn btn-danger"
-                    onClick={() => handleApprovalClick('tolak')}
-                  >
-                    <FiX className="me-2" /> Tolak
-                  </button>
-                </div>
-              )}
-
-              {/* Bendahara Actions */}
-              {isBendaharaRW && pengajuan.status === 'disetujui' && (
-                <div className="d-grid gap-2">
-                  <button 
-                    className="btn btn-info"
-                    onClick={() => handleApprovalClick('proses')}
-                  >
-                    <RupiahIcon className="me-2" /> Proses Pembayaran
-                  </button>
-                </div>
-              )}
-
-              {isBendaharaRW && pengajuan.status === 'diproses' && (
-                <div className="d-grid gap-2">
-                  <button 
-                    className="btn btn-success"
-                    onClick={() => handleApprovalClick('selesai')}
-                  >
-                    <FiCheckCircle className="me-2" /> Selesaikan
-                  </button>
-                </div>
-              )}
-
-              {/* Pemohon Actions */}
-              {isPemohon && ['diajukan', 'direvisi'].includes(pengajuan.status) && (
-                <div className="d-grid gap-2">
-                  <Link 
-                    href={`/keuangan/pengajuan/${pengajuan.id}/edit`}
-                    className="btn btn-warning"
-                  >
-                    <FiEdit2 className="me-2" /> Edit Pengajuan
-                  </Link>
-                </div>
-              )}
-
-              {/* Status Complete */}
-              {['selesai', 'ditolak', 'dibatalkan'].includes(pengajuan.status) && (
-                <p className="text-muted text-center mb-0">
-                  Pengajuan sudah {pengajuan.status}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Timeline */}
           <div className="card">
             <div className="card-header bg-primary text-white">
-              <h6 className="mb-0 fw-bold">
-                <FiClock className="me-2" />
-                Riwayat Status
-              </h6>
+              <h6 className="mb-0 fw-bold"><FiClock className="me-2" />Riwayat Status</h6>
             </div>
             <div className="card-body p-0">
-              <div className="timeline p-3">
+              <div className="p-3">
                 {pengajuan.riwayat_status && pengajuan.riwayat_status.length > 0 ? (
-                  [...pengajuan.riwayat_status].reverse().map((riwayat, index) => {
-                    const { icon, color } = getTimelineIcon(riwayat.status)
-                    return (
-                      <div key={index} className="timeline-item pb-3 mb-3 border-bottom">
-                        <div className="d-flex">
-                          <div className="flex-shrink-0 me-3">
-                            <div 
-                              className={`rounded-circle bg-${color} bg-opacity-10 p-2 d-flex align-items-center justify-content-center`}
-                              style={{ width: '40px', height: '40px' }}
-                            >
-                              <span className={`text-${color}`}>{icon}</span>
+                  <div className="timeline">
+                    {[...pengajuan.riwayat_status].reverse().map((riwayat, index) => {
+                      const { icon, color } = getTimelineIcon(riwayat.status)
+                      return (
+                        <div key={index} className={`timeline-item ${index < pengajuan.riwayat_status.length - 1 ? 'pb-3 mb-3 border-bottom' : ''}`}>
+                          <div className="d-flex">
+                            <div className="flex-shrink-0 me-3">
+                              <div className={`rounded-circle bg-${color} bg-opacity-10 p-2 d-flex align-items-center justify-content-center`} style={{ width: '40px', height: '40px' }}>
+                                <span className={`text-${color}`}>{icon}</span>
+                              </div>
+                            </div>
+                            <div className="flex-grow-1">
+                              <h6 className="mb-1 fw-bold small">{getStatusLabel(riwayat.status)}</h6>
+                              <p className="mb-1 small text-muted">
+                                <FiCalendar className="me-1" size={12} />
+                                {formatDateTime(riwayat.tanggal)}
+                              </p>
+                              {riwayat.nama_user && (
+                                <p className="mb-1 small text-muted">
+                                  <FiUser className="me-1" size={12} />
+                                  {riwayat.nama_user}
+                                </p>
+                              )}
+                              {riwayat.catatan && (
+                                <p className="mb-0 small fst-italic text-secondary">&quot;{riwayat.catatan}&quot;</p>
+                              )}
                             </div>
                           </div>
-                          <div className="flex-grow-1">
-                            <h6 className="mb-1 fw-bold">{getStatusLabel(riwayat.status)}</h6>
-                            <p className="mb-1 small text-muted">
-                              <FiCalendar className="me-1" />
-                              {formatDateTime(riwayat.tanggal)}
-                            </p>
-                            {riwayat.nama_user && (
-                              <p className="mb-1 small text-muted">
-                                <FiUser className="me-1" />
-                                {riwayat.nama_user}
-                              </p>
-                            )}
-                            {riwayat.catatan && (
-                              <p className="mb-0 small fst-italic">
-                                &quot;{riwayat.catatan}&quot;
-                              </p>
-                            )}
-                          </div>
                         </div>
-                      </div>
-                    )
-                  })
+                      )
+                    })}
+                  </div>
                 ) : (
                   <p className="text-muted text-center py-3 mb-0">Belum ada riwayat</p>
                 )}
@@ -621,7 +527,7 @@ export default function DetailPengajuanPage() {
         </div>
       </div>
 
-      {/* Approval Modal */}
+      {/* Modal */}
       {showApprovalModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
@@ -634,11 +540,7 @@ export default function DetailPengajuanPage() {
                   {approvalAction === 'proses' && 'Proses Pembayaran'}
                   {approvalAction === 'selesai' && 'Selesaikan Pengajuan'}
                 </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowApprovalModal(false)}
-                />
+                <button type="button" className="btn-close" onClick={() => setShowApprovalModal(false)} />
               </div>
               <div className="modal-body">
                 <p className="mb-3">
@@ -655,42 +557,19 @@ export default function DetailPengajuanPage() {
                     rows={3}
                     value={approvalNote}
                     onChange={(e) => setApprovalNote(e.target.value)}
-                    placeholder={
-                      approvalAction === 'revisi' 
-                        ? 'Jelaskan apa yang perlu direvisi...'
-                        : approvalAction === 'tolak'
-                        ? 'Jelaskan alasan penolakan...'
-                        : 'Catatan (opsional)...'
-                    }
-                    required={approvalAction === 'revisi' || approvalAction === 'tolak'}
+                    placeholder={approvalAction === 'revisi' ? 'Jelaskan apa yang perlu direvisi...' : approvalAction === 'tolak' ? 'Jelaskan alasan penolakan...' : 'Catatan (opsional)...'}
                   />
                 </div>
               </div>
               <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowApprovalModal(false)} disabled={processing}>Batal</button>
                 <button
                   type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowApprovalModal(false)}
-                  disabled={processing}
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-${
-                    approvalAction === 'setujui' || approvalAction === 'selesai' ? 'success' :
-                    approvalAction === 'tolak' ? 'danger' : 
-                    approvalAction === 'proses' ? 'info' : 'warning'
-                  }`}
+                  className={`btn btn-${approvalAction === 'setujui' || approvalAction === 'selesai' ? 'success' : approvalAction === 'tolak' ? 'danger' : approvalAction === 'proses' ? 'info' : 'warning'}`}
                   onClick={handleApprovalSubmit}
                   disabled={processing || ((approvalAction === 'revisi' || approvalAction === 'tolak') && !approvalNote)}
                 >
-                  {processing ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" />
-                      Memproses...
-                    </>
-                  ) : (
+                  {processing ? <><span className="spinner-border spinner-border-sm me-2" />Memproses...</> : (
                     <>
                       {approvalAction === 'setujui' && 'Setujui'}
                       {approvalAction === 'tolak' && 'Tolak'}

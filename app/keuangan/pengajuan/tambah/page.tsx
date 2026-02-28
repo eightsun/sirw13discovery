@@ -51,14 +51,31 @@ export default function TambahPengajuanPage() {
   const watchedWilayah = watch('wilayah')
   const watchedNilai = watch('nilai_transaksi')
 
-  // Set nama pemohon dan jabatan dari userData saat tersedia
+  // Set nama pemohon, jabatan, dan WhatsApp dari userData saat tersedia
   useEffect(() => {
-    if (userData?.nama_lengkap) {
-      setValue('nama_pemohon', userData.nama_lengkap)
+    const fetchUserData = async () => {
+      if (userData?.nama_lengkap) {
+        setValue('nama_pemohon', userData.nama_lengkap)
+      }
+      if (role) {
+        setValue('jabatan_pemohon', getRoleLabel(role))
+      }
+      
+      // Fetch nomor WhatsApp dari data warga
+      if (userData?.id) {
+        const { data: wargaData } = await supabase
+          .from('warga')
+          .select('no_hp')
+          .eq('user_id', userData.id)
+          .single()
+        
+        if (wargaData?.no_hp) {
+          setValue('no_wa', wargaData.no_hp)
+        }
+      }
     }
-    if (role) {
-      setValue('jabatan_pemohon', getRoleLabel(role))
-    }
+    
+    fetchUserData()
   }, [userData, role, setValue])
 
   // Fetch kategori dengan sorting numerik
