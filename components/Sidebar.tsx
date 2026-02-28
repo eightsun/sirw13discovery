@@ -54,7 +54,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           href: '/rumah', 
           label: 'Daftar Rumah', 
           icon: <FiHome />,
-          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'ketua_rt', 'sekretaris_rt', 'bendahara_rt']
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'koordinator_rw', 'ketua_rt', 'sekretaris_rt', 'bendahara_rt']
         },
         { 
           href: '/warga/tambah', 
@@ -81,13 +81,13 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           href: '/ipl/verifikasi', 
           label: 'Verifikasi', 
           icon: <FiFileText />,
-          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'ketua_rt', 'sekretaris_rt', 'bendahara_rt']
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'koordinator_rw', 'ketua_rt', 'sekretaris_rt', 'bendahara_rt']
         },
         { 
           href: '/admin/ipl/tarif', 
           label: 'Pengaturan Tarif', 
           icon: <FiSettings />,
-          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw']
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'koordinator_rw']
         },
       ],
     },
@@ -108,19 +108,19 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           href: '/keuangan', 
           label: 'Dashboard Kas', 
           icon: <FiBarChart2 />,
-          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'ketua_rt', 'sekretaris_rt', 'bendahara_rt']
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'koordinator_rw', 'ketua_rt', 'sekretaris_rt', 'bendahara_rt']
         },
         { 
           href: '/keuangan/pengajuan', 
           label: 'Pengajuan', 
           icon: <FiFileText />,
-          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'ketua_rt', 'sekretaris_rt', 'bendahara_rt']
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'koordinator_rw', 'ketua_rt', 'sekretaris_rt', 'bendahara_rt']
         },
         { 
           href: '/keuangan/transaksi', 
           label: 'Transaksi Kas', 
           icon: <FiCreditCard />,
-          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw']
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'koordinator_rw']
         },
         { 
           href: '/keuangan/budget', 
@@ -132,7 +132,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           href: '/keuangan/laporan', 
           label: 'Laporan Bulanan', 
           icon: <FiFileText />,
-          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw']
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'koordinator_rw']
         },
       ],
     },

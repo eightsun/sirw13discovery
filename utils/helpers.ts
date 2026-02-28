@@ -59,7 +59,7 @@ export function maskName(name: string): string {
 // ==========================================
 
 export function isRWRole(role: UserRole): boolean {
-  return ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw'].includes(role)
+  return ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'koordinator_rw'].includes(role)
 }
 
 export function isRTRole(role: UserRole): boolean {

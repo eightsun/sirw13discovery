@@ -152,7 +152,7 @@ export function useUser(): UseUserReturn {
   const role = userState.userData?.role || null
 
   // Helper flags
-  const rwRoles: UserRole[] = ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw']
+  const rwRoles: UserRole[] = ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'koordinator_rw']
   const rtRoles: UserRole[] = ['ketua_rt', 'sekretaris_rt', 'bendahara_rt']
   const pengurusRoles: UserRole[] = [...rwRoles, ...rtRoles]
 
