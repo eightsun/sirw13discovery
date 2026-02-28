@@ -65,7 +65,7 @@ export default function KeuanganDashboardPage() {
         if (kasData) {
           const summary: Record<string, KasSummary> = {}
           
-          kasData.forEach((t) => {
+          kasData.forEach((t: { jenis_kas: 'rw' | 'rt'; wilayah: 'Timur' | 'Barat'; tipe: string; jumlah: number }) => {
             const key = `${t.jenis_kas}-${t.wilayah}`
             if (!summary[key]) {
               summary[key] = {
@@ -94,7 +94,7 @@ export default function KeuanganDashboardPage() {
 
         if (pengajuanData) {
           const summary: Record<string, number> = {}
-          pengajuanData.forEach((p) => {
+          pengajuanData.forEach((p: { status: string }) => {
             summary[p.status] = (summary[p.status] || 0) + 1
           })
           setPengajuanSummary(
@@ -126,7 +126,7 @@ export default function KeuanganDashboardPage() {
         if (monthData) {
           let pemasukan = 0
           let pengeluaran = 0
-          monthData.forEach((t) => {
+          monthData.forEach((t: { tipe: string; jumlah: number }) => {
             if (t.tipe === 'pemasukan') pemasukan += t.jumlah
             else pengeluaran += t.jumlah
           })
