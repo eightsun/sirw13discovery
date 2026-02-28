@@ -1,641 +1,435 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useForm } from 'react-hook-form'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
 import { formatRupiah } from '@/utils/helpers'
-import { KategoriPengeluaran, PengajuanFormInput, BudgetSummary } from '@/types'
+import { PengajuanPembelian, StatusPengajuan } from '@/types'
 import { 
-  FiSave, 
-  FiArrowLeft, 
-  FiUpload, 
+  FiPlus, 
+  FiEye, 
+  FiEdit2, 
+  FiTrash2, 
+  FiCheck, 
   FiX, 
-  FiAlertTriangle,
-  FiInfo
+  FiRefreshCw,
+  FiFilter
 } from 'react-icons/fi'
 
-export default function TambahPengajuanPage() {
-  const router = useRouter()
-  const { userData } = useUser()
+export default function PengajuanListPage() {
+  const { userData, isPengurus, isRW } = useUser()
   const supabase = createClient()
   
-  const [loading, setLoading] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [kategoriList, setKategoriList] = useState<KategoriPengeluaran[]>([])
-  const [budgetSummary, setBudgetSummary] = useState<BudgetSummary | null>(null)
-  const [budgetWarning, setBudgetWarning] = useState<string | null>(null)
-  
-  // File uploads
-  const [buktiPersetujuan, setBuktiPersetujuan] = useState<File | null>(null)
-  const [notaInvoice, setNotaInvoice] = useState<File | null>(null)
-  const [buktiTransaksi, setBuktiTransaksi] = useState<File | null>(null)
-  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
+  const [loading, setLoading] = useState(true)
+  const [pengajuan, setPengajuan] = useState<PengajuanPembelian[]>([])
+  const [filterStatus, setFilterStatus] = useState<string>('')
+  const [filterWilayah, setFilterWilayah] = useState<string>('')
+  const [showApprovalModal, setShowApprovalModal] = useState(false)
+  const [selectedPengajuan, setSelectedPengajuan] = useState<PengajuanPembelian | null>(null)
+  const [approvalAction, setApprovalAction] = useState<'setujui' | 'tolak' | 'revisi' | null>(null)
+  const [approvalNote, setApprovalNote] = useState('')
+  const [processing, setProcessing] = useState(false)
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors },
-  } = useForm<PengajuanFormInput>({
-    defaultValues: {
-      nama_pemohon: userData?.nama_lengkap || '',
-      tanggal_pengajuan: new Date().toISOString().split('T')[0],
-      wilayah: 'Timur',
-    }
-  })
+  const isKetuaRW = userData?.role === 'ketua_rw' || userData?.role === 'wakil_ketua_rw'
+  const isBendaharaRW = userData?.role === 'bendahara_rw'
 
-  const watchedKategori = watch('kategori_id')
-  const watchedWilayah = watch('wilayah')
-  const watchedNilai = watch('nilai_transaksi')
-
-  // Set nama pemohon dari userData saat tersedia
   useEffect(() => {
-    if (userData?.nama_lengkap) {
-      setValue('nama_pemohon', userData.nama_lengkap)
-    }
-  }, [userData, setValue])
+    fetchPengajuan()
+  }, [filterStatus, filterWilayah])
 
-  // Fetch kategori
-  useEffect(() => {
-    const fetchKategori = async () => {
-      const { data } = await supabase
-        .from('kategori_pengeluaran')
-        .select('*')
-        .eq('is_active', true)
-        .order('kode')
-      
-      if (data) setKategoriList(data)
-    }
-    fetchKategori()
-  }, [])
-
-  // Check budget saat kategori atau wilayah berubah
-  useEffect(() => {
-    const checkBudget = async () => {
-      if (!watchedKategori || !watchedWilayah) {
-        setBudgetSummary(null)
-        setBudgetWarning(null)
-        return
-      }
-
-      const tahun = new Date().getFullYear()
-      
-      // Get budget
-      const { data: budgetData } = await supabase
-        .from('budget_tahunan')
-        .select('jumlah_budget')
-        .eq('tahun', tahun)
-        .eq('wilayah', watchedWilayah)
-        .eq('kategori_id', watchedKategori)
-        .single()
-
-      // Get total pengeluaran kategori ini
-      const { data: transaksiData } = await supabase
-        .from('kas_transaksi')
-        .select('jumlah')
-        .eq('wilayah', watchedWilayah)
-        .eq('kategori_id', watchedKategori)
-        .eq('tipe', 'pengeluaran')
-        .gte('tanggal', `${tahun}-01-01`)
-
-      const budget = budgetData?.jumlah_budget || 0
-      const terpakai = transaksiData?.reduce((sum: number, t: { jumlah: number }) => sum + t.jumlah, 0) || 0
-      const sisa = budget - terpakai
-      const persentase = budget > 0 ? (terpakai / budget) * 100 : 0
-
-      const kategori = kategoriList.find(k => k.id === Number(watchedKategori))
-
-      setBudgetSummary({
-        kategori_id: Number(watchedKategori),
-        kategori_nama: kategori?.nama || '',
-        budget,
-        terpakai,
-        sisa,
-        persentase
-      })
-
-      // Check warning
-      if (watchedNilai && sisa < watchedNilai) {
-        setBudgetWarning(`Nilai pengajuan (${formatRupiah(watchedNilai)}) melebihi sisa budget (${formatRupiah(sisa)})`)
-      } else {
-        setBudgetWarning(null)
-      }
-    }
-
-    checkBudget()
-  }, [watchedKategori, watchedWilayah, watchedNilai, kategoriList])
-
-  // Compress image before upload
-  const compressImage = async (file: File): Promise<Blob> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      const img = new Image()
-      
-      img.onload = () => {
-        // Max dimension
-        const maxDim = 1200
-        let width = img.width
-        let height = img.height
-        
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = (height / width) * maxDim
-            width = maxDim
-          } else {
-            width = (width / height) * maxDim
-            height = maxDim
-          }
-        }
-        
-        canvas.width = width
-        canvas.height = height
-        ctx?.drawImage(img, 0, 0, width, height)
-        
-        canvas.toBlob(
-          (blob) => resolve(blob!),
-          'image/jpeg',
-          0.7 // Quality
-        )
-      }
-      
-      img.src = URL.createObjectURL(file)
-    })
-  }
-
-  // Upload file to Supabase Storage (Private Bucket)
-  const uploadFile = async (file: File, folder: string): Promise<string | null> => {
+  const fetchPengajuan = async () => {
     try {
-      let uploadData: Blob | File = file
+      setLoading(true)
       
-      // Compress if image
-      if (file.type.startsWith('image/')) {
-        uploadData = await compressImage(file)
+      let query = supabase
+        .from('pengajuan_pembelian')
+        .select(`
+          *,
+          kategori:kategori_id (id, kode, nama),
+          pemohon:pemohon_id (nama_lengkap, email)
+        `)
+        .order('created_at', { ascending: false })
+
+      if (filterStatus) {
+        query = query.eq('status', filterStatus)
       }
-      
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-      
-      const { data, error } = await supabase.storage
-        .from('pengajuan')
-        .upload(fileName, uploadData, {
-          cacheControl: '3600',
-          upsert: false
-        })
-      
-      if (error) {
-        console.error('Upload error:', error)
-        return null
+      if (filterWilayah) {
+        query = query.eq('wilayah', filterWilayah)
       }
-      
-      // Return path only (not public URL)
-      // URL will be generated when viewing using createSignedUrl
-      return fileName
+
+      const { data, error } = await query
+
+      if (error) throw error
+      setPengajuan(data || [])
     } catch (error) {
-      console.error('Upload error:', error)
-      return null
+      console.error('Error fetching pengajuan:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const onSubmit = async (data: PengajuanFormInput) => {
+  const getStatusBadge = (status: StatusPengajuan) => {
+    const badges: Record<StatusPengajuan, { color: string; label: string }> = {
+      'diajukan': { color: 'warning', label: 'Menunggu Approval' },
+      'direvisi': { color: 'info', label: 'Perlu Revisi' },
+      'disetujui': { color: 'primary', label: 'Disetujui' },
+      'ditolak': { color: 'danger', label: 'Ditolak' },
+      'diproses': { color: 'info', label: 'Sedang Diproses' },
+      'selesai': { color: 'success', label: 'Selesai' },
+      'dibatalkan': { color: 'secondary', label: 'Dibatalkan' }
+    }
+    const badge = badges[status] || { color: 'secondary', label: status }
+    return <span className={`badge bg-${badge.color}`}>{badge.label}</span>
+  }
+
+  const handleApprovalClick = (item: PengajuanPembelian, action: 'setujui' | 'tolak' | 'revisi') => {
+    setSelectedPengajuan(item)
+    setApprovalAction(action)
+    setApprovalNote('')
+    setShowApprovalModal(true)
+  }
+
+  const handleApprovalSubmit = async () => {
+    if (!selectedPengajuan || !approvalAction) return
+
     try {
-      setSubmitting(true)
+      setProcessing(true)
 
-      // Upload files
-      let buktiPersetujuanUrl: string | null = null
-      let notaInvoiceUrl: string | null = null
-      let buktiTransaksiUrl: string | null = null
+      let newStatus: StatusPengajuan
+      let catatan: string
 
-      if (buktiPersetujuan) {
-        setUploadProgress(prev => ({ ...prev, persetujuan: 0 }))
-        buktiPersetujuanUrl = await uploadFile(buktiPersetujuan, 'persetujuan')
-        setUploadProgress(prev => ({ ...prev, persetujuan: 100 }))
+      switch (approvalAction) {
+        case 'setujui':
+          newStatus = 'disetujui'
+          catatan = approvalNote || 'Disetujui oleh Ketua RW'
+          break
+        case 'tolak':
+          newStatus = 'ditolak'
+          catatan = approvalNote || 'Ditolak oleh Ketua RW'
+          break
+        case 'revisi':
+          newStatus = 'direvisi'
+          catatan = approvalNote || 'Perlu revisi'
+          break
+        default:
+          return
       }
 
-      if (notaInvoice) {
-        setUploadProgress(prev => ({ ...prev, nota: 0 }))
-        notaInvoiceUrl = await uploadFile(notaInvoice, 'nota')
-        setUploadProgress(prev => ({ ...prev, nota: 100 }))
-      }
-
-      if (buktiTransaksi) {
-        setUploadProgress(prev => ({ ...prev, transaksi: 0 }))
-        buktiTransaksiUrl = await uploadFile(buktiTransaksi, 'transaksi')
-        setUploadProgress(prev => ({ ...prev, transaksi: 100 }))
-      }
-
-      // Prepare data
-      const pengajuanData = {
-        pemohon_id: userData?.id,
-        nama_pemohon: data.nama_pemohon,
-        jabatan_pemohon: data.jabatan_pemohon,
-        no_wa: data.no_wa || null,
-        deskripsi_pembelian: data.deskripsi_pembelian,
-        wilayah: data.wilayah,
-        tanggal_pengajuan: data.tanggal_pengajuan,
-        tanggal_target: data.tanggal_target || null,
-        kategori_id: data.kategori_id || null,
-        nilai_transaksi: Number(data.nilai_transaksi),
-        link_referensi: data.link_referensi || null,
-        bukti_persetujuan_url: buktiPersetujuanUrl,
-        nota_invoice_url: notaInvoiceUrl,
-        bukti_transaksi_url: buktiTransaksiUrl,
-        rekening_penerima: data.rekening_penerima || null,
-        nama_pemilik_rekening: data.nama_pemilik_rekening || null,
-        bank: data.bank || null,
-        catatan_tambahan: data.catatan_tambahan || null,
-        status: 'diajukan',
-        riwayat_status: [{
-          status: 'diajukan',
+      // Update riwayat status
+      const newRiwayat = [
+        ...selectedPengajuan.riwayat_status,
+        {
+          status: newStatus,
           tanggal: new Date().toISOString(),
-          catatan: 'Pengajuan dibuat',
+          catatan,
           oleh: userData?.id || '',
           nama_user: userData?.nama_lengkap || ''
-        }]
+        }
+      ]
+
+      const updateData: Record<string, unknown> = {
+        status: newStatus,
+        riwayat_status: newRiwayat,
+        updated_at: new Date().toISOString()
+      }
+
+      if (approvalAction === 'setujui') {
+        updateData.disetujui_oleh = userData?.id
+        updateData.tanggal_disetujui = new Date().toISOString()
+        updateData.catatan_approval = catatan
       }
 
       const { error } = await supabase
         .from('pengajuan_pembelian')
-        .insert(pengajuanData)
+        .update(updateData)
+        .eq('id', selectedPengajuan.id)
 
       if (error) throw error
 
-      router.push('/keuangan/pengajuan')
+      setShowApprovalModal(false)
+      fetchPengajuan()
     } catch (error) {
-      console.error('Error creating pengajuan:', error)
-      alert('Gagal menyimpan pengajuan. Silakan coba lagi.')
+      console.error('Error updating pengajuan:', error)
+      alert('Gagal memproses pengajuan')
     } finally {
-      setSubmitting(false)
+      setProcessing(false)
     }
   }
 
-  const FileUploadField = ({
-    label,
-    file,
-    setFile,
-    accept = 'image/*,.pdf',
-    progress
-  }: {
-    label: string
-    file: File | null
-    setFile: (f: File | null) => void
-    accept?: string
-    progress?: number
-  }) => (
-    <div className="mb-3">
-      <label className="form-label">{label}</label>
-      <div className="input-group">
-        <input
-          type="file"
-          className="form-control"
-          accept={accept}
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-        />
-        {file && (
-          <button
-            type="button"
-            className="btn btn-outline-danger"
-            onClick={() => setFile(null)}
-          >
-            <FiX />
-          </button>
-        )}
-      </div>
-      {file && (
-        <small className="text-muted">
-          {file.name} ({(file.size / 1024).toFixed(1)} KB)
-        </small>
-      )}
-      {progress !== undefined && progress > 0 && progress < 100 && (
-        <div className="progress mt-1" style={{ height: '5px' }}>
-          <div className="progress-bar" style={{ width: `${progress}%` }} />
-        </div>
-      )}
-    </div>
-  )
+  const handleDelete = async (id: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus pengajuan ini?')) return
+
+    try {
+      const { error } = await supabase
+        .from('pengajuan_pembelian')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      fetchPengajuan()
+    } catch (error) {
+      console.error('Error deleting pengajuan:', error)
+      alert('Gagal menghapus pengajuan')
+    }
+  }
 
   return (
     <div className="fade-in">
       {/* Page Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h1 className="page-title mb-1">Buat Pengajuan Pembelian</h1>
+          <h1 className="page-title mb-1">Pengajuan Pembelian</h1>
           <p className="text-muted mb-0">
-            Isi formulir pengajuan pembelian atau pengeluaran
+            Kelola pengajuan pembelian dan pengeluaran
           </p>
         </div>
-        <Link href="/keuangan/pengajuan" className="btn btn-outline-secondary">
-          <FiArrowLeft className="me-2" />
-          Kembali
+        <Link href="/keuangan/pengajuan/tambah" className="btn btn-primary">
+          <FiPlus className="me-2" />
+          Pengajuan Baru
         </Link>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="row">
-          {/* Main Form */}
-          <div className="col-lg-8">
-            {/* Data Pemohon */}
-            <div className="card mb-4">
-              <div className="card-header bg-primary text-white">
-                <h6 className="mb-0 fw-bold">Data Pemohon</h6>
-              </div>
-              <div className="card-body">
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">Nama Pemohon <span className="text-danger">*</span></label>
-                    <input
-                      type="text"
-                      className={`form-control ${errors.nama_pemohon ? 'is-invalid' : ''}`}
-                      {...register('nama_pemohon', { required: 'Nama pemohon wajib diisi' })}
-                    />
-                    {errors.nama_pemohon && (
-                      <div className="invalid-feedback">{errors.nama_pemohon.message}</div>
-                    )}
-                  </div>
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">Jabatan/Posisi <span className="text-danger">*</span></label>
-                    <input
-                      type="text"
-                      className={`form-control ${errors.jabatan_pemohon ? 'is-invalid' : ''}`}
-                      placeholder="Contoh: Koordinator Keamanan"
-                      {...register('jabatan_pemohon', { required: 'Jabatan wajib diisi' })}
-                    />
-                    {errors.jabatan_pemohon && (
-                      <div className="invalid-feedback">{errors.jabatan_pemohon.message}</div>
-                    )}
-                  </div>
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">Nomor WhatsApp</label>
-                    <input
-                      type="tel"
-                      className="form-control"
-                      placeholder="08xxxxxxxxxx"
-                      {...register('no_wa')}
-                    />
-                  </div>
-                </div>
-              </div>
+      {/* Filters */}
+      <div className="card mb-4">
+        <div className="card-body">
+          <div className="row g-3">
+            <div className="col-md-4">
+              <label className="form-label">
+                <FiFilter className="me-1" /> Status
+              </label>
+              <select
+                className="form-select"
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
+                <option value="">Semua Status</option>
+                <option value="diajukan">Menunggu Approval</option>
+                <option value="direvisi">Perlu Revisi</option>
+                <option value="disetujui">Disetujui</option>
+                <option value="ditolak">Ditolak</option>
+                <option value="diproses">Sedang Diproses</option>
+                <option value="selesai">Selesai</option>
+              </select>
             </div>
-
-            {/* Detail Pengajuan */}
-            <div className="card mb-4">
-              <div className="card-header bg-primary text-white">
-                <h6 className="mb-0 fw-bold">Detail Pengajuan</h6>
-              </div>
-              <div className="card-body">
-                <div className="row">
-                  <div className="col-12 mb-3">
-                    <label className="form-label">Deskripsi Pembelian <span className="text-danger">*</span></label>
-                    <textarea
-                      className={`form-control ${errors.deskripsi_pembelian ? 'is-invalid' : ''}`}
-                      rows={3}
-                      placeholder="Jelaskan detail barang/jasa yang akan dibeli..."
-                      {...register('deskripsi_pembelian', { required: 'Deskripsi wajib diisi' })}
-                    />
-                    {errors.deskripsi_pembelian && (
-                      <div className="invalid-feedback">{errors.deskripsi_pembelian.message}</div>
-                    )}
-                  </div>
-
-                  <div className="col-md-4 mb-3">
-                    <label className="form-label">Wilayah <span className="text-danger">*</span></label>
-                    <select
-                      className="form-select"
-                      {...register('wilayah', { required: true })}
-                    >
-                      <option value="Timur">Discovery Timur</option>
-                      <option value="Barat">Discovery Barat</option>
-                    </select>
-                  </div>
-
-                  <div className="col-md-4 mb-3">
-                    <label className="form-label">Tanggal Pengajuan <span className="text-danger">*</span></label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      {...register('tanggal_pengajuan', { required: true })}
-                    />
-                  </div>
-
-                  <div className="col-md-4 mb-3">
-                    <label className="form-label">Tanggal Target</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      {...register('tanggal_target')}
-                    />
-                  </div>
-
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">Kategori Pengeluaran</label>
-                    <select
-                      className="form-select"
-                      {...register('kategori_id', { valueAsNumber: true })}
-                    >
-                      <option value="">-- Pilih Kategori --</option>
-                      {kategoriList.map((k) => (
-                        <option key={k.id} value={k.id}>
-                          {k.kode}. {k.nama}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">Nilai Transaksi <span className="text-danger">*</span></label>
-                    <div className="input-group">
-                      <span className="input-group-text">Rp</span>
-                      <input
-                        type="number"
-                        className={`form-control ${errors.nilai_transaksi ? 'is-invalid' : ''}`}
-                        placeholder="0"
-                        {...register('nilai_transaksi', { 
-                          required: 'Nilai wajib diisi',
-                          min: { value: 1, message: 'Nilai harus lebih dari 0' }
-                        })}
-                      />
-                    </div>
-                    {errors.nilai_transaksi && (
-                      <div className="text-danger small mt-1">{errors.nilai_transaksi.message}</div>
-                    )}
-                  </div>
-
-                  <div className="col-12 mb-3">
-                    <label className="form-label">Link Referensi Harga</label>
-                    <input
-                      type="url"
-                      className="form-control"
-                      placeholder="https://..."
-                      {...register('link_referensi')}
-                    />
-                    <small className="text-muted">Link ke toko online atau quotation</small>
-                  </div>
-                </div>
-              </div>
+            <div className="col-md-4">
+              <label className="form-label">Wilayah</label>
+              <select
+                className="form-select"
+                value={filterWilayah}
+                onChange={(e) => setFilterWilayah(e.target.value)}
+              >
+                <option value="">Semua Wilayah</option>
+                <option value="Timur">Discovery Timur</option>
+                <option value="Barat">Discovery Barat</option>
+              </select>
             </div>
-
-            {/* Upload Bukti */}
-            <div className="card mb-4">
-              <div className="card-header bg-primary text-white">
-                <h6 className="mb-0 fw-bold">Upload Bukti (Opsional)</h6>
-              </div>
-              <div className="card-body">
-                <FileUploadField
-                  label="Bukti Persetujuan Ketua RW"
-                  file={buktiPersetujuan}
-                  setFile={setBuktiPersetujuan}
-                  progress={uploadProgress.persetujuan}
-                />
-                <FileUploadField
-                  label="Nota/Invoice/Quotation"
-                  file={notaInvoice}
-                  setFile={setNotaInvoice}
-                  progress={uploadProgress.nota}
-                />
-                <FileUploadField
-                  label="Bukti Transaksi Bank (untuk Reimbursement)"
-                  file={buktiTransaksi}
-                  setFile={setBuktiTransaksi}
-                  progress={uploadProgress.transaksi}
-                />
-              </div>
-            </div>
-
-            {/* Reimbursement */}
-            <div className="card mb-4">
-              <div className="card-header bg-primary text-white">
-                <h6 className="mb-0 fw-bold">Data Reimbursement (Jika Ada)</h6>
-              </div>
-              <div className="card-body">
-                <div className="row">
-                  <div className="col-md-4 mb-3">
-                    <label className="form-label">Nomor Rekening</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Nomor rekening penerima"
-                      {...register('rekening_penerima')}
-                    />
-                  </div>
-                  <div className="col-md-4 mb-3">
-                    <label className="form-label">Nama Pemilik Rekening</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      {...register('nama_pemilik_rekening')}
-                    />
-                  </div>
-                  <div className="col-md-4 mb-3">
-                    <label className="form-label">Bank</label>
-                    <select className="form-select" {...register('bank')}>
-                      <option value="">-- Pilih Bank --</option>
-                      <option value="BCA">BCA</option>
-                      <option value="BNI">BNI</option>
-                      <option value="BRI">BRI</option>
-                      <option value="Mandiri">Mandiri</option>
-                      <option value="CIMB Niaga">CIMB Niaga</option>
-                      <option value="Permata">Permata</option>
-                      <option value="Jago">Jago</option>
-                      <option value="Jenius">Jenius</option>
-                      <option value="Lainnya">Lainnya</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Catatan */}
-            <div className="card mb-4">
-              <div className="card-header bg-primary text-white">
-                <h6 className="mb-0 fw-bold">Catatan Tambahan</h6>
-              </div>
-              <div className="card-body">
-                <textarea
-                  className="form-control"
-                  rows={3}
-                  placeholder="Catatan tambahan jika ada..."
-                  {...register('catatan_tambahan')}
-                />
-              </div>
+            <div className="col-md-4 d-flex align-items-end">
+              <button 
+                className="btn btn-outline-secondary"
+                onClick={() => {
+                  setFilterStatus('')
+                  setFilterWilayah('')
+                }}
+              >
+                <FiRefreshCw className="me-2" />
+                Reset Filter
+              </button>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Sidebar */}
-          <div className="col-lg-4">
-            {/* Budget Info */}
-            {budgetSummary && budgetSummary.budget > 0 && (
-              <div className="card mb-4">
-                <div className="card-header bg-info text-white">
-                  <h6 className="mb-0 fw-bold">
-                    <FiInfo className="me-2" />
-                    Info Budget
-                  </h6>
-                </div>
-                <div className="card-body">
-                  <p className="mb-2"><strong>{budgetSummary.kategori_nama}</strong></p>
-                  <div className="mb-2">
-                    <small className="text-muted">Budget Tahun Ini</small>
-                    <div className="fw-bold">{formatRupiah(budgetSummary.budget)}</div>
-                  </div>
-                  <div className="mb-2">
-                    <small className="text-muted">Sudah Terpakai</small>
-                    <div className="fw-bold text-danger">{formatRupiah(budgetSummary.terpakai)}</div>
-                  </div>
-                  <div className="mb-3">
-                    <small className="text-muted">Sisa Budget</small>
-                    <div className="fw-bold text-success">{formatRupiah(budgetSummary.sisa)}</div>
-                  </div>
-                  <div className="progress" style={{ height: '10px' }}>
-                    <div 
-                      className={`progress-bar ${budgetSummary.persentase > 80 ? 'bg-danger' : 'bg-success'}`}
-                      style={{ width: `${Math.min(budgetSummary.persentase, 100)}%` }}
-                    />
-                  </div>
-                  <small className="text-muted">{budgetSummary.persentase.toFixed(1)}% terpakai</small>
-                </div>
+      {/* Table */}
+      <div className="card">
+        <div className="card-body p-0">
+          {loading ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
               </div>
-            )}
+            </div>
+          ) : pengajuan.length === 0 ? (
+            <div className="text-center py-5">
+              <p className="text-muted mb-0">Belum ada pengajuan</p>
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-hover mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>No. Pengajuan</th>
+                    <th>Tanggal</th>
+                    <th>Pemohon</th>
+                    <th>Deskripsi</th>
+                    <th>Wilayah</th>
+                    <th>Kategori</th>
+                    <th className="text-end">Nilai</th>
+                    <th>Status</th>
+                    <th className="text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pengajuan.map((item) => (
+                    <tr key={item.id}>
+                      <td className="fw-bold">{item.nomor_pengajuan}</td>
+                      <td>{new Date(item.tanggal_pengajuan).toLocaleDateString('id-ID')}</td>
+                      <td>
+                        <div>{item.nama_pemohon}</div>
+                        <small className="text-muted">{item.jabatan_pemohon}</small>
+                      </td>
+                      <td>
+                        <div className="text-truncate" style={{ maxWidth: '200px' }}>
+                          {item.deskripsi_pembelian}
+                        </div>
+                      </td>
+                      <td>{item.wilayah}</td>
+                      <td>{item.kategori?.nama || '-'}</td>
+                      <td className="text-end fw-bold">{formatRupiah(item.nilai_transaksi)}</td>
+                      <td>{getStatusBadge(item.status)}</td>
+                      <td>
+                        <div className="d-flex justify-content-center gap-1">
+                          <Link
+                            href={`/keuangan/pengajuan/${item.id}`}
+                            className="btn btn-sm btn-outline-primary"
+                            title="Lihat Detail"
+                          >
+                            <FiEye />
+                          </Link>
+                          
+                          {/* Approval buttons for Ketua RW */}
+                          {isKetuaRW && item.status === 'diajukan' && (
+                            <>
+                              <button
+                                className="btn btn-sm btn-success"
+                                title="Setujui"
+                                onClick={() => handleApprovalClick(item, 'setujui')}
+                              >
+                                <FiCheck />
+                              </button>
+                              <button
+                                className="btn btn-sm btn-danger"
+                                title="Tolak"
+                                onClick={() => handleApprovalClick(item, 'tolak')}
+                              >
+                                <FiX />
+                              </button>
+                              <button
+                                className="btn btn-sm btn-warning"
+                                title="Minta Revisi"
+                                onClick={() => handleApprovalClick(item, 'revisi')}
+                              >
+                                <FiRefreshCw />
+                              </button>
+                            </>
+                          )}
 
-            {/* Budget Warning */}
-            {budgetWarning && (
-              <div className="alert alert-warning">
-                <FiAlertTriangle className="me-2" />
-                {budgetWarning}
-              </div>
-            )}
+                          {/* Edit/Delete for pemohon */}
+                          {item.pemohon_id === userData?.id && ['diajukan', 'direvisi'].includes(item.status) && (
+                            <>
+                              <Link
+                                href={`/keuangan/pengajuan/${item.id}/edit`}
+                                className="btn btn-sm btn-outline-warning"
+                                title="Edit"
+                              >
+                                <FiEdit2 />
+                              </Link>
+                              <button
+                                className="btn btn-sm btn-outline-danger"
+                                title="Hapus"
+                                onClick={() => handleDelete(item.id)}
+                              >
+                                <FiTrash2 />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
 
-            {/* Submit Button */}
-            <div className="card">
-              <div className="card-body">
+      {/* Approval Modal */}
+      {showApprovalModal && selectedPengajuan && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  {approvalAction === 'setujui' && 'Setujui Pengajuan'}
+                  {approvalAction === 'tolak' && 'Tolak Pengajuan'}
+                  {approvalAction === 'revisi' && 'Minta Revisi'}
+                </h5>
                 <button
-                  type="submit"
-                  className="btn btn-primary w-100 mb-3"
-                  disabled={submitting}
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowApprovalModal(false)}
+                />
+              </div>
+              <div className="modal-body">
+                <p className="mb-3">
+                  Pengajuan: <strong>{selectedPengajuan.nomor_pengajuan}</strong><br />
+                  {selectedPengajuan.deskripsi_pembelian}
+                </p>
+                <div className="mb-3">
+                  <label className="form-label">
+                    Catatan {approvalAction === 'revisi' && <span className="text-danger">*</span>}
+                  </label>
+                  <textarea
+                    className="form-control"
+                    rows={3}
+                    value={approvalNote}
+                    onChange={(e) => setApprovalNote(e.target.value)}
+                    placeholder={
+                      approvalAction === 'revisi' 
+                        ? 'Jelaskan apa yang perlu direvisi...'
+                        : 'Catatan (opsional)...'
+                    }
+                    required={approvalAction === 'revisi'}
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowApprovalModal(false)}
+                  disabled={processing}
                 >
-                  {submitting ? (
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-${
+                    approvalAction === 'setujui' ? 'success' :
+                    approvalAction === 'tolak' ? 'danger' : 'warning'
+                  }`}
+                  onClick={handleApprovalSubmit}
+                  disabled={processing || (approvalAction === 'revisi' && !approvalNote)}
+                >
+                  {processing ? (
                     <>
                       <span className="spinner-border spinner-border-sm me-2" />
-                      Menyimpan...
+                      Memproses...
                     </>
                   ) : (
                     <>
-                      <FiSave className="me-2" />
-                      Simpan Pengajuan
+                      {approvalAction === 'setujui' && 'Setujui'}
+                      {approvalAction === 'tolak' && 'Tolak'}
+                      {approvalAction === 'revisi' && 'Kirim ke Revisi'}
                     </>
                   )}
                 </button>
-                <Link href="/keuangan/pengajuan" className="btn btn-outline-secondary w-100">
-                  Batal
-                </Link>
               </div>
             </div>
           </div>
         </div>
-      </form>
+      )}
     </div>
   )
 }
