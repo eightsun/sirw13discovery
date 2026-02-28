@@ -5,13 +5,18 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
 import { formatRupiah } from '@/utils/helpers'
-import { KasTransaksi } from '@/types'
+import { KasTransaksi, KategoriPengeluaran } from '@/types'
 import { 
   FiArrowLeft,
   FiPrinter,
-  FiDownload,
   FiCalendar
 } from 'react-icons/fi'
+
+interface KategoriSummary {
+  kode: string
+  nama: string
+  total: number
+}
 
 export default function LaporanBulananPage() {
   const { userData } = useUser()
@@ -26,6 +31,7 @@ export default function LaporanBulananPage() {
   // Summary
   const [totalPemasukan, setTotalPemasukan] = useState(0)
   const [totalPengeluaran, setTotalPengeluaran] = useState(0)
+  const [kategoriSummary, setKategoriSummary] = useState<KategoriSummary[]>([])
   
   // Pejabat penandatangan
   const [ketuaRW, setKetuaRW] = useState('')
@@ -63,15 +69,52 @@ export default function LaporanBulananPage() {
       // Calculate totals
       let pemasukan = 0
       let pengeluaran = 0
+      const kategoriMap = new Map<string, KategoriSummary>()
+      
       transaksiData?.forEach((t: KasTransaksi) => {
         if (t.tipe === 'pemasukan') {
           pemasukan += t.jumlah
         } else {
           pengeluaran += t.jumlah
+          
+          // Group by kategori
+          if (t.kategori) {
+            const key = t.kategori.kode
+            if (kategoriMap.has(key)) {
+              const existing = kategoriMap.get(key)!
+              existing.total += t.jumlah
+            } else {
+              kategoriMap.set(key, {
+                kode: t.kategori.kode,
+                nama: t.kategori.nama,
+                total: t.jumlah
+              })
+            }
+          } else {
+            // Tanpa kategori
+            const key = '99'
+            if (kategoriMap.has(key)) {
+              const existing = kategoriMap.get(key)!
+              existing.total += t.jumlah
+            } else {
+              kategoriMap.set(key, {
+                kode: '99',
+                nama: 'Tanpa Kategori',
+                total: t.jumlah
+              })
+            }
+          }
         }
       })
+      
       setTotalPemasukan(pemasukan)
       setTotalPengeluaran(pengeluaran)
+      
+      // Sort kategori by kode
+      const sortedKategori = Array.from(kategoriMap.values()).sort((a, b) => 
+        parseInt(a.kode) - parseInt(b.kode)
+      )
+      setKategoriSummary(sortedKategori)
 
       // Fetch pejabat
       const { data: ketuaData } = await supabase
@@ -134,10 +177,15 @@ export default function LaporanBulananPage() {
             border: 1px solid #333; 
             padding: 5px 8px; 
             text-align: left;
+            vertical-align: top;
           }
-          th { background: #f0f0f0; }
+          th { 
+            background: #f0f0f0; 
+            white-space: nowrap;
+          }
           .text-right { text-align: right; }
           .text-center { text-align: center; }
+          .nowrap { white-space: nowrap; }
           .summary { margin: 20px 0; }
           .summary-row { display: flex; justify-content: space-between; max-width: 300px; }
           .signatures { 
@@ -153,6 +201,7 @@ export default function LaporanBulananPage() {
             padding-top: 5px;
           }
           .date-place { text-align: right; margin: 30px 0; }
+          .section-title { font-weight: bold; margin: 15px 0 10px 0; }
           @media print {
             body { padding: 0; }
           }
@@ -276,34 +325,39 @@ export default function LaporanBulananPage() {
                 </p>
               ) : (
                 <>
+                  <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>A. RINCIAN TRANSAKSI</p>
                   <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
                     <thead>
                       <tr>
-                        <th style={{ border: '1px solid #333', padding: '5px 8px', backgroundColor: '#f0f0f0' }}>No</th>
-                        <th style={{ border: '1px solid #333', padding: '5px 8px', backgroundColor: '#f0f0f0' }}>Tanggal</th>
-                        <th style={{ border: '1px solid #333', padding: '5px 8px', backgroundColor: '#f0f0f0' }}>Kas</th>
-                        <th style={{ border: '1px solid #333', padding: '5px 8px', backgroundColor: '#f0f0f0' }}>Tipe</th>
-                        <th style={{ border: '1px solid #333', padding: '5px 8px', backgroundColor: '#f0f0f0' }}>Keterangan</th>
-                        <th style={{ border: '1px solid #333', padding: '5px 8px', backgroundColor: '#f0f0f0', textAlign: 'right' }}>Jumlah</th>
+                        <th style={{ border: '1px solid #333', padding: '5px 8px', backgroundColor: '#f0f0f0', width: '30px', whiteSpace: 'nowrap' }}>No</th>
+                        <th style={{ border: '1px solid #333', padding: '5px 8px', backgroundColor: '#f0f0f0', width: '75px', whiteSpace: 'nowrap' }}>Tanggal</th>
+                        <th style={{ border: '1px solid #333', padding: '5px 8px', backgroundColor: '#f0f0f0', width: '35px', whiteSpace: 'nowrap' }}>Kas</th>
+                        <th style={{ border: '1px solid #333', padding: '5px 8px', backgroundColor: '#f0f0f0', width: '50px', whiteSpace: 'nowrap' }}>Tipe</th>
+                        <th style={{ border: '1px solid #333', padding: '5px 8px', backgroundColor: '#f0f0f0', width: '45px', whiteSpace: 'nowrap' }}>Kode</th>
+                        <th style={{ border: '1px solid #333', padding: '5px 8px', backgroundColor: '#f0f0f0', whiteSpace: 'nowrap' }}>Keterangan</th>
+                        <th style={{ border: '1px solid #333', padding: '5px 8px', backgroundColor: '#f0f0f0', textAlign: 'right', width: '110px', whiteSpace: 'nowrap' }}>Jumlah</th>
                       </tr>
                     </thead>
                     <tbody>
                       {transaksi.map((t, index) => (
-                        <tr key={t.id}>
-                          <td style={{ border: '1px solid #333', padding: '5px 8px', textAlign: 'center' }}>{index + 1}</td>
-                          <td style={{ border: '1px solid #333', padding: '5px 8px' }}>
+                        <tr key={t.id} style={{ verticalAlign: 'top' }}>
+                          <td style={{ border: '1px solid #333', padding: '5px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>{index + 1}</td>
+                          <td style={{ border: '1px solid #333', padding: '5px 8px', whiteSpace: 'nowrap' }}>
                             {new Date(t.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: '2-digit' })}
                           </td>
-                          <td style={{ border: '1px solid #333', padding: '5px 8px' }}>
+                          <td style={{ border: '1px solid #333', padding: '5px 8px', whiteSpace: 'nowrap' }}>
                             {t.jenis_kas.toUpperCase()}
                           </td>
-                          <td style={{ border: '1px solid #333', padding: '5px 8px' }}>
+                          <td style={{ border: '1px solid #333', padding: '5px 8px', whiteSpace: 'nowrap' }}>
                             {t.tipe === 'pemasukan' ? 'Masuk' : 'Keluar'}
                           </td>
-                          <td style={{ border: '1px solid #333', padding: '5px 8px', maxWidth: '200px' }}>
-                            {t.keterangan?.substring(0, 30) || '-'}{t.keterangan && t.keterangan.length > 30 ? '...' : ''}
+                          <td style={{ border: '1px solid #333', padding: '5px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            {t.tipe === 'pengeluaran' && t.kategori ? t.kategori.kode : '-'}
                           </td>
-                          <td style={{ border: '1px solid #333', padding: '5px 8px', textAlign: 'right' }}>
+                          <td style={{ border: '1px solid #333', padding: '5px 8px', wordWrap: 'break-word' }}>
+                            {t.keterangan || '-'}
+                          </td>
+                          <td style={{ border: '1px solid #333', padding: '5px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                             {t.tipe === 'pemasukan' ? '' : '-'}{formatRupiah(t.jumlah)}
                           </td>
                         </tr>
@@ -311,7 +365,42 @@ export default function LaporanBulananPage() {
                     </tbody>
                   </table>
 
+                  {/* Ringkasan Pengeluaran per Kategori */}
+                  {kategoriSummary.length > 0 && (
+                    <>
+                      <p style={{ fontWeight: 'bold', marginBottom: '10px', marginTop: '25px' }}>B. RINGKASAN PENGELUARAN PER KATEGORI</p>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+                        <thead>
+                          <tr>
+                            <th style={{ border: '1px solid #333', padding: '5px 8px', backgroundColor: '#f0f0f0', width: '60px' }}>Kode</th>
+                            <th style={{ border: '1px solid #333', padding: '5px 8px', backgroundColor: '#f0f0f0' }}>Nama Kategori</th>
+                            <th style={{ border: '1px solid #333', padding: '5px 8px', backgroundColor: '#f0f0f0', textAlign: 'right', width: '150px' }}>Jumlah</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {kategoriSummary.map((kat) => (
+                            <tr key={kat.kode}>
+                              <td style={{ border: '1px solid #333', padding: '5px 8px', textAlign: 'center' }}>{kat.kode}</td>
+                              <td style={{ border: '1px solid #333', padding: '5px 8px' }}>{kat.nama}</td>
+                              <td style={{ border: '1px solid #333', padding: '5px 8px', textAlign: 'right' }}>{formatRupiah(kat.total)}</td>
+                            </tr>
+                          ))}
+                          {/* Total Pengeluaran */}
+                          <tr style={{ fontWeight: 'bold', backgroundColor: '#f0f0f0' }}>
+                            <td style={{ border: '1px solid #333', padding: '5px 8px', textAlign: 'center' }} colSpan={2}>
+                              Total Pengeluaran
+                            </td>
+                            <td style={{ border: '1px solid #333', padding: '5px 8px', textAlign: 'right' }}>
+                              {formatRupiah(totalPengeluaran)}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </>
+                  )}
+
                   {/* Summary */}
+                  <p style={{ fontWeight: 'bold', marginBottom: '10px', marginTop: '25px' }}>C. RINGKASAN KEUANGAN</p>
                   <div style={{ marginBottom: '30px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', maxWidth: '300px', marginBottom: '5px' }}>
                       <span>Total Pemasukan:</span>
@@ -321,7 +410,7 @@ export default function LaporanBulananPage() {
                       <span>Total Pengeluaran:</span>
                       <span>{formatRupiah(totalPengeluaran)}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', maxWidth: '300px', fontWeight: 'bold' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', maxWidth: '300px', fontWeight: 'bold', borderTop: '1px solid #333', paddingTop: '5px', marginTop: '5px' }}>
                       <span>Saldo:</span>
                       <span>{formatRupiah(totalPemasukan - totalPengeluaran)}</span>
                     </div>

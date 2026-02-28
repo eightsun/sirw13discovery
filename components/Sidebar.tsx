@@ -157,6 +157,12 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw']
         },
         { 
+          href: '/admin/roles', 
+          label: 'Kelola Pengurus', 
+          icon: <FiUsers />,
+          roles: ['ketua_rw']
+        },
+        { 
           href: '/pengaturan', 
           label: 'Pengaturan', 
           icon: <FiSettings />,
@@ -191,7 +197,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         />
       )}
       
-      <aside className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
+      <aside className={`sidebar ${isOpen ? 'sidebar-open' : ''}`} style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
         {/* Close button for mobile */}
         <button 
           className="btn btn-link text-white position-absolute d-md-none"
@@ -201,13 +207,17 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           <FiX size={24} />
         </button>
         
-        <Link href="/dashboard" className="sidebar-brand" onClick={onClose}>
-          🏘️ SIRW13
-        </Link>
+        {/* Fixed Header */}
+        <div className="flex-shrink-0">
+          <Link href="/dashboard" className="sidebar-brand" onClick={onClose}>
+            🏘️ SIRW13
+          </Link>
+        </div>
         
-        <hr className="sidebar-divider" />
+        <hr className="sidebar-divider flex-shrink-0 my-2" />
         
-        <nav>
+        {/* Scrollable Menu Area */}
+        <nav className="flex-grow-1" style={{ overflowY: 'auto', overflowX: 'hidden' }}>
           {menuSections.map((section, sectionIndex) => {
             const filteredItems = filterMenuItems(section.items)
             
@@ -231,23 +241,25 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                 ))}
                 
                 {sectionIndex < menuSections.length - 1 && (
-                  <hr className="sidebar-divider" />
+                  <hr className="sidebar-divider my-2" />
                 )}
               </div>
             )
           })}
         </nav>
         
-        <hr className="sidebar-divider" />
-        
-        <div className="px-3 py-2">
-          <small className="text-white-50">
-            RW 013 Desa Banjarsari
-            <br />
-            Kec. Manyar, Kab. Gresik
-            <br />
-            Permata Discovery
-          </small>
+        {/* Fixed Footer */}
+        <div className="flex-shrink-0">
+          <hr className="sidebar-divider my-2" />
+          <div className="px-3 py-2">
+            <small className="text-white-50">
+              RW 013 Desa Banjarsari
+              <br />
+              Kec. Manyar, Kab. Gresik
+              <br />
+              Permata Discovery
+            </small>
+          </div>
         </div>
       </aside>
     </>

@@ -223,6 +223,26 @@ export default function KeuanganDashboardPage() {
         )}
       </div>
 
+      {/* Quick Menu - Horizontal Scroll on Mobile */}
+      <div className="d-flex gap-2 mb-4 overflow-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <Link href="/keuangan/transaksi" className="card card-body text-center text-decoration-none flex-shrink-0 hover-shadow py-2 px-3" style={{ minWidth: '90px' }}>
+          <FiTrendingUp className="text-primary mb-1 mx-auto" size={20} />
+          <small className="fw-bold text-dark" style={{ fontSize: '0.7rem' }}>Transaksi</small>
+        </Link>
+        <Link href="/keuangan/pengajuan" className="card card-body text-center text-decoration-none flex-shrink-0 hover-shadow py-2 px-3" style={{ minWidth: '90px' }}>
+          <FiFileText className="text-warning mb-1 mx-auto" size={20} />
+          <small className="fw-bold text-dark" style={{ fontSize: '0.7rem' }}>Pengajuan</small>
+        </Link>
+        <Link href="/keuangan/budget" className="card card-body text-center text-decoration-none flex-shrink-0 hover-shadow py-2 px-3" style={{ minWidth: '90px' }}>
+          <FiAlertCircle className="text-info mb-1 mx-auto" size={20} />
+          <small className="fw-bold text-dark" style={{ fontSize: '0.7rem' }}>Budget</small>
+        </Link>
+        <Link href="/keuangan/laporan" className="card card-body text-center text-decoration-none flex-shrink-0 hover-shadow py-2 px-3" style={{ minWidth: '90px' }}>
+          <FiCheckCircle className="text-success mb-1 mx-auto" size={20} />
+          <small className="fw-bold text-dark" style={{ fontSize: '0.7rem' }}>Laporan</small>
+        </Link>
+      </div>
+
       {/* Summary Cards - Kas RW */}
       <div className="row g-3 mb-4">
         <div className="col-md-6 col-lg-3">

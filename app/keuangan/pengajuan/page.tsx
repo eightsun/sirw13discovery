@@ -31,6 +31,10 @@ export default function PengajuanListPage() {
   const [approvalNote, setApprovalNote] = useState('')
   const [processing, setProcessing] = useState(false)
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<PengajuanPembelian | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
   const isKetuaRW = userData?.role === 'ketua_rw' || userData?.role === 'wakil_ketua_rw'
   const isBendaharaRW = userData?.role === 'bendahara_rw'
 
@@ -157,20 +161,64 @@ export default function PengajuanListPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus pengajuan ini?')) return
+  const handleDeleteClick = (item: PengajuanPembelian) => {
+    setDeleteTarget(item)
+    setShowDeleteModal(true)
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
 
     try {
+      setDeleting(true)
+
+      // Kumpulkan semua file URL yang perlu dihapus
+      const filesToDelete: string[] = []
+      
+      if (deleteTarget.nota_invoice_url) filesToDelete.push(deleteTarget.nota_invoice_url)
+      if (deleteTarget.bukti_transfer_url) filesToDelete.push(deleteTarget.bukti_transfer_url)
+      if (deleteTarget.bukti_transaksi_url) filesToDelete.push(deleteTarget.bukti_transaksi_url)
+      
+      // Hapus file dari riwayat_status jika ada bukti_url
+      if (deleteTarget.riwayat_status) {
+        deleteTarget.riwayat_status.forEach((r: { bukti_url?: string }) => {
+          if (r.bukti_url) filesToDelete.push(r.bukti_url)
+        })
+      }
+
+      // Hapus file dari storage
+      if (filesToDelete.length > 0) {
+        const { error: storageError } = await supabase.storage
+          .from('pengajuan')
+          .remove(filesToDelete)
+        
+        if (storageError) {
+          console.error('Error deleting files:', storageError)
+        }
+      }
+
+      // Hapus kas_transaksi terkait jika ada
+      await supabase
+        .from('kas_transaksi')
+        .delete()
+        .eq('pengajuan_id', deleteTarget.id)
+
+      // Hapus pengajuan
       const { error } = await supabase
         .from('pengajuan_pembelian')
         .delete()
-        .eq('id', id)
+        .eq('id', deleteTarget.id)
 
       if (error) throw error
+
+      setShowDeleteModal(false)
+      setDeleteTarget(null)
       fetchPengajuan()
     } catch (error) {
       console.error('Error deleting pengajuan:', error)
       alert('Gagal menghapus pengajuan')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -279,7 +327,7 @@ export default function PengajuanListPage() {
                         <small className="text-muted">{item.jabatan_pemohon}</small>
                       </td>
                       <td>
-                        <div className="text-truncate" style={{ maxWidth: '200px' }}>
+                        <div style={{ whiteSpace: 'normal', wordWrap: 'break-word' }}>
                           {item.deskripsi_pembelian}
                         </div>
                       </td>
@@ -324,24 +372,26 @@ export default function PengajuanListPage() {
                             </>
                           )}
 
-                          {/* Edit/Delete for pemohon */}
+                          {/* Edit for pemohon (only own pengajuan with status diajukan/direvisi) */}
                           {item.pemohon_id === userData?.id && ['diajukan', 'direvisi'].includes(item.status) && (
-                            <>
-                              <Link
-                                href={`/keuangan/pengajuan/${item.id}/edit`}
-                                className="btn btn-sm btn-outline-warning"
-                                title="Edit"
-                              >
-                                <FiEdit2 />
-                              </Link>
-                              <button
-                                className="btn btn-sm btn-outline-danger"
-                                title="Hapus"
-                                onClick={() => handleDelete(item.id)}
-                              >
-                                <FiTrash2 />
-                              </button>
-                            </>
+                            <Link
+                              href={`/keuangan/pengajuan/${item.id}/edit`}
+                              className="btn btn-sm btn-outline-warning"
+                              title="Edit"
+                            >
+                              <FiEdit2 />
+                            </Link>
+                          )}
+
+                          {/* Delete button - Ketua RW can delete ANY, pemohon only own with status diajukan/direvisi */}
+                          {(isKetuaRW || (item.pemohon_id === userData?.id && ['diajukan', 'direvisi'].includes(item.status))) && (
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              title="Hapus Pengajuan"
+                              onClick={() => handleDeleteClick(item)}
+                            >
+                              <FiTrash2 />
+                            </button>
                           )}
                         </div>
                       </td>
@@ -353,6 +403,74 @@ export default function PengajuanListPage() {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && deleteTarget && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-danger text-white">
+                <h5 className="modal-title">
+                  <FiTrash2 className="me-2" />
+                  Hapus Pengajuan
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleting}
+                />
+              </div>
+              <div className="modal-body">
+                <p className="mb-3">
+                  Apakah Anda yakin ingin menghapus pengajuan berikut?
+                </p>
+                <div className="alert alert-secondary">
+                  <strong>{deleteTarget.nomor_pengajuan}</strong><br />
+                  {deleteTarget.deskripsi_pembelian}<br />
+                  <span className="fw-bold text-primary">{formatRupiah(deleteTarget.nilai_transaksi)}</span>
+                </div>
+                <div className="alert alert-warning small mb-0">
+                  <strong>⚠️ Perhatian:</strong>
+                  <ul className="mb-0 ps-3 mt-1">
+                    <li>Semua file dokumen pendukung akan dihapus</li>
+                    <li>Jika sudah ada transaksi kas terkait, akan ikut terhapus</li>
+                    <li>Tindakan ini tidak dapat dibatalkan</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleting}
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                >
+                  {deleting ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" />
+                      Menghapus...
+                    </>
+                  ) : (
+                    <>
+                      <FiTrash2 className="me-2" />
+                      Ya, Hapus Pengajuan
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Approval Modal */}
       {showApprovalModal && selectedPengajuan && (

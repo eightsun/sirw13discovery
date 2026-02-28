@@ -9,6 +9,7 @@ export type UserRole =
   | 'wakil_ketua_rw'
   | 'sekretaris_rw' 
   | 'bendahara_rw' 
+  | 'koordinator_rw'
   | 'ketua_rt' 
   | 'sekretaris_rt'
   | 'bendahara_rt'
@@ -557,6 +558,7 @@ export interface PengajuanPembelian {
   bukti_persetujuan_url?: string;
   nota_invoice_url?: string;
   bukti_transaksi_url?: string;
+  bukti_transfer_url?: string;
   // Reimbursement
   rekening_penerima?: string;
   nama_pemilik_rekening?: string;

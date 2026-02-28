@@ -76,6 +76,7 @@ export function getRoleLabel(role: UserRole): string {
     wakil_ketua_rw: 'Wakil Ketua RW',
     sekretaris_rw: 'Sekretaris RW',
     bendahara_rw: 'Bendahara RW',
+    koordinator_rw: 'Koordinator RW',
     ketua_rt: 'Ketua RT',
     sekretaris_rt: 'Sekretaris RT',
     bendahara_rt: 'Bendahara RT',

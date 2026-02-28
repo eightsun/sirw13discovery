@@ -227,6 +227,29 @@ export default function TambahPengajuanPage() {
     try {
       setSubmitting(true)
 
+      // Generate nomor pengajuan yang unik
+      const now = new Date()
+      const year = now.getFullYear()
+      const month = String(now.getMonth() + 1).padStart(2, '0')
+      const prefix = `PB/${year}/${month}/`
+
+      // Cari nomor terakhir untuk bulan ini
+      const { data: existingData } = await supabase
+        .from('pengajuan_pembelian')
+        .select('nomor_pengajuan')
+        .like('nomor_pengajuan', `${prefix}%`)
+        .order('nomor_pengajuan', { ascending: false })
+        .limit(1)
+
+      let nextNumber = 1
+      if (existingData && existingData.length > 0) {
+        const lastNomor = existingData[0].nomor_pengajuan
+        const lastNumber = parseInt(lastNomor.split('/').pop() || '0')
+        nextNumber = lastNumber + 1
+      }
+
+      const nomor_pengajuan = `${prefix}${String(nextNumber).padStart(4, '0')}`
+
       // Upload files (tanpa bukti persetujuan - approval via aplikasi)
       let notaInvoiceUrl: string | null = null
       let buktiTransaksiUrl: string | null = null
@@ -245,6 +268,7 @@ export default function TambahPengajuanPage() {
 
       // Prepare data
       const pengajuanData = {
+        nomor_pengajuan,
         pemohon_id: userData?.id,
         nama_pemohon: data.nama_pemohon,
         jabatan_pemohon: data.jabatan_pemohon,

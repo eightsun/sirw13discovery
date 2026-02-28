@@ -46,7 +46,8 @@ export default function DetailPengajuanPage() {
   const [processing, setProcessing] = useState(false)
   
   // State untuk upload bukti pembayaran
-  const [buktiPembayaran, setBuktiPembayaran] = useState<File | null>(null)
+  const [buktiTransfer, setBuktiTransfer] = useState<File | null>(null)
+  const [buktiInvoice, setBuktiInvoice] = useState<File | null>(null)
   const [paymentNote, setPaymentNote] = useState('')
   const [paymentDate, setPaymentDate] = useState('')
 
@@ -143,7 +144,8 @@ export default function DetailPengajuanPage() {
   }
 
   const handlePaymentClick = () => {
-    setBuktiPembayaran(null)
+    setBuktiTransfer(null)
+    setBuktiInvoice(null)
     setPaymentNote('')
     setPaymentDate(new Date().toISOString().split('T')[0]) // Default hari ini
     setShowPaymentModal(true)
@@ -292,10 +294,16 @@ export default function DetailPengajuanPage() {
     try {
       setProcessing(true)
 
-      // Upload bukti pembayaran jika ada
-      let buktiPembayaranUrl: string | null = null
-      if (buktiPembayaran) {
-        buktiPembayaranUrl = await uploadFile(buktiPembayaran, 'pembayaran')
+      // Upload bukti transfer jika ada
+      let buktiTransferUrl: string | null = null
+      if (buktiTransfer) {
+        buktiTransferUrl = await uploadFile(buktiTransfer, 'transfer')
+      }
+
+      // Upload bukti invoice/kwitansi jika ada
+      let buktiInvoiceUrl: string | null = null
+      if (buktiInvoice) {
+        buktiInvoiceUrl = await uploadFile(buktiInvoice, 'invoice')
       }
 
       const catatan = paymentNote || 'Pembayaran telah diselesaikan oleh Bendahara'
@@ -308,7 +316,7 @@ export default function DetailPengajuanPage() {
           catatan,
           oleh: userData?.id || '',
           nama_user: userData?.nama_lengkap || '',
-          bukti_url: buktiPembayaranUrl || undefined
+          bukti_url: buktiTransferUrl || undefined
         }
       ]
 
@@ -321,9 +329,14 @@ export default function DetailPengajuanPage() {
         catatan_proses: catatan
       }
 
-      // Simpan bukti pembayaran ke field khusus
-      if (buktiPembayaranUrl) {
-        updateData.bukti_transaksi_url = buktiPembayaranUrl
+      // Simpan bukti transfer ke field khusus
+      if (buktiTransferUrl) {
+        updateData.bukti_transfer_url = buktiTransferUrl
+      }
+
+      // Simpan bukti invoice/kwitansi ke field nota_invoice_url
+      if (buktiInvoiceUrl) {
+        updateData.nota_invoice_url = buktiInvoiceUrl
       }
 
       // Update pengajuan
@@ -352,6 +365,10 @@ export default function DetailPengajuanPage() {
       await supabase.from('kas_transaksi').insert(kasData)
 
       setShowPaymentModal(false)
+      setBuktiTransfer(null)
+      setBuktiInvoice(null)
+      setPaymentNote('')
+      setPaymentDate('')
       fetchPengajuan()
     } catch (error) {
       console.error('Error completing payment:', error)
@@ -558,23 +575,25 @@ export default function DetailPengajuanPage() {
             </div>
             <div className="card-body">
               <div className="row g-3">
+                {/* Nota/Invoice dari Pemohon */}
                 <div className="col-md-6">
                   <div className="border rounded p-3 h-100">
-                    <label className="text-muted small d-block mb-2">Nota/Invoice/Quotation</label>
-                    {pengajuan.nota_invoice_url ? (
+                    <label className="text-muted small d-block mb-2">Nota/Invoice (dari Pemohon)</label>
+                    {pengajuan.nota_invoice_url && pengajuan.status !== 'selesai' ? (
                       <button className="btn btn-sm btn-outline-primary" onClick={() => openFile(pengajuan.nota_invoice_url)}>
                         <FiDownload className="me-1" /> Lihat File
                       </button>
-                    ) : (
+                    ) : !pengajuan.nota_invoice_url ? (
                       <span className="text-muted">Belum diupload</span>
-                    )}
+                    ) : null}
+                    {/* Jika status selesai, nota_invoice_url dipakai untuk invoice dari Bendahara */}
                   </div>
                 </div>
+
+                {/* Bukti Transaksi dari Pemohon */}
                 <div className="col-md-6">
                   <div className="border rounded p-3 h-100">
-                    <label className="text-muted small d-block mb-2">
-                      {pengajuan.status === 'selesai' ? 'Bukti Pembayaran/Pelunasan' : 'Bukti Transfer Bank'}
-                    </label>
+                    <label className="text-muted small d-block mb-2">Bukti Transaksi (dari Pemohon)</label>
                     {pengajuan.bukti_transaksi_url ? (
                       <button className="btn btn-sm btn-outline-primary" onClick={() => openFile(pengajuan.bukti_transaksi_url)}>
                         <FiDownload className="me-1" /> Lihat File
@@ -584,6 +603,42 @@ export default function DetailPengajuanPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Bukti Transfer Bank dari Bendahara - muncul setelah selesai */}
+                {pengajuan.status === 'selesai' && (
+                  <>
+                    <div className="col-md-6">
+                      <div className="border rounded p-3 h-100 bg-light">
+                        <label className="text-muted small d-block mb-2">
+                          <FiCheckCircle className="me-1 text-success" />
+                          Bukti Transfer Bank (dari Bendahara)
+                        </label>
+                        {pengajuan.bukti_transfer_url ? (
+                          <button className="btn btn-sm btn-outline-success" onClick={() => openFile(pengajuan.bukti_transfer_url)}>
+                            <FiDownload className="me-1" /> Lihat File
+                          </button>
+                        ) : (
+                          <span className="text-muted">Tidak ada</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="border rounded p-3 h-100 bg-light">
+                        <label className="text-muted small d-block mb-2">
+                          <FiCheckCircle className="me-1 text-success" />
+                          Invoice/Kwitansi Pelunasan (dari Bendahara)
+                        </label>
+                        {pengajuan.nota_invoice_url ? (
+                          <button className="btn btn-sm btn-outline-success" onClick={() => openFile(pengajuan.nota_invoice_url)}>
+                            <FiDownload className="me-1" /> Lihat File
+                          </button>
+                        ) : (
+                          <span className="text-muted">Tidak ada</span>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -788,26 +843,55 @@ export default function DetailPengajuanPage() {
                   <small className="text-muted">Tanggal ini akan dicatat sebagai tanggal pengeluaran Kas RW</small>
                 </div>
 
+                {/* Upload Bukti Transfer Bank */}
                 <div className="mb-3">
                   <label className="form-label fw-bold">
                     <FiUpload className="me-2" />
-                    Upload Bukti Pembayaran/Pelunasan
+                    Upload Bukti Transfer Bank
                   </label>
                   <input 
                     type="file" 
                     className="form-control"
                     accept="image/*,.pdf"
-                    onChange={(e) => setBuktiPembayaran(e.target.files?.[0] || null)}
+                    onChange={(e) => setBuktiTransfer(e.target.files?.[0] || null)}
                   />
                   <small className="text-muted">Format: JPG, PNG, atau PDF (maks. 5MB)</small>
-                  {buktiPembayaran && (
+                  {buktiTransfer && (
                     <div className="mt-2 p-2 bg-light rounded small">
                       <FiFileText className="me-1" />
-                      {buktiPembayaran.name}
+                      {buktiTransfer.name}
                       <button 
                         type="button" 
                         className="btn btn-sm btn-link text-danger p-0 ms-2"
-                        onClick={() => setBuktiPembayaran(null)}
+                        onClick={() => setBuktiTransfer(null)}
+                      >
+                        <FiX />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload Bukti Invoice/Kwitansi */}
+                <div className="mb-3">
+                  <label className="form-label fw-bold">
+                    <FiUpload className="me-2" />
+                    Upload Bukti Invoice/Kwitansi Pelunasan
+                  </label>
+                  <input 
+                    type="file" 
+                    className="form-control"
+                    accept="image/*,.pdf"
+                    onChange={(e) => setBuktiInvoice(e.target.files?.[0] || null)}
+                  />
+                  <small className="text-muted">Format: JPG, PNG, atau PDF (maks. 5MB)</small>
+                  {buktiInvoice && (
+                    <div className="mt-2 p-2 bg-light rounded small">
+                      <FiFileText className="me-1" />
+                      {buktiInvoice.name}
+                      <button 
+                        type="button" 
+                        className="btn btn-sm btn-link text-danger p-0 ms-2"
+                        onClick={() => setBuktiInvoice(null)}
                       >
                         <FiX />
                       </button>
