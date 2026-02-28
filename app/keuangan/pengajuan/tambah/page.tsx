@@ -103,7 +103,7 @@ export default function TambahPengajuanPage() {
         .gte('tanggal', `${tahun}-01-01`)
 
       const budget = budgetData?.jumlah_budget || 0
-      const terpakai = transaksiData?.reduce((sum, t) => sum + t.jumlah, 0) || 0
+      const terpakai = transaksiData?.reduce((sum: number, t: { jumlah: number }) => sum + t.jumlah, 0) || 0
       const sisa = budget - terpakai
       const persentase = budget > 0 ? (terpakai / budget) * 100 : 0
 
