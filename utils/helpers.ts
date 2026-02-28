@@ -15,6 +15,17 @@ export function formatDate(date: string | Date): string {
   })
 }
 
+// Format mata uang Rupiah
+export function formatRupiah(amount: number | null | undefined): string {
+  if (amount === null || amount === undefined) return 'Rp 0'
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
+
 // Format tanggal singkat
 export function formatDateShort(date: string | Date): string {
   if (!date) return '-'

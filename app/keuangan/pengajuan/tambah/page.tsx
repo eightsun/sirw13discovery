@@ -167,7 +167,7 @@ export default function TambahPengajuanPage() {
     })
   }
 
-  // Upload file to Supabase Storage
+  // Upload file to Supabase Storage (Private Bucket)
   const uploadFile = async (file: File, folder: string): Promise<string | null> => {
     try {
       let uploadData: Blob | File = file
@@ -192,12 +192,9 @@ export default function TambahPengajuanPage() {
         return null
       }
       
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('pengajuan')
-        .getPublicUrl(fileName)
-      
-      return urlData.publicUrl
+      // Return path only (not public URL)
+      // URL will be generated when viewing using createSignedUrl
+      return fileName
     } catch (error) {
       console.error('Upload error:', error)
       return null
