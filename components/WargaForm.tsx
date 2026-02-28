@@ -317,47 +317,88 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
       setLoading(true)
       setError(null)
 
-      // Validasi NIK - cek hanya warga aktif
+      let savedWargaId = wargaId
+      let isLinkedToExisting = false
+
+      // Cek NIK saat create (termasuk onboarding)
       if (mode === 'create' && data.nik) {
-        const { data: existingNIK } = await supabase
+        const { data: existingWarga } = await supabase
           .from('warga')
-          .select('id, nama_lengkap')
+          .select('id, nama_lengkap, email')
           .eq('nik', data.nik)
           .eq('is_active', true)
-          .single()
+          .maybeSingle()
         
-        if (existingNIK) {
-          setError(`NIK ${data.nik} sudah terdaftar atas nama ${existingNIK.nama_lengkap}`)
-          setLoading(false)
-          return
+        if (existingWarga) {
+          // NIK sudah ada, cek apakah sudah punya user account
+          const { data: existingUserWithWarga } = await supabase
+            .from('users')
+            .select('id, email')
+            .eq('warga_id', existingWarga.id)
+            .maybeSingle()
+          
+          if (existingUserWithWarga) {
+            // Warga sudah punya user lain → TOLAK
+            setError(`NIK ${data.nik} sudah terdaftar atas nama ${existingWarga.nama_lengkap} dan sudah memiliki akun (${existingUserWithWarga.email}). Silakan hubungi pengurus jika ada kesalahan.`)
+            setLoading(false)
+            return
+          }
+          
+          // Warga ada tapi belum punya user → UPDATE data warga & LINK
+          if (isOnboarding) {
+            // Update data warga yang sudah ada dengan data baru dari form
+            const updateData = {
+              ...data,
+              email: data.email || existingWarga.email, // Pertahankan email jika sudah ada
+              updated_at: new Date().toISOString(),
+            }
+            
+            const { error: updateError } = await supabase
+              .from('warga')
+              .update(updateData)
+              .eq('id', existingWarga.id)
+            
+            if (updateError) throw updateError
+            
+            savedWargaId = existingWarga.id
+            isLinkedToExisting = true
+            
+            console.log('Linked to existing warga:', existingWarga.id)
+          } else {
+            // Bukan onboarding (misalnya pengurus tambah warga) → TOLAK duplikat
+            setError(`NIK ${data.nik} sudah terdaftar atas nama ${existingWarga.nama_lengkap}`)
+            setLoading(false)
+            return
+          }
         }
       }
 
-      // Prepare warga data
-      const wargaData = {
-        ...data,
-        is_active: true,
-        updated_at: new Date().toISOString(),
-      }
+      // Jika belum link ke existing, lakukan INSERT baru
+      if (!isLinkedToExisting) {
+        // Prepare warga data
+        const wargaData = {
+          ...data,
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        }
 
-      let savedWargaId = wargaId
+        if (mode === 'create') {
+          const { data: insertedWarga, error: insertError } = await supabase
+            .from('warga')
+            .insert(wargaData)
+            .select('id')
+            .single()
 
-      if (mode === 'create') {
-        const { data: insertedWarga, error: insertError } = await supabase
-          .from('warga')
-          .insert(wargaData)
-          .select('id')
-          .single()
+          if (insertError) throw insertError
+          savedWargaId = insertedWarga.id
+        } else if (mode === 'edit' && wargaId) {
+          const { error: updateError } = await supabase
+            .from('warga')
+            .update(wargaData)
+            .eq('id', wargaId)
 
-        if (insertError) throw insertError
-        savedWargaId = insertedWarga.id
-      } else if (mode === 'edit' && wargaId) {
-        const { error: updateError } = await supabase
-          .from('warga')
-          .update(wargaData)
-          .eq('id', wargaId)
-
-        if (updateError) throw updateError
+          if (updateError) throw updateError
+        }
       }
 
       // Save kendaraan

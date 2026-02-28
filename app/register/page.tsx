@@ -30,7 +30,7 @@ export default function RegisterPage() {
       setIsLoading(true)
       setError(null)
 
-      // 1. Register user di Supabase Auth DULU
+      // 1. Register user di Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -44,7 +44,7 @@ export default function RegisterPage() {
 
       if (authError) {
         if (authError.message.includes('already registered')) {
-          setError('Email sudah terdaftar')
+          setError('Email sudah terdaftar. Silakan login.')
         } else {
           setError(authError.message)
         }
@@ -52,42 +52,8 @@ export default function RegisterPage() {
       }
 
       if (authData.user) {
-        // 2. Sekarang user sudah authenticated, cek NIK di tabel warga
-        const { data: existingWarga, error: wargaError } = await supabase
-          .from('warga')
-          .select('id, nama_lengkap, email, rumah_id')
-          .eq('nik', data.nik)
-          .eq('is_active', true)
-          .maybeSingle()
-
-        if (wargaError) {
-          console.error('Error checking NIK:', wargaError)
-        }
-
-        // 3. Cek apakah warga ini sudah punya user account lain
-        if (existingWarga) {
-          const { data: existingUserWithWarga } = await supabase
-            .from('users')
-            .select('id')
-            .eq('warga_id', existingWarga.id)
-            .maybeSingle()
-
-          if (existingUserWithWarga) {
-            // NIK sudah dipakai user lain, tapi auth sudah terlanjur dibuat
-            // Tetap lanjutkan tanpa link ke warga (akan onboarding)
-            console.warn('NIK already linked to another user')
-          }
-        }
-
-        // 4. Siapkan data user
-        const userInsertData: {
-          id: string
-          email: string
-          nama_lengkap: string
-          role: string
-          is_active: boolean
-          warga_id: string | null
-        } = {
+        // 2. Buat entry di tabel users (warga_id akan diisi saat onboarding)
+        const userInsertData = {
           id: authData.user.id,
           email: data.email,
           nama_lengkap: data.nama_lengkap,
@@ -96,34 +62,7 @@ export default function RegisterPage() {
           warga_id: null,
         }
 
-        // 5. Jika NIK ditemukan dan belum dipakai user lain, link langsung
-        if (existingWarga) {
-          const { data: existingUserWithWarga } = await supabase
-            .from('users')
-            .select('id')
-            .eq('warga_id', existingWarga.id)
-            .maybeSingle()
-
-          if (!existingUserWithWarga) {
-            userInsertData.warga_id = existingWarga.id
-
-            // Update email di tabel warga jika belum ada
-            if (!existingWarga.email || existingWarga.email !== data.email) {
-              await supabase
-                .from('warga')
-                .update({ email: data.email })
-                .eq('id', existingWarga.id)
-            }
-
-            setSuccessMessage(`Data Anda (${existingWarga.nama_lengkap}) berhasil ditemukan dan dihubungkan dengan akun baru. Anda tidak perlu mengisi data lagi.`)
-          } else {
-            setSuccessMessage('Pendaftaran berhasil! Silakan lengkapi data warga setelah login.')
-          }
-        } else {
-          setSuccessMessage('Pendaftaran berhasil! Silakan lengkapi data warga setelah login.')
-        }
-
-        // 6. Cek apakah user sudah ada di tabel users (dari trigger Supabase)
+        // 3. Cek apakah user sudah ada di tabel users (dari trigger Supabase)
         const { data: existingUser } = await supabase
           .from('users')
           .select('id')
@@ -131,19 +70,14 @@ export default function RegisterPage() {
           .maybeSingle()
 
         if (existingUser) {
-          // User sudah ada, update dengan warga_id
+          // User sudah ada, update nama saja
           const { error: updateError } = await supabase
             .from('users')
-            .update({
-              nama_lengkap: data.nama_lengkap,
-              warga_id: userInsertData.warga_id,
-            })
+            .update({ nama_lengkap: data.nama_lengkap })
             .eq('id', authData.user.id)
 
           if (updateError) {
             console.error('Error updating user profile:', updateError)
-            setError('Database error saving new user')
-            return
           }
         } else {
           // User belum ada, insert baru
@@ -153,10 +87,12 @@ export default function RegisterPage() {
 
           if (insertError) {
             console.error('Error creating user profile:', insertError)
-            setError('Database error saving new user')
+            setError('Gagal menyimpan data user. Silakan coba lagi.')
             return
           }
         }
+
+        setSuccessMessage('Pendaftaran berhasil! Silakan login dan lengkapi data diri Anda.')
       }
 
       setSuccess(true)
