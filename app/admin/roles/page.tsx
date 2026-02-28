@@ -343,7 +343,7 @@ export default function ManageRolesPage() {
   }
 
   // Filter users
-  const filteredPengurus = pengurus.filter(user => {
+  const filteredPengurus = pengurus.filter((user: UserWithWarga) => {
     const matchSearch = searchTerm === '' || 
       user.warga?.nama_lengkap?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -354,15 +354,15 @@ export default function ManageRolesPage() {
   })
 
   // Group by role level
-  const rwLevel = filteredPengurus.filter(u => 
+  const rwLevel = filteredPengurus.filter((u: UserWithWarga) => 
     ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'koordinator_rw'].includes(u.role)
   )
-  const rtLevel = filteredPengurus.filter(u => 
+  const rtLevel = filteredPengurus.filter((u: UserWithWarga) => 
     ['ketua_rt', 'sekretaris_rt', 'bendahara_rt'].includes(u.role)
   )
 
   // Count warga yang bisa di-upgrade (punya akun tapi role masih 'warga')
-  const wargaWithAccount = allUsers.filter(u => u.role === 'warga' && u.warga_id).length
+  const wargaWithAccount = allUsers.filter((u: UserWithWarga) => u.role === 'warga' && u.warga_id).length
 
   if (!isKetuaRW && currentUserRole) {
     return (
@@ -484,7 +484,7 @@ export default function ManageRolesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {rwLevel.map((user) => (
+                      {rwLevel.map((user: UserWithWarga) => (
                         <tr key={user.id}>
                           <td>
                             <div className="fw-bold">{user.warga?.nama_lengkap || '-'}</div>
@@ -584,7 +584,7 @@ export default function ManageRolesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {rtLevel.map((user) => (
+                      {rtLevel.map((user: UserWithWarga) => (
                         <tr key={user.id}>
                           <td>
                             <div className="fw-bold">{user.warga?.nama_lengkap || '-'}</div>
@@ -735,7 +735,7 @@ export default function ManageRolesPage() {
                   <div className="mb-3">
                     <label className="form-label">Pilih Warga</label>
                     <div className="list-group" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                      {wargaList.map(warga => (
+                      {wargaList.map((warga: WargaOption) => (
                         <button
                           key={warga.id}
                           type="button"

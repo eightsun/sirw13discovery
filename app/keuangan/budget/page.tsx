@@ -97,7 +97,7 @@ export default function BudgetTahunanPage() {
       if (budgetData) {
         // Calculate realisasi for each budget
         const budgetWithRealisasi = await Promise.all(
-          budgetData.map(async (budget) => {
+          budgetData.map(async (budget: BudgetItem) => {
             const { data: realisasiData } = await supabase
               .from('pengajuan_pembelian')
               .select('nilai_transaksi')
@@ -107,7 +107,7 @@ export default function BudgetTahunanPage() {
               .gte('tanggal_pengajuan', `${budget.tahun}-01-01`)
               .lte('tanggal_pengajuan', `${budget.tahun}-12-31`)
 
-            const realisasi = realisasiData?.reduce((sum, item) => sum + item.nilai_transaksi, 0) || 0
+            const realisasi = realisasiData?.reduce((sum: number, item: { nilai_transaksi: number }) => sum + item.nilai_transaksi, 0) || 0
             return { ...budget, realisasi }
           })
         )
@@ -125,8 +125,8 @@ export default function BudgetTahunanPage() {
   }, [fetchData])
 
   // Calculate totals
-  const totalBudget = budgetList.reduce((sum, item) => sum + item.jumlah_budget, 0)
-  const totalRealisasi = budgetList.reduce((sum, item) => sum + (item.realisasi || 0), 0)
+  const totalBudget = budgetList.reduce((sum: number, item: BudgetItem) => sum + item.jumlah_budget, 0)
+  const totalRealisasi = budgetList.reduce((sum: number, item: BudgetItem) => sum + (item.realisasi || 0), 0)
   const totalSisa = totalBudget - totalRealisasi
   const totalPersentase = totalBudget > 0 ? (totalRealisasi / totalBudget) * 100 : 0
 
@@ -222,7 +222,7 @@ export default function BudgetTahunanPage() {
       }
 
       // Insert budget for each category
-      const budgetInserts = categories.map(cat => ({
+      const budgetInserts = categories.map((cat: KategoriPengeluaran) => ({
         tahun: bulkYear,
         wilayah: bulkWilayah,
         kategori_id: cat.id,
@@ -253,8 +253,8 @@ export default function BudgetTahunanPage() {
   }
 
   // Get categories not yet in budget
-  const availableCategories = kategoriList.filter(
-    kat => !budgetList.some(b => b.kategori_id === kat.id)
+  const availableCategories = kategoriList.filter((kat: KategoriPengeluaran) =>
+     !budgetList.some((b: BudgetItem) => b.kategori_id === kat.id)
   )
 
   const getProgressColor = (persen: number) => {
@@ -458,7 +458,7 @@ export default function BudgetTahunanPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {budgetList.map((item) => {
+                  {budgetList.map((item: BudgetItem) => {
                     const sisa = item.jumlah_budget - (item.realisasi || 0)
                     const persen = item.jumlah_budget > 0 
                       ? ((item.realisasi || 0) / item.jumlah_budget) * 100 
@@ -595,7 +595,7 @@ export default function BudgetTahunanPage() {
                     onChange={(e) => setNewBudget({ ...newBudget, kategori_id: e.target.value })}
                   >
                     <option value="">-- Pilih Kategori --</option>
-                    {availableCategories.map(kat => (
+                    {availableCategories.map((kat: KategoriPengeluaran) => (
                       <option key={kat.id} value={kat.id}>
                         {kat.kode}. {kat.nama}
                       </option>
