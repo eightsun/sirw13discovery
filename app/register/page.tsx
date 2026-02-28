@@ -30,34 +30,7 @@ export default function RegisterPage() {
       setIsLoading(true)
       setError(null)
 
-      // 1. Cek apakah NIK sudah terdaftar di tabel warga
-      const { data: existingWarga, error: wargaError } = await supabase
-        .from('warga')
-        .select('id, nama_lengkap, email, rumah_id')
-        .eq('nik', data.nik)
-        .eq('is_active', true)
-        .maybeSingle()
-
-      if (wargaError) {
-        console.error('Error checking NIK:', wargaError)
-      }
-
-      // 2. Jika NIK sudah ada, cek apakah sudah punya akun
-      if (existingWarga) {
-        // Cek apakah warga ini sudah punya user account
-        const { data: existingUser } = await supabase
-          .from('users')
-          .select('id')
-          .eq('warga_id', existingWarga.id)
-          .maybeSingle()
-
-        if (existingUser) {
-          setError(`NIK ${data.nik} sudah terdaftar atas nama ${existingWarga.nama_lengkap} dan sudah memiliki akun. Silakan login.`)
-          return
-        }
-      }
-
-      // 3. Register user di Supabase Auth
+      // 1. Register user di Supabase Auth DULU
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -79,6 +52,33 @@ export default function RegisterPage() {
       }
 
       if (authData.user) {
+        // 2. Sekarang user sudah authenticated, cek NIK di tabel warga
+        const { data: existingWarga, error: wargaError } = await supabase
+          .from('warga')
+          .select('id, nama_lengkap, email, rumah_id')
+          .eq('nik', data.nik)
+          .eq('is_active', true)
+          .maybeSingle()
+
+        if (wargaError) {
+          console.error('Error checking NIK:', wargaError)
+        }
+
+        // 3. Cek apakah warga ini sudah punya user account lain
+        if (existingWarga) {
+          const { data: existingUserWithWarga } = await supabase
+            .from('users')
+            .select('id')
+            .eq('warga_id', existingWarga.id)
+            .maybeSingle()
+
+          if (existingUserWithWarga) {
+            // NIK sudah dipakai user lain, tapi auth sudah terlanjur dibuat
+            // Tetap lanjutkan tanpa link ke warga (akan onboarding)
+            console.warn('NIK already linked to another user')
+          }
+        }
+
         // 4. Siapkan data user
         const userInsertData: {
           id: string
@@ -86,7 +86,7 @@ export default function RegisterPage() {
           nama_lengkap: string
           role: string
           is_active: boolean
-          warga_id?: string | null
+          warga_id: string | null
         } = {
           id: authData.user.id,
           email: data.email,
@@ -96,24 +96,34 @@ export default function RegisterPage() {
           warga_id: null,
         }
 
-        // 5. Jika NIK sudah ada di warga, link langsung
+        // 5. Jika NIK ditemukan dan belum dipakai user lain, link langsung
         if (existingWarga) {
-          userInsertData.warga_id = existingWarga.id
+          const { data: existingUserWithWarga } = await supabase
+            .from('users')
+            .select('id')
+            .eq('warga_id', existingWarga.id)
+            .maybeSingle()
 
-          // Update email di tabel warga jika belum ada
-          if (!existingWarga.email) {
-            await supabase
-              .from('warga')
-              .update({ email: data.email })
-              .eq('id', existingWarga.id)
+          if (!existingUserWithWarga) {
+            userInsertData.warga_id = existingWarga.id
+
+            // Update email di tabel warga jika belum ada
+            if (!existingWarga.email || existingWarga.email !== data.email) {
+              await supabase
+                .from('warga')
+                .update({ email: data.email })
+                .eq('id', existingWarga.id)
+            }
+
+            setSuccessMessage(`Data Anda (${existingWarga.nama_lengkap}) berhasil ditemukan dan dihubungkan dengan akun baru. Anda tidak perlu mengisi data lagi.`)
+          } else {
+            setSuccessMessage('Pendaftaran berhasil! Silakan lengkapi data warga setelah login.')
           }
-
-          setSuccessMessage(`Data Anda (${existingWarga.nama_lengkap}) berhasil ditemukan dan dihubungkan dengan akun baru.`)
         } else {
           setSuccessMessage('Pendaftaran berhasil! Silakan lengkapi data warga setelah login.')
         }
 
-        // 6. Cek apakah user sudah ada (mungkin dibuat oleh trigger)
+        // 6. Cek apakah user sudah ada di tabel users (dari trigger Supabase)
         const { data: existingUser } = await supabase
           .from('users')
           .select('id')
