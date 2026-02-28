@@ -135,8 +135,8 @@ export default function ManageRolesPage() {
 
       if (usersData) {
         // Filter pengurus (non-warga roles)
-        const pengurusList = usersData.filter(u => u.role !== 'warga')
-        setPengurus(pengurusList as UserWithWarga[])
+        const pengurusList = (usersData as UserWithWarga[]).filter((u: UserWithWarga) => u.role !== 'warga')
+        setPengurus(pengurusList)
         setAllUsers(usersData as UserWithWarga[])
       }
     } catch (error) {
@@ -186,7 +186,7 @@ export default function ManageRolesPage() {
 
       if (data) {
         // Filter berdasarkan nama/NIK
-        const filtered = data.filter(u => {
+        const filtered = data.filter((u: { id: string; warga_id: string; warga: unknown }) => {
           const warga = u.warga as { nama_lengkap: string; nik: string } | null
           if (!warga) return false
           const searchLower = term.toLowerCase()
@@ -195,7 +195,7 @@ export default function ManageRolesPage() {
         })
 
         // Map ke format WargaOption, include user_id untuk update
-        const wargaOptions = filtered.map(u => {
+        const wargaOptions = filtered.map((u: { id: string; warga_id: string; warga: unknown }) => {
           const w = u.warga as { id: string; nama_lengkap: string; nik: string; no_hp: string; nomor_rumah: string; kelurahan: string }
           return {
             id: w.id,
@@ -820,5 +820,3 @@ export default function ManageRolesPage() {
     </div>
   )
 }
-
-
