@@ -73,9 +73,9 @@ export default function PengajuanListPage() {
     const badges: Record<StatusPengajuan, { color: string; label: string }> = {
       'diajukan': { color: 'warning', label: 'Menunggu Approval' },
       'direvisi': { color: 'info', label: 'Perlu Revisi' },
-      'disetujui': { color: 'primary', label: 'Disetujui' },
+      'disetujui': { color: 'primary', label: 'Menunggu Pembayaran' },
       'ditolak': { color: 'danger', label: 'Ditolak' },
-      'diproses': { color: 'info', label: 'Sedang Diproses' },
+      'diproses': { color: 'info', label: 'Pembayaran Diproses' },
       'selesai': { color: 'success', label: 'Selesai' },
       'dibatalkan': { color: 'secondary', label: 'Dibatalkan' }
     }
@@ -102,7 +102,7 @@ export default function PengajuanListPage() {
       switch (approvalAction) {
         case 'setujui':
           newStatus = 'disetujui'
-          catatan = approvalNote || 'Disetujui oleh Ketua RW'
+          catatan = approvalNote || 'Disetujui oleh Ketua RW, menunggu pembayaran Bendahara'
           break
         case 'tolak':
           newStatus = 'ditolak'
@@ -206,9 +206,9 @@ export default function PengajuanListPage() {
                 <option value="">Semua Status</option>
                 <option value="diajukan">Menunggu Approval</option>
                 <option value="direvisi">Perlu Revisi</option>
-                <option value="disetujui">Disetujui</option>
+                <option value="disetujui">Menunggu Pembayaran</option>
                 <option value="ditolak">Ditolak</option>
-                <option value="diproses">Sedang Diproses</option>
+                <option value="diproses">Pembayaran Diproses</option>
                 <option value="selesai">Selesai</option>
               </select>
             </div>

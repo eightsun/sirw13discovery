@@ -48,6 +48,7 @@ export default function DetailPengajuanPage() {
   // State untuk upload bukti pembayaran
   const [buktiPembayaran, setBuktiPembayaran] = useState<File | null>(null)
   const [paymentNote, setPaymentNote] = useState('')
+  const [paymentDate, setPaymentDate] = useState('')
 
   const isKetuaRW = userData?.role === 'ketua_rw' || userData?.role === 'wakil_ketua_rw'
   const isBendaharaRW = userData?.role === 'bendahara_rw'
@@ -144,6 +145,7 @@ export default function DetailPengajuanPage() {
   const handlePaymentClick = () => {
     setBuktiPembayaran(null)
     setPaymentNote('')
+    setPaymentDate(new Date().toISOString().split('T')[0]) // Default hari ini
     setShowPaymentModal(true)
   }
 
@@ -332,14 +334,14 @@ export default function DetailPengajuanPage() {
 
       if (error) throw error
 
-      // Buat transaksi pengeluaran di kas
+      // Buat transaksi pengeluaran di kas dengan tanggal pembayaran
       const kasData = {
         jenis_kas: 'rw',
         wilayah: pengajuan.wilayah,
         tipe: 'pengeluaran',
         sumber: 'pengajuan',
         sumber_id: pengajuan.id,
-        tanggal: new Date().toISOString().split('T')[0],
+        tanggal: paymentDate, // Gunakan tanggal pembayaran yang dipilih
         kategori_id: pengajuan.kategori_id,
         jumlah: pengajuan.nilai_transaksi,
         keterangan: pengajuan.deskripsi_pembelian,
@@ -770,6 +772,22 @@ export default function DetailPengajuanPage() {
                   </div>
                 )}
 
+                {/* Tanggal Pembayaran */}
+                <div className="mb-3">
+                  <label className="form-label fw-bold">
+                    <FiCalendar className="me-2" />
+                    Tanggal Pembayaran <span className="text-danger">*</span>
+                  </label>
+                  <input 
+                    type="date" 
+                    className="form-control"
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                    required
+                  />
+                  <small className="text-muted">Tanggal ini akan dicatat sebagai tanggal pengeluaran Kas RW</small>
+                </div>
+
                 <div className="mb-3">
                   <label className="form-label fw-bold">
                     <FiUpload className="me-2" />
@@ -821,7 +839,7 @@ export default function DetailPengajuanPage() {
                   type="button"
                   className="btn btn-success"
                   onClick={handlePaymentSubmit}
-                  disabled={processing}
+                  disabled={processing || !paymentDate}
                 >
                   {processing ? (
                     <><span className="spinner-border spinner-border-sm me-2" />Memproses...</>
