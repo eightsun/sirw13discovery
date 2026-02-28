@@ -494,3 +494,210 @@ export interface IPLDashboardStats {
   tunggakan_per_rt: { rt: string; jumlah: number }[];
   pembayaran_pending: number;
 }
+
+// ==========================================
+// FASE 4: KEUANGAN TYPES
+// ==========================================
+
+// Kategori Pengeluaran
+export interface KategoriPengeluaran {
+  id: number;
+  kode: string;
+  nama: string;
+  deskripsi?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+// Budget Tahunan
+export interface BudgetTahunan {
+  id: number;
+  tahun: number;
+  wilayah: 'Timur' | 'Barat';
+  kategori_id: number;
+  jumlah_budget: number;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+  // Joined
+  kategori?: KategoriPengeluaran;
+}
+
+// Status Pengajuan
+export type StatusPengajuan = 'diajukan' | 'direvisi' | 'disetujui' | 'ditolak' | 'diproses' | 'selesai' | 'dibatalkan';
+
+// Riwayat Status
+export interface RiwayatStatus {
+  status: StatusPengajuan;
+  tanggal: string;
+  catatan?: string;
+  oleh: string;
+  nama_user?: string;
+}
+
+// Pengajuan Pembelian
+export interface PengajuanPembelian {
+  id: string;
+  nomor_pengajuan: string;
+  // Pemohon
+  pemohon_id: string;
+  nama_pemohon: string;
+  jabatan_pemohon: string;
+  no_wa?: string;
+  // Detail
+  deskripsi_pembelian: string;
+  wilayah: 'Timur' | 'Barat';
+  tanggal_pengajuan: string;
+  tanggal_target?: string;
+  kategori_id?: number;
+  nilai_transaksi: number;
+  link_referensi?: string;
+  // Bukti
+  bukti_persetujuan_url?: string;
+  nota_invoice_url?: string;
+  bukti_transaksi_url?: string;
+  // Reimbursement
+  rekening_penerima?: string;
+  nama_pemilik_rekening?: string;
+  bank?: string;
+  // Catatan
+  catatan_tambahan?: string;
+  // Status
+  status: StatusPengajuan;
+  riwayat_status: RiwayatStatus[];
+  // Approval
+  disetujui_oleh?: string;
+  tanggal_disetujui?: string;
+  catatan_approval?: string;
+  // Proses
+  diproses_oleh?: string;
+  tanggal_diproses?: string;
+  catatan_proses?: string;
+  // Timestamps
+  created_at: string;
+  updated_at: string;
+  // Joined
+  kategori?: KategoriPengeluaran;
+  pemohon?: { nama_lengkap: string; email: string };
+  approver?: { nama_lengkap: string };
+  processor?: { nama_lengkap: string };
+}
+
+// Form Input Pengajuan
+export interface PengajuanFormInput {
+  nama_pemohon: string;
+  jabatan_pemohon: string;
+  no_wa?: string;
+  deskripsi_pembelian: string;
+  wilayah: 'Timur' | 'Barat';
+  tanggal_pengajuan: string;
+  tanggal_target?: string;
+  kategori_id?: number;
+  nilai_transaksi: number;
+  link_referensi?: string;
+  rekening_penerima?: string;
+  nama_pemilik_rekening?: string;
+  bank?: string;
+  catatan_tambahan?: string;
+}
+
+// Jenis Kas
+export type JenisKas = 'rw' | 'rt';
+
+// Tipe Transaksi Kas
+export type TipeTransaksi = 'pemasukan' | 'pengeluaran';
+
+// Sumber Transaksi
+export type SumberTransaksi = 'ipl' | 'pengajuan' | 'manual';
+
+// Kas Transaksi
+export interface KasTransaksi {
+  id: string;
+  jenis_kas: JenisKas;
+  rt_id?: string;
+  wilayah: 'Timur' | 'Barat';
+  tipe: TipeTransaksi;
+  sumber: SumberTransaksi;
+  sumber_id?: string;
+  tanggal: string;
+  kategori_id?: number;
+  jumlah: number;
+  keterangan?: string;
+  pengajuan_id?: string;
+  bukti_url?: string;
+  created_by?: string;
+  created_at: string;
+  // Joined
+  kategori?: KategoriPengeluaran;
+  rt?: { nomor_rt: string };
+  pengajuan?: PengajuanPembelian;
+}
+
+// Form Input Kas Transaksi Manual
+export interface KasTransaksiFormInput {
+  jenis_kas: JenisKas;
+  rt_id?: string;
+  wilayah: 'Timur' | 'Barat';
+  tipe: TipeTransaksi;
+  tanggal: string;
+  kategori_id?: number;
+  jumlah: number;
+  keterangan?: string;
+}
+
+// Laporan Keuangan
+export interface LaporanKeuangan {
+  id: string;
+  wilayah: 'Timur' | 'Barat';
+  bulan: string;
+  periode_awal: string;
+  periode_akhir: string;
+  saldo_awal: number;
+  total_pemasukan: number;
+  total_pengeluaran: number;
+  saldo_akhir: number;
+  file_url?: string;
+  ditandatangani_oleh: { nama: string; jabatan: string; tanda_tangan_url?: string }[];
+  digenerate_oleh?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Setting Pembagian IPL
+export interface SettingPembagianIPL {
+  id: number;
+  wilayah: 'Timur' | 'Barat';
+  berlaku_mulai: string;
+  nominal_ipl: number;
+  bagian_rw: number;
+  bagian_rt: number;
+  is_active: boolean;
+  created_at: string;
+  created_by?: string;
+}
+
+// Dashboard Keuangan Stats
+export interface KeuanganDashboardStats {
+  // Kas RW
+  saldo_kas_rw_timur: number;
+  saldo_kas_rw_barat: number;
+  saldo_kas_rw_total: number;
+  // Kas RT
+  saldo_kas_rt: { rt_id: string; nomor_rt: string; saldo: number }[];
+  // Transaksi bulan ini
+  pemasukan_bulan_ini: number;
+  pengeluaran_bulan_ini: number;
+  // Pengajuan
+  pengajuan_menunggu: number;
+  pengajuan_diproses: number;
+}
+
+// Budget Summary
+export interface BudgetSummary {
+  kategori_id: number;
+  kategori_nama: string;
+  budget: number;
+  terpakai: number;
+  sisa: number;
+  persentase: number;
+}

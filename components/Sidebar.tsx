@@ -95,21 +95,44 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       title: 'Administrasi',
       items: [
         { 
-          href: '/surat', 
-          label: 'Surat Menyurat', 
-          icon: <FiFileText />,
-          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'ketua_rt', 'sekretaris_rt']
-        },
-        { 
-          href: '/keuangan', 
-          label: 'Keuangan', 
-          icon: <FiCreditCard />,
-          roles: ['ketua_rw', 'wakil_ketua_rw', 'bendahara_rw', 'ketua_rt', 'bendahara_rt']
-        },
-        { 
           href: '/kegiatan', 
           label: 'Kegiatan', 
           icon: <FiCalendar />,
+        },
+      ],
+    },
+    {
+      title: 'Keuangan',
+      items: [
+        { 
+          href: '/keuangan', 
+          label: 'Dashboard Kas', 
+          icon: <FiBarChart2 />,
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'ketua_rt', 'sekretaris_rt', 'bendahara_rt']
+        },
+        { 
+          href: '/keuangan/pengajuan', 
+          label: 'Pengajuan', 
+          icon: <FiFileText />,
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'ketua_rt', 'sekretaris_rt', 'bendahara_rt']
+        },
+        { 
+          href: '/keuangan/transaksi', 
+          label: 'Transaksi Kas', 
+          icon: <FiCreditCard />,
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw']
+        },
+        { 
+          href: '/keuangan/budget', 
+          label: 'Budget Tahunan', 
+          icon: <FiDatabase />,
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'bendahara_rw']
+        },
+        { 
+          href: '/keuangan/laporan', 
+          label: 'Laporan Bulanan', 
+          icon: <FiFileText />,
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw']
         },
       ],
     },
