@@ -79,20 +79,21 @@ export default function RegisterPage() {
       }
 
       if (authData.user) {
-        // 4. Buat entry di tabel users
+        // 4. Siapkan data user
         const userInsertData: {
           id: string
           email: string
           nama_lengkap: string
           role: string
           is_active: boolean
-          warga_id?: string
+          warga_id?: string | null
         } = {
           id: authData.user.id,
           email: data.email,
           nama_lengkap: data.nama_lengkap,
           role: 'warga',
           is_active: true,
+          warga_id: null,
         }
 
         // 5. Jika NIK sudah ada di warga, link langsung
@@ -112,13 +113,35 @@ export default function RegisterPage() {
           setSuccessMessage('Pendaftaran berhasil! Silakan lengkapi data warga setelah login.')
         }
 
-        const { error: profileError } = await supabase
+        // 6. Cek apakah user sudah ada (mungkin dibuat oleh trigger)
+        const { data: existingUser } = await supabase
           .from('users')
-          .insert(userInsertData)
+          .select('id')
+          .eq('id', authData.user.id)
+          .maybeSingle()
 
-        if (profileError) {
-          console.error('Error creating user profile:', profileError)
-          // Tetap lanjutkan karena auth sudah berhasil
+        if (existingUser) {
+          // User sudah ada, update dengan warga_id
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({
+              nama_lengkap: data.nama_lengkap,
+              warga_id: userInsertData.warga_id,
+            })
+            .eq('id', authData.user.id)
+
+          if (updateError) {
+            console.error('Error updating user profile:', updateError)
+          }
+        } else {
+          // User belum ada, insert baru
+          const { error: insertError } = await supabase
+            .from('users')
+            .insert(userInsertData)
+
+          if (insertError) {
+            console.error('Error creating user profile:', insertError)
+          }
         }
       }
 
