@@ -132,6 +132,8 @@ export default function RegisterPage() {
 
           if (updateError) {
             console.error('Error updating user profile:', updateError)
+            setError('Database error saving new user')
+            return
           }
         } else {
           // User belum ada, insert baru
@@ -141,6 +143,8 @@ export default function RegisterPage() {
 
           if (insertError) {
             console.error('Error creating user profile:', insertError)
+            setError('Database error saving new user')
+            return
           }
         }
       }
