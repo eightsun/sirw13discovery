@@ -172,15 +172,17 @@ export default function EditPengajuanPage() {
     try {
       setSubmitting(true)
 
-      let notaInvoiceUrl = pengajuan.nota_invoice_url
-      let buktiTransaksiUrl = pengajuan.bukti_transaksi_url
+      let notaInvoiceUrl: string | null | undefined = pengajuan.nota_invoice_url
+      let buktiTransaksiUrl: string | null | undefined = pengajuan.bukti_transaksi_url
 
       if (notaInvoice) {
-        notaInvoiceUrl = await uploadFile(notaInvoice, 'nota')
+        const uploaded = await uploadFile(notaInvoice, 'nota')
+        if (uploaded) notaInvoiceUrl = uploaded
       }
 
       if (buktiTransaksi) {
-        buktiTransaksiUrl = await uploadFile(buktiTransaksi, 'transaksi')
+        const uploaded = await uploadFile(buktiTransaksi, 'transaksi')
+        if (uploaded) buktiTransaksiUrl = uploaded
       }
 
       // Update riwayat jika status direvisi -> diajukan
