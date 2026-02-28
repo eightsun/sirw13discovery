@@ -22,7 +22,8 @@ import {
   FiUpload,
   FiCheckCircle,
   FiXCircle,
-  FiAlertCircle
+  FiAlertCircle,
+  FiCreditCard
 } from 'react-icons/fi'
 
 // Custom Rupiah Icon
@@ -39,9 +40,14 @@ export default function DetailPengajuanPage() {
   const [loading, setLoading] = useState(true)
   const [pengajuan, setPengajuan] = useState<PengajuanPembelian | null>(null)
   const [showApprovalModal, setShowApprovalModal] = useState(false)
-  const [approvalAction, setApprovalAction] = useState<'setujui' | 'tolak' | 'revisi' | 'proses' | 'selesai' | null>(null)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [approvalAction, setApprovalAction] = useState<'setujui' | 'tolak' | 'revisi' | 'proses' | null>(null)
   const [approvalNote, setApprovalNote] = useState('')
   const [processing, setProcessing] = useState(false)
+  
+  // State untuk upload bukti pembayaran
+  const [buktiPembayaran, setBuktiPembayaran] = useState<File | null>(null)
+  const [paymentNote, setPaymentNote] = useState('')
 
   const isKetuaRW = userData?.role === 'ketua_rw' || userData?.role === 'wakil_ketua_rw'
   const isBendaharaRW = userData?.role === 'bendahara_rw'
@@ -78,9 +84,9 @@ export default function DetailPengajuanPage() {
     const badges: Record<StatusPengajuan, { color: string; label: string; icon: React.ReactNode }> = {
       'diajukan': { color: 'warning', label: 'Menunggu Approval', icon: <FiClock /> },
       'direvisi': { color: 'info', label: 'Perlu Revisi', icon: <FiRefreshCw /> },
-      'disetujui': { color: 'primary', label: 'Disetujui', icon: <FiCheck /> },
+      'disetujui': { color: 'primary', label: 'Menunggu Pembayaran', icon: <FiCreditCard /> },
       'ditolak': { color: 'danger', label: 'Ditolak', icon: <FiX /> },
-      'diproses': { color: 'info', label: 'Sedang Diproses', icon: <FiClock /> },
+      'diproses': { color: 'info', label: 'Pembayaran Diproses', icon: <FiClock /> },
       'selesai': { color: 'success', label: 'Selesai', icon: <FiCheckCircle /> },
       'dibatalkan': { color: 'secondary', label: 'Dibatalkan', icon: <FiXCircle /> }
     }
@@ -98,7 +104,7 @@ export default function DetailPengajuanPage() {
       'direvisi': { icon: <FiRefreshCw />, color: 'info' },
       'disetujui': { icon: <FiCheck />, color: 'success' },
       'ditolak': { icon: <FiX />, color: 'danger' },
-      'diproses': { icon: <RupiahIcon />, color: 'info' },
+      'diproses': { icon: <FiCreditCard />, color: 'info' },
       'selesai': { icon: <FiCheckCircle />, color: 'success' },
       'dibatalkan': { icon: <FiXCircle />, color: 'secondary' }
     }
@@ -111,8 +117,8 @@ export default function DetailPengajuanPage() {
       'direvisi': 'Diminta Revisi oleh Ketua RW',
       'disetujui': 'Disetujui oleh Ketua RW',
       'ditolak': 'Ditolak oleh Ketua RW',
-      'diproses': 'Pembayaran Diproses oleh Bendahara',
-      'selesai': 'Pengajuan Selesai',
+      'diproses': 'Pembayaran Diproses Bendahara',
+      'selesai': 'Pembayaran Selesai',
       'dibatalkan': 'Pengajuan Dibatalkan'
     }
     return labels[status] || status
@@ -129,10 +135,77 @@ export default function DetailPengajuanPage() {
     })
   }
 
-  const handleApprovalClick = (action: 'setujui' | 'tolak' | 'revisi' | 'proses' | 'selesai') => {
+  const handleApprovalClick = (action: 'setujui' | 'tolak' | 'revisi' | 'proses') => {
     setApprovalAction(action)
     setApprovalNote('')
     setShowApprovalModal(true)
+  }
+
+  const handlePaymentClick = () => {
+    setBuktiPembayaran(null)
+    setPaymentNote('')
+    setShowPaymentModal(true)
+  }
+
+  // Compress image
+  const compressImage = async (file: File): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const img = new Image()
+      
+      img.onload = () => {
+        const maxDim = 1200
+        let width = img.width
+        let height = img.height
+        
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = (height / width) * maxDim
+            width = maxDim
+          } else {
+            width = (width / height) * maxDim
+            height = maxDim
+          }
+        }
+        
+        canvas.width = width
+        canvas.height = height
+        ctx?.drawImage(img, 0, 0, width, height)
+        
+        canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.7)
+      }
+      
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
+  // Upload file
+  const uploadFile = async (file: File, folder: string): Promise<string | null> => {
+    try {
+      let uploadData: Blob | File = file
+      
+      if (file.type.startsWith('image/')) {
+        uploadData = await compressImage(file)
+      }
+      
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+      
+      const { error } = await supabase.storage
+        .from('pengajuan')
+        .upload(fileName, uploadData, { cacheControl: '3600', upsert: false })
+      
+      if (error) {
+        console.error('Upload error:', error)
+        return null
+      }
+      
+      return fileName
+    } catch (error) {
+      console.error('Upload error:', error)
+      return null
+    }
   }
 
   const handleApprovalSubmit = async () => {
@@ -147,7 +220,7 @@ export default function DetailPengajuanPage() {
       switch (approvalAction) {
         case 'setujui':
           newStatus = 'disetujui'
-          catatan = approvalNote || 'Disetujui oleh Ketua RW'
+          catatan = approvalNote || 'Disetujui oleh Ketua RW, menunggu pembayaran Bendahara'
           break
         case 'tolak':
           newStatus = 'ditolak'
@@ -159,11 +232,7 @@ export default function DetailPengajuanPage() {
           break
         case 'proses':
           newStatus = 'diproses'
-          catatan = approvalNote || 'Pembayaran sedang diproses'
-          break
-        case 'selesai':
-          newStatus = 'selesai'
-          catatan = approvalNote || 'Pengajuan selesai'
+          catatan = approvalNote || 'Pembayaran sedang diproses oleh Bendahara'
           break
         default:
           return
@@ -192,28 +261,9 @@ export default function DetailPengajuanPage() {
         updateData.catatan_approval = catatan
       }
 
-      if (approvalAction === 'proses' || approvalAction === 'selesai') {
+      if (approvalAction === 'proses') {
         updateData.diproses_oleh = userData?.id
         updateData.tanggal_diproses = new Date().toISOString()
-        updateData.catatan_proses = catatan
-
-        if (approvalAction === 'selesai') {
-          const kasData = {
-            jenis_kas: 'rw',
-            wilayah: pengajuan.wilayah,
-            tipe: 'pengeluaran',
-            sumber: 'pengajuan',
-            sumber_id: pengajuan.id,
-            tanggal: new Date().toISOString().split('T')[0],
-            kategori_id: pengajuan.kategori_id,
-            jumlah: pengajuan.nilai_transaksi,
-            keterangan: pengajuan.deskripsi_pembelian,
-            pengajuan_id: pengajuan.id,
-            created_by: userData?.id
-          }
-
-          await supabase.from('kas_transaksi').insert(kasData)
-        }
       }
 
       const { error } = await supabase
@@ -228,6 +278,82 @@ export default function DetailPengajuanPage() {
     } catch (error) {
       console.error('Error updating pengajuan:', error)
       alert('Gagal memproses pengajuan')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  // Handle pembayaran selesai dengan upload bukti
+  const handlePaymentSubmit = async () => {
+    if (!pengajuan) return
+
+    try {
+      setProcessing(true)
+
+      // Upload bukti pembayaran jika ada
+      let buktiPembayaranUrl: string | null = null
+      if (buktiPembayaran) {
+        buktiPembayaranUrl = await uploadFile(buktiPembayaran, 'pembayaran')
+      }
+
+      const catatan = paymentNote || 'Pembayaran telah diselesaikan oleh Bendahara'
+
+      const newRiwayat: RiwayatStatus[] = [
+        ...pengajuan.riwayat_status,
+        {
+          status: 'selesai',
+          tanggal: new Date().toISOString(),
+          catatan,
+          oleh: userData?.id || '',
+          nama_user: userData?.nama_lengkap || '',
+          bukti_url: buktiPembayaranUrl || undefined
+        }
+      ]
+
+      const updateData: Record<string, unknown> = {
+        status: 'selesai',
+        riwayat_status: newRiwayat,
+        updated_at: new Date().toISOString(),
+        diproses_oleh: userData?.id,
+        tanggal_diproses: new Date().toISOString(),
+        catatan_proses: catatan
+      }
+
+      // Simpan bukti pembayaran ke field khusus
+      if (buktiPembayaranUrl) {
+        updateData.bukti_transaksi_url = buktiPembayaranUrl
+      }
+
+      // Update pengajuan
+      const { error } = await supabase
+        .from('pengajuan_pembelian')
+        .update(updateData)
+        .eq('id', pengajuan.id)
+
+      if (error) throw error
+
+      // Buat transaksi pengeluaran di kas
+      const kasData = {
+        jenis_kas: 'rw',
+        wilayah: pengajuan.wilayah,
+        tipe: 'pengeluaran',
+        sumber: 'pengajuan',
+        sumber_id: pengajuan.id,
+        tanggal: new Date().toISOString().split('T')[0],
+        kategori_id: pengajuan.kategori_id,
+        jumlah: pengajuan.nilai_transaksi,
+        keterangan: pengajuan.deskripsi_pembelian,
+        pengajuan_id: pengajuan.id,
+        created_by: userData?.id
+      }
+
+      await supabase.from('kas_transaksi').insert(kasData)
+
+      setShowPaymentModal(false)
+      fetchPengajuan()
+    } catch (error) {
+      console.error('Error completing payment:', error)
+      alert('Gagal menyelesaikan pembayaran')
     } finally {
       setProcessing(false)
     }
@@ -294,6 +420,7 @@ export default function DetailPengajuanPage() {
         
         {hasActions && (
           <div className="d-flex flex-wrap gap-2">
+            {/* Ketua RW Actions */}
             {showKetuaActions && (
               <>
                 <button className="btn btn-success d-flex align-items-center" onClick={() => handleApprovalClick('setujui')}>
@@ -307,16 +434,22 @@ export default function DetailPengajuanPage() {
                 </button>
               </>
             )}
+
+            {/* Bendahara: Proses Pembayaran */}
             {showBendaharaProses && (
               <button className="btn btn-info d-flex align-items-center" onClick={() => handleApprovalClick('proses')}>
-                <RupiahIcon className="me-1" /> Proses Pembayaran
+                <FiCreditCard className="me-1" /> Proses Pembayaran
               </button>
             )}
+
+            {/* Bendahara: Selesaikan dengan upload bukti */}
             {showBendaharaSelesai && (
-              <button className="btn btn-success d-flex align-items-center" onClick={() => handleApprovalClick('selesai')}>
-                <FiCheckCircle className="me-1" /> Selesaikan
+              <button className="btn btn-success d-flex align-items-center" onClick={handlePaymentClick}>
+                <FiCheckCircle className="me-1" /> Selesaikan & Upload Bukti
               </button>
             )}
+
+            {/* Pemohon Edit */}
             {showPemohonEdit && (
               <Link href={`/keuangan/pengajuan/${pengajuan.id}/edit`} className="btn btn-outline-primary d-flex align-items-center">
                 <FiEdit2 className="me-1" /> Edit Pengajuan
@@ -437,7 +570,9 @@ export default function DetailPengajuanPage() {
                 </div>
                 <div className="col-md-6">
                   <div className="border rounded p-3 h-100">
-                    <label className="text-muted small d-block mb-2">Bukti Transfer Bank</label>
+                    <label className="text-muted small d-block mb-2">
+                      {pengajuan.status === 'selesai' ? 'Bukti Pembayaran/Pelunasan' : 'Bukti Transfer Bank'}
+                    </label>
                     {pengajuan.bukti_transaksi_url ? (
                       <button className="btn btn-sm btn-outline-primary" onClick={() => openFile(pengajuan.bukti_transaksi_url)}>
                         <FiDownload className="me-1" /> Lihat File
@@ -512,6 +647,15 @@ export default function DetailPengajuanPage() {
                               {riwayat.catatan && (
                                 <p className="mb-0 small fst-italic text-secondary">&quot;{riwayat.catatan}&quot;</p>
                               )}
+                              {/* Tampilkan link bukti pembayaran jika ada */}
+                              {riwayat.bukti_url && (
+                                <button 
+                                  className="btn btn-sm btn-outline-success mt-2"
+                                  onClick={() => openFile(riwayat.bukti_url)}
+                                >
+                                  <FiDownload className="me-1" size={12} /> Bukti Pembayaran
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -527,7 +671,7 @@ export default function DetailPengajuanPage() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Approval Modal (untuk Ketua RW & Bendahara proses) */}
       {showApprovalModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
@@ -538,7 +682,6 @@ export default function DetailPengajuanPage() {
                   {approvalAction === 'tolak' && 'Tolak Pengajuan'}
                   {approvalAction === 'revisi' && 'Minta Revisi'}
                   {approvalAction === 'proses' && 'Proses Pembayaran'}
-                  {approvalAction === 'selesai' && 'Selesaikan Pengajuan'}
                 </h5>
                 <button type="button" className="btn-close" onClick={() => setShowApprovalModal(false)} />
               </div>
@@ -548,6 +691,21 @@ export default function DetailPengajuanPage() {
                   {pengajuan.deskripsi_pembelian}<br />
                   <span className="fw-bold text-primary">{formatRupiah(pengajuan.nilai_transaksi)}</span>
                 </p>
+
+                {approvalAction === 'setujui' && (
+                  <div className="alert alert-info small">
+                    <FiCreditCard className="me-2" />
+                    Setelah disetujui, pengajuan akan menunggu proses pembayaran oleh Bendahara RW.
+                  </div>
+                )}
+
+                {approvalAction === 'proses' && (
+                  <div className="alert alert-info small">
+                    <FiClock className="me-2" />
+                    Status akan berubah menjadi &quot;Pembayaran Diproses&quot;. Anda dapat menyelesaikan dan upload bukti pembayaran setelah ini.
+                  </div>
+                )}
+
                 <div className="mb-3">
                   <label className="form-label">
                     Catatan {(approvalAction === 'revisi' || approvalAction === 'tolak') && <span className="text-danger">*</span>}
@@ -565,7 +723,7 @@ export default function DetailPengajuanPage() {
                 <button type="button" className="btn btn-secondary" onClick={() => setShowApprovalModal(false)} disabled={processing}>Batal</button>
                 <button
                   type="button"
-                  className={`btn btn-${approvalAction === 'setujui' || approvalAction === 'selesai' ? 'success' : approvalAction === 'tolak' ? 'danger' : approvalAction === 'proses' ? 'info' : 'warning'}`}
+                  className={`btn btn-${approvalAction === 'setujui' ? 'success' : approvalAction === 'tolak' ? 'danger' : approvalAction === 'proses' ? 'info' : 'warning'}`}
                   onClick={handleApprovalSubmit}
                   disabled={processing || ((approvalAction === 'revisi' || approvalAction === 'tolak') && !approvalNote)}
                 >
@@ -575,8 +733,100 @@ export default function DetailPengajuanPage() {
                       {approvalAction === 'tolak' && 'Tolak'}
                       {approvalAction === 'revisi' && 'Kirim ke Revisi'}
                       {approvalAction === 'proses' && 'Proses Pembayaran'}
-                      {approvalAction === 'selesai' && 'Selesaikan'}
                     </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Completion Modal (untuk Bendahara selesaikan) */}
+      {showPaymentModal && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-success text-white">
+                <h5 className="modal-title">
+                  <FiCheckCircle className="me-2" />
+                  Selesaikan Pembayaran
+                </h5>
+                <button type="button" className="btn-close btn-close-white" onClick={() => setShowPaymentModal(false)} />
+              </div>
+              <div className="modal-body">
+                <p className="mb-3">
+                  <strong>{pengajuan.nomor_pengajuan}</strong><br />
+                  {pengajuan.deskripsi_pembelian}<br />
+                  <span className="fw-bold text-primary fs-5">{formatRupiah(pengajuan.nilai_transaksi)}</span>
+                </p>
+
+                {/* Info Reimbursement jika ada */}
+                {pengajuan.rekening_penerima && (
+                  <div className="alert alert-secondary small mb-3">
+                    <strong>Transfer ke:</strong><br />
+                    {pengajuan.bank} - {pengajuan.rekening_penerima}<br />
+                    a.n. {pengajuan.nama_pemilik_rekening}
+                  </div>
+                )}
+
+                <div className="mb-3">
+                  <label className="form-label fw-bold">
+                    <FiUpload className="me-2" />
+                    Upload Bukti Pembayaran/Pelunasan
+                  </label>
+                  <input 
+                    type="file" 
+                    className="form-control"
+                    accept="image/*,.pdf"
+                    onChange={(e) => setBuktiPembayaran(e.target.files?.[0] || null)}
+                  />
+                  <small className="text-muted">Format: JPG, PNG, atau PDF (maks. 5MB)</small>
+                  {buktiPembayaran && (
+                    <div className="mt-2 p-2 bg-light rounded small">
+                      <FiFileText className="me-1" />
+                      {buktiPembayaran.name}
+                      <button 
+                        type="button" 
+                        className="btn btn-sm btn-link text-danger p-0 ms-2"
+                        onClick={() => setBuktiPembayaran(null)}
+                      >
+                        <FiX />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">Catatan Pembayaran</label>
+                  <textarea
+                    className="form-control"
+                    rows={2}
+                    value={paymentNote}
+                    onChange={(e) => setPaymentNote(e.target.value)}
+                    placeholder="Catatan tambahan tentang pembayaran (opsional)..."
+                  />
+                </div>
+
+                <div className="alert alert-warning small mb-0">
+                  <FiAlertCircle className="me-2" />
+                  Setelah diselesaikan, transaksi akan tercatat sebagai pengeluaran di Kas RW dan tidak dapat diubah.
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowPaymentModal(false)} disabled={processing}>
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  onClick={handlePaymentSubmit}
+                  disabled={processing}
+                >
+                  {processing ? (
+                    <><span className="spinner-border spinner-border-sm me-2" />Memproses...</>
+                  ) : (
+                    <><FiCheckCircle className="me-2" />Selesaikan Pembayaran</>
                   )}
                 </button>
               </div>

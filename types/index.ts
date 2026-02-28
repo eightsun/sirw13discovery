@@ -533,6 +533,7 @@ export interface RiwayatStatus {
   catatan?: string;
   oleh: string;
   nama_user?: string;
+  bukti_url?: string; // URL bukti pembayaran (untuk status selesai)
 }
 
 // Pengajuan Pembelian
