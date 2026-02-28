@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
-import { formatRupiah } from '@/utils/helpers'
+import { formatRupiah, getRoleLabel } from '@/utils/helpers'
 import { KategoriPengeluaran, PengajuanFormInput, BudgetSummary } from '@/types'
 import { 
   FiSave, 
@@ -19,7 +19,7 @@ import {
 
 export default function TambahPengajuanPage() {
   const router = useRouter()
-  const { userData } = useUser()
+  const { userData, role } = useUser()
   const supabase = createClient()
   
   const [loading, setLoading] = useState(false)
@@ -28,8 +28,7 @@ export default function TambahPengajuanPage() {
   const [budgetSummary, setBudgetSummary] = useState<BudgetSummary | null>(null)
   const [budgetWarning, setBudgetWarning] = useState<string | null>(null)
   
-  // File uploads
-  const [buktiPersetujuan, setBuktiPersetujuan] = useState<File | null>(null)
+  // File uploads - Hapus buktiPersetujuan karena approval via aplikasi
   const [notaInvoice, setNotaInvoice] = useState<File | null>(null)
   const [buktiTransaksi, setBuktiTransaksi] = useState<File | null>(null)
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
@@ -52,23 +51,29 @@ export default function TambahPengajuanPage() {
   const watchedWilayah = watch('wilayah')
   const watchedNilai = watch('nilai_transaksi')
 
-  // Set nama pemohon dari userData saat tersedia
+  // Set nama pemohon dan jabatan dari userData saat tersedia
   useEffect(() => {
     if (userData?.nama_lengkap) {
       setValue('nama_pemohon', userData.nama_lengkap)
     }
-  }, [userData, setValue])
+    if (role) {
+      setValue('jabatan_pemohon', getRoleLabel(role))
+    }
+  }, [userData, role, setValue])
 
-  // Fetch kategori
+  // Fetch kategori dengan sorting numerik
   useEffect(() => {
     const fetchKategori = async () => {
       const { data } = await supabase
         .from('kategori_pengeluaran')
         .select('*')
         .eq('is_active', true)
-        .order('kode')
       
-      if (data) setKategoriList(data)
+      if (data) {
+        // Sort berdasarkan kode secara numerik
+        const sorted = data.sort((a, b) => parseInt(a.kode) - parseInt(b.kode))
+        setKategoriList(sorted)
+      }
     }
     fetchKategori()
   }, [])
@@ -205,16 +210,9 @@ export default function TambahPengajuanPage() {
     try {
       setSubmitting(true)
 
-      // Upload files
-      let buktiPersetujuanUrl: string | null = null
+      // Upload files (tanpa bukti persetujuan - approval via aplikasi)
       let notaInvoiceUrl: string | null = null
       let buktiTransaksiUrl: string | null = null
-
-      if (buktiPersetujuan) {
-        setUploadProgress(prev => ({ ...prev, persetujuan: 0 }))
-        buktiPersetujuanUrl = await uploadFile(buktiPersetujuan, 'persetujuan')
-        setUploadProgress(prev => ({ ...prev, persetujuan: 100 }))
-      }
 
       if (notaInvoice) {
         setUploadProgress(prev => ({ ...prev, nota: 0 }))
@@ -241,7 +239,7 @@ export default function TambahPengajuanPage() {
         kategori_id: data.kategori_id || null,
         nilai_transaksi: Number(data.nilai_transaksi),
         link_referensi: data.link_referensi || null,
-        bukti_persetujuan_url: buktiPersetujuanUrl,
+        bukti_persetujuan_url: null, // Approval via aplikasi
         nota_invoice_url: notaInvoiceUrl,
         bukti_transaksi_url: buktiTransaksiUrl,
         rekening_penerima: data.rekening_penerima || null,
@@ -484,12 +482,6 @@ export default function TambahPengajuanPage() {
                 <h6 className="mb-0 fw-bold">Upload Bukti (Opsional)</h6>
               </div>
               <div className="card-body">
-                <FileUploadField
-                  label="Bukti Persetujuan Ketua RW"
-                  file={buktiPersetujuan}
-                  setFile={setBuktiPersetujuan}
-                  progress={uploadProgress.persetujuan}
-                />
                 <FileUploadField
                   label="Nota/Invoice/Quotation"
                   file={notaInvoice}
