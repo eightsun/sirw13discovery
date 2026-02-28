@@ -186,9 +186,9 @@ export default function TransaksiKasPage() {
 
     // Add summary rows
     data.push({} as typeof data[0])
-    data.push({ 'No': '' as unknown as number, 'Tanggal': '', 'Jenis Kas': '', 'Wilayah': '', 'Tipe': '', 'Sumber': '', 'Kategori': '', 'Keterangan': 'Total Pemasukan', 'Jumlah': totalPemasukan })
-    data.push({ 'No': '' as unknown as number, 'Tanggal': '', 'Jenis Kas': '', 'Wilayah': '', 'Tipe': '', 'Sumber': '', 'Kategori': '', 'Keterangan': 'Total Pengeluaran', 'Jumlah': -totalPengeluaran })
-    data.push({ 'No': '' as unknown as number, 'Tanggal': '', 'Jenis Kas': '', 'Wilayah': '', 'Tipe': '', 'Sumber': '', 'Kategori': '', 'Keterangan': 'Saldo', 'Jumlah': totalPemasukan - totalPengeluaran })
+    data.push({ 'No': '' as unknown as number, 'Tanggal': '', 'Jenis Kas': '', 'Wilayah': '' as unknown as 'Timur' | 'Barat', 'Tipe': '', 'Sumber': '', 'Kategori': '', 'Keterangan': 'Total Pemasukan', 'Jumlah': totalPemasukan })
+    data.push({ 'No': '' as unknown as number, 'Tanggal': '', 'Jenis Kas': '', 'Wilayah': '' as unknown as 'Timur' | 'Barat', 'Tipe': '', 'Sumber': '', 'Kategori': '', 'Keterangan': 'Total Pengeluaran', 'Jumlah': -totalPengeluaran })
+    data.push({ 'No': '' as unknown as number, 'Tanggal': '', 'Jenis Kas': '', 'Wilayah': '' as unknown as 'Timur' | 'Barat', 'Tipe': '', 'Sumber': '', 'Kategori': '', 'Keterangan': 'Saldo', 'Jumlah': totalPemasukan - totalPengeluaran })
 
     const ws = XLSX.utils.json_to_sheet(data)
     const wb = XLSX.utils.book_new()
