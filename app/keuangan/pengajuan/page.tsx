@@ -183,13 +183,21 @@ export default function PengajuanListPage() {
     try {
       setDeleting(true)
 
+      // DEBUG: Log deleteTarget untuk cek URL
+      console.log('deleteTarget:', deleteTarget)
+      console.log('nota_invoice_url:', deleteTarget.nota_invoice_url)
+      console.log('bukti_transaksi_url:', deleteTarget.bukti_transaksi_url)
+      console.log('bukti_transfer_url:', deleteTarget.bukti_transfer_url)
+
       // Kumpulkan semua file path yang perlu dihapus
       const filePaths: string[] = []
       
       // Helper untuk menambah path jika valid
       const addPath = (url: string | undefined | null) => {
+        console.log('addPath called with:', url)
         if (url) {
           const path = extractStoragePath(url)
+          console.log('extracted path:', path)
           if (path) filePaths.push(path)
         }
       }
