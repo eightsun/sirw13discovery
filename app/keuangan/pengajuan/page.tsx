@@ -169,9 +169,11 @@ export default function PengajuanListPage() {
   // Helper function untuk extract path dari storage URL
   const extractStoragePath = (url: string): string | null => {
     if (!url) return null
-    // URL format: https://xxx.supabase.co/storage/v1/object/public/pengajuan/path/file.jpg
-    // Kita perlu extract: path/file.jpg
-    const match = url.match(/\/pengajuan\/(.+)$/)
+    // URL formats:
+    // 1. Public: https://xxx.supabase.co/storage/v1/object/public/pengajuan/path/file.jpg
+    // 2. Signed: https://xxx.supabase.co/storage/v1/object/sign/pengajuan/path/file.jpg?token=...
+    // Kita perlu extract: path/file.jpg (tanpa token)
+    const match = url.match(/\/pengajuan\/([^?]+)/)
     return match ? match[1] : null
   }
 
