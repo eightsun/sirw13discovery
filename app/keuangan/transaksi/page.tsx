@@ -49,8 +49,8 @@ export default function TransaksiKasPage() {
     bendaharaBarat: string;
   }>({
     ketuaRW: 'Ichsan Yudha Pratama',
-    bendaharaTimur: 'Ratih Muliasari',
-    bendaharaBarat: 'Ratih Muliasari'
+    bendaharaTimur: 'Ferdinan Rakhmad Yanuar',
+    bendaharaBarat: 'Achmad Rizaq'
   })
 
   useEffect(() => {
@@ -59,32 +59,21 @@ export default function TransaksiKasPage() {
   }, [filterJenisKas, filterWilayah, filterTipe, filterBulan])
 
   const fetchPejabat = async () => {
-    // Fetch Ketua RW
+    // Fetch Ketua RW dari tabel users (yang punya kolom role)
     const { data: ketuaData } = await supabase
-      .from('warga')
+      .from('users')
       .select('nama_lengkap')
       .eq('role', 'ketua_rw')
+      .eq('is_active', true)
       .single()
     
-    // Fetch Bendahara RW
-    const { data: bendaharaData } = await supabase
-      .from('warga')
-      .select('nama_lengkap, wilayah')
-      .eq('role', 'bendahara_rw')
-    
-    if (ketuaData) {
+    if (ketuaData && ketuaData.nama_lengkap) {
       setPejabat(prev => ({ ...prev, ketuaRW: ketuaData.nama_lengkap }))
     }
     
-    if (bendaharaData) {
-      bendaharaData.forEach((b: { nama_lengkap: string; wilayah: string }) => {
-        if (b.wilayah === 'Timur') {
-          setPejabat(prev => ({ ...prev, bendaharaTimur: b.nama_lengkap }))
-        } else if (b.wilayah === 'Barat') {
-          setPejabat(prev => ({ ...prev, bendaharaBarat: b.nama_lengkap }))
-        }
-      })
-    }
+    // Catatan: Bendahara Timur dan Barat tidak bisa dibedakan dari tabel users
+    // karena tidak ada kolom wilayah. Nama default sudah di-set di state awal.
+    // Jika ingin dinamis, perlu menambahkan kolom wilayah di tabel users.
   }
 
   const fetchTransaksi = async () => {
@@ -169,6 +158,43 @@ export default function TransaksiKasPage() {
     }
     return title
   }
+
+  // Download Template Excel
+  const downloadTemplate = useCallback(() => {
+    // Header row
+    const templateData = [
+      {
+        'Tanggal (DD/MM/YYYY)': '28/02/2026',
+        'Jenis Kas (rw/rt)': 'rw',
+        'Wilayah (Timur/Barat)': 'Timur',
+        'Tipe (pemasukan/pengeluaran)': 'pemasukan',
+        'Kode Kategori': '1',
+        'Keterangan': 'Contoh: Pemasukan IPL Februari 2026',
+        'Jumlah': 500000
+      },
+      {
+        'Tanggal (DD/MM/YYYY)': '01/03/2026',
+        'Jenis Kas (rw/rt)': 'rw',
+        'Wilayah (Timur/Barat)': 'Timur',
+        'Tipe (pemasukan/pengeluaran)': 'pengeluaran',
+        'Kode Kategori': '2',
+        'Keterangan': 'Contoh: Pembelian alat kebersihan',
+        'Jumlah': 150000
+      }
+    ]
+
+    const ws = XLSX.utils.json_to_sheet(templateData)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Template')
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 20 }, { wch: 18 }, { wch: 22 }, { wch: 28 },
+      { wch: 15 }, { wch: 45 }, { wch: 15 }
+    ]
+
+    XLSX.writeFile(wb, 'template_transaksi_kas.xlsx')
+  }, [])
 
   // Download Excel
   const downloadExcel = useCallback(() => {
@@ -384,13 +410,12 @@ export default function TransaksiKasPage() {
         </div>
         <div className="d-flex flex-wrap gap-2">
           {/* Download Template */}
-          <a 
-            href="/templates/template_transaksi_kas.xlsx" 
-            download
+          <button 
             className="btn btn-outline-info"
+            onClick={downloadTemplate}
           >
             <FiDownload className="me-1" /> Template Excel
-          </a>
+          </button>
           
           {/* Import Excel */}
           {isPengurus && (
