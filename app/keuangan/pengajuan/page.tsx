@@ -166,13 +166,20 @@ export default function PengajuanListPage() {
     setShowDeleteModal(true)
   }
 
-  // Helper function untuk extract path dari storage URL
+  // Helper function untuk extract path dari storage URL atau path relatif
   const extractStoragePath = (url: string): string | null => {
     if (!url) return null
+    
+    // Jika sudah berupa path relatif (tidak dimulai dengan http), langsung return
+    if (!url.startsWith('http')) {
+      // Hapus query string jika ada
+      return url.split('?')[0]
+    }
+    
+    // Jika URL lengkap, extract path setelah /pengajuan/
     // URL formats:
     // 1. Public: https://xxx.supabase.co/storage/v1/object/public/pengajuan/path/file.jpg
     // 2. Signed: https://xxx.supabase.co/storage/v1/object/sign/pengajuan/path/file.jpg?token=...
-    // Kita perlu extract: path/file.jpg (tanpa token)
     const match = url.match(/\/pengajuan\/([^?]+)/)
     return match ? match[1] : null
   }
