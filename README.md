@@ -1,232 +1,566 @@
-# SIRW13 - Sistem Informasi RW 013
+# SIRW13 - Sistem Informasi RW 013 Permata Discovery
 
-Sistem Informasi untuk pengelolaan data warga RW 013 Permata Discovery, Desa Banjarsari, Kec. Manyar, Kabupaten Gresik.
+Sistem manajemen warga berbasis web untuk RW 013 Permata Discovery, Desa Banjarsari, Kec. Manyar, Kab. Gresik, Jawa Timur.
 
-## 🚀 Tech Stack
+## 🔗 Links
 
-- **Frontend**: Next.js 14 (App Router), TypeScript, Bootstrap 5
-- **Backend**: Supabase (PostgreSQL, Auth, Storage)
-- **State Management**: Zustand, React Hook Form
-- **Icons**: React Icons (Feather Icons)
-- **Deployment**: Vercel
+- **Production**: https://permatadiscovery.vercel.app
+- **Repository**: [GitHub Repository URL]
+- **Supabase**: [Supabase Dashboard URL]
 
-## 📋 Fitur Utama
+---
 
-### Data Warga Lengkap (Sesuai Formulir Pendataan)
+## 📋 Tech Stack
 
-#### A. Data Identitas Pribadi
-- Nama Lengkap (sesuai KTP)
-- NIK (16 digit)
-- Nomor KK
-- Tempat & Tanggal Lahir
-- Jenis Kelamin (L/P)
-- Agama
-- Status Perkawinan (Belum Kawin/Kawin/Cerai Hidup/Cerai Mati)
-- Pendidikan Terakhir (SD s/d S3)
-- Pekerjaan & Nama Institusi
-- No. HP/WhatsApp
-- Email (untuk login)
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Next.js | 14.x | React Framework (App Router) |
+| TypeScript | 5.x | Type Safety |
+| Supabase | - | Database + Auth + Storage |
+| Bootstrap | 5.3 | CSS Framework |
+| React Hook Form | - | Form Management |
+| React Icons (Feather) | - | Icon Library |
+| Vercel | - | Deployment |
 
-#### B. Status Kependudukan
-- Status Kependudukan: Penduduk Tetap / Kontrak / Menumpang / Pemilik Tidak Tinggal
-- Lama Tinggal (Tahun & Bulan)
-- Status Rumah: Milik Sendiri / Sewa / Kontrak / Menumpang / Dinas
+---
 
-#### C. Alamat Domisili
-- Blok Rumah (Jl. Discovery Timur 1-7 / Barat 1-4)
-- No Rumah
-- RT / RW
-- Perumahan, Kelurahan, Kecamatan, Kota/Kabupaten, Kode Pos
-
-#### D. Alamat Sesuai KTP
-- Opsi: Sama dengan alamat domisili / Berbeda
-- Jika berbeda: Alamat lengkap KTP
-
-#### E. Status Dokumen Kependudukan
-- KTP Elektronik: Ada & Aktif / Ada tapi alamat berbeda / Dalam proses pindah / Tidak ada
-- Kartu Keluarga: Sesuai domisili / Alamat berbeda / Dalam proses perubahan
-- Surat Domisili: Sudah ada / Belum ada
-- Status Pindah: Antar RT / Antar RW / Antar Kota / Pendatang Baru
-
-#### F. Data Keluarga
-- Hubungan dalam Keluarga (Kepala Keluarga, Istri, Suami, Anak, dll)
-- Link ke Kepala Keluarga
-- Daftar Anggota Keluarga
-
-#### G. Data Darurat
-- Nama Kontak Darurat
-- Hubungan
-- No HP
-
-#### H. Data Tambahan
-- **Kendaraan**: Jenis (Motor/Mobil), Nomor Polisi, Merek, Tipe, Tahun, Warna (bisa multiple)
-- **Minat Olahraga**: Futsal, Badminton, Tenis, Golf, Renang, dll (checkbox multiple)
-- **Kepemilikan Usaha**: Nama, Deskripsi, Alamat, WhatsApp (bisa multiple)
-
-### Fitur Sistem
-- 🔐 Autentikasi (Login/Register)
-- 👥 Role-based Access Control (RW, RT, Warga)
-- 📊 Dashboard dengan statistik
-- 🔍 Pencarian dan filter data warga
-- 🔒 Data masking untuk privasi
-- 📱 Responsive design
-
-## 👤 Role & Akses
-
-| Role | Lihat Data | Tambah | Edit | Hapus |
-|------|------------|--------|------|-------|
-| Ketua/Wakil/Sekretaris RW | Semua warga | ✅ | ✅ | ✅ |
-| Bendahara RW | Semua warga | ❌ | ❌ | ❌ |
-| Ketua/Sekretaris RT | Warga RT sendiri | ✅ | ✅ | ❌ |
-| Bendahara RT | Warga RT sendiri | ❌ | ❌ | ❌ |
-| Warga | Data sendiri | ❌ | Data sendiri | ❌ |
-
-## 🛠️ Instalasi
-
-### 1. Setup Supabase
-
-1. Buat project baru di [Supabase](https://supabase.com)
-2. Buka SQL Editor dan jalankan script `supabase/schema.sql`
-3. Catat **Project URL** dan **anon key** dari Settings > API
-
-### 2. Setup Project
-
-```bash
-# Clone repository
-git clone <repo-url>
-cd sirw13
-
-# Install dependencies
-npm install
-
-# Copy environment file
-cp .env.local.example .env.local
-
-# Edit .env.local dengan kredensial Supabase
-NEXT_PUBLIC_SUPABASE_URL=your-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-```
-
-### 3. Development
-
-```bash
-npm run dev
-```
-
-Buka http://localhost:3000
-
-### 4. Deploy ke Vercel
-
-1. Push ke GitHub
-2. Import repository di Vercel
-3. Tambahkan environment variables
-4. Deploy
-
-### 5. Konfigurasi Auth Supabase
-
-Di Supabase Dashboard > Authentication > URL Configuration:
-- Site URL: `https://your-app.vercel.app`
-- Redirect URLs: `https://your-app.vercel.app/**`
-
-## 📁 Struktur Project
+## 📁 Project Structure
 
 ```
 sirw13/
-├── app/
-│   ├── dashboard/
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── login/
-│   │   └── page.tsx
-│   ├── register/
-│   │   └── page.tsx
-│   ├── warga/
-│   │   ├── [id]/
-│   │   │   └── page.tsx
-│   │   ├── edit/
+├── app/                          # Next.js App Router
+│   ├── (auth)/                   # Auth pages (login, register)
+│   │   ├── login/page.tsx
+│   │   └── register/page.tsx
+│   ├── admin/                    # Admin pages
+│   │   └── roles/page.tsx        # Kelola Pengurus RW/RT
+│   ├── dashboard/page.tsx        # Dashboard utama
+│   ├── ipl/                      # Fase 3: IPL Management
+│   │   ├── bayar/page.tsx        # Form bayar IPL (warga)
+│   │   ├── tagihan/page.tsx      # Daftar tagihan IPL
+│   │   └── verifikasi/page.tsx   # Verifikasi pembayaran (bendahara)
+│   ├── keuangan/                 # Fase 4: Keuangan
+│   │   ├── page.tsx              # Dashboard Kas
+│   │   ├── budget/page.tsx       # Budget Tahunan
+│   │   ├── laporan/page.tsx      # Laporan Bulanan
+│   │   ├── pengajuan/            # Pengajuan Pembelian
+│   │   │   ├── page.tsx          # List pengajuan
+│   │   │   ├── tambah/page.tsx   # Form tambah
 │   │   │   └── [id]/
-│   │   │       └── page.tsx
-│   │   ├── tambah/
-│   │   │   └── page.tsx
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── globals.css
-│   ├── layout.tsx
-│   └── page.tsx
-├── components/
-│   ├── Navbar.tsx
-│   ├── Sidebar.tsx
-│   └── WargaForm.tsx
-├── hooks/
-│   └── useUser.ts
+│   │   │       ├── page.tsx      # Detail pengajuan
+│   │   │       └── edit/page.tsx # Edit pengajuan
+│   │   └── transaksi/            # Transaksi Kas
+│   │       ├── page.tsx          # List transaksi
+│   │       ├── tambah/page.tsx   # Form tambah manual
+│   │       └── import/page.tsx   # Import dari Excel
+│   ├── onboarding/page.tsx       # Form onboarding user baru
+│   ├── profile/page.tsx          # Halaman profil user
+│   ├── pengaturan/               # Pengaturan
+│   │   └── tarif/page.tsx        # Pengaturan tarif IPL
+│   ├── rumah/                    # Fase 2: Manajemen Rumah
+│   │   ├── page.tsx              # Daftar Rumah
+│   │   ├── tambah/page.tsx       # Tambah rumah
+│   │   └── [id]/page.tsx         # Detail rumah & keluarga
+│   ├── warga/                    # Fase 1: Data Warga
+│   │   ├── page.tsx              # Daftar Warga
+│   │   ├── tambah/page.tsx       # Tambah warga
+│   │   └── [id]/
+│   │       ├── page.tsx          # Detail warga
+│   │       └── edit/page.tsx     # Edit warga
+│   ├── layout.tsx                # Root layout
+│   └── globals.css               # Global styles
+│
+├── components/                   # Reusable components
+│   ├── AuthGuard.tsx             # Route protection
+│   ├── Header.tsx                # Top navigation
+│   ├── Sidebar.tsx               # Side navigation (with mobile toggle)
+│   ├── WargaForm.tsx             # Form warga (create/edit/onboarding)
+│   └── ...
+│
+├── hooks/                        # Custom hooks
+│   └── useUser.ts                # User state & role management
+│
 ├── lib/
 │   └── supabase/
-│       ├── client.ts
-│       ├── middleware.ts
-│       └── server.ts
-├── store/
-│   └── useStore.ts
-├── supabase/
-│   └── schema.sql
+│       ├── client.ts             # Browser Supabase client
+│       └── server.ts             # Server Supabase client
+│
 ├── types/
-│   └── index.ts
+│   └── index.ts                  # TypeScript type definitions
+│
 ├── utils/
-│   └── helpers.ts
-├── middleware.ts
-├── package.json
-└── README.md
+│   └── helpers.ts                # Utility functions (formatRupiah, isRWRole, etc.)
+│
+└── public/                       # Static assets
 ```
 
-## 📊 Database Schema
+---
 
-### Tabel Utama
+## 🗄️ Database Schema (Supabase)
 
-- **rt**: Data RT (001-006)
-- **jalan**: Data Jalan (Discovery Timur 1-7, Barat 1-4)
-- **warga**: Data warga lengkap (semua field A-H)
-- **kendaraan**: Data kendaraan warga
-- **usaha**: Data usaha warga
-- **users**: Profile user (linked to Supabase Auth)
+### Tables
 
-### Enum Types
+```
+users                    # Auth users dengan role
+├── id (uuid, PK)
+├── email
+├── role (user_role enum)
+├── warga_id (FK → warga)
+└── nama_lengkap
 
-- `user_role`: ketua_rw, wakil_ketua_rw, sekretaris_rw, bendahara_rw, ketua_rt, sekretaris_rt, bendahara_rt, warga
-- `jenis_kelamin`: L, P
-- `status_pernikahan`: belum_kawin, kawin, cerai_hidup, cerai_mati
-- `agama`: islam, kristen, katolik, hindu, budha, konghucu, lainnya
-- `pendidikan_terakhir`: tidak_sekolah, sd, smp, sma, diploma_1-4, sarjana_s1, magister_s2, doktor_s3
-- `status_kependudukan`: penduduk_tetap, penduduk_kontrak, menumpang, pemilik_tidak_tinggal
-- `status_rumah`: milik_sendiri, sewa, kontrak, menumpang, dinas
-- `status_ktp`: ada_aktif, ada_alamat_beda, proses_pindah, tidak_ada
-- `status_kk`: sesuai_domisili, alamat_beda, proses_perubahan
-- `status_surat_domisili`: sudah_ada, belum_ada
-- `status_pindah`: tidak_pindah, pindah_antar_rt, pindah_antar_rw, pindah_antar_kota, pendatang_baru
-- `hubungan_keluarga`: kepala_keluarga, istri, suami, anak, orang_tua, mertua, menantu, cucu, kerabat, lainnya
-- `jenis_kendaraan`: motor, mobil
+warga                    # Data warga lengkap
+├── id (uuid, PK)
+├── nik (unique)
+├── nama_lengkap
+├── tempat_lahir, tanggal_lahir
+├── jenis_kelamin
+├── agama
+├── status_perkawinan
+├── pendidikan_terakhir
+├── pekerjaan
+├── nomor_rumah
+├── rt, kelurahan
+├── no_hp, email
+├── status_warga (tetap/kontrak/kost)
+├── status_kepemilikan
+├── status_kk (kepala_keluarga/anggota)
+├── nomor_kk
+├── hubungan_keluarga
+├── tanggal_masuk
+├── status_domisili (aktif/pindah/meninggal)
+├── foto_url
+├── user_id (FK → users)
+└── created_by, updated_by
 
-## 🔐 Row Level Security
+rumah                    # Data rumah
+├── id (uuid, PK)
+├── nomor_rumah
+├── alamat_lengkap
+├── rt
+├── wilayah (Timur/Barat)
+├── status_hunian
+├── jumlah_kk
+└── catatan
 
-Semua tabel dilindungi dengan RLS:
-- Pengurus RW: akses penuh
-- Pengurus RT: akses warga di RT-nya
-- Warga: akses data sendiri saja
+ipl_tagihan              # Tagihan IPL bulanan
+├── id (uuid, PK)
+├── rumah_id (FK)
+├── periode (YYYY-MM)
+├── jumlah_tagihan
+├── status (belum_bayar/menunggu_verifikasi/lunas)
+├── tanggal_bayar
+├── bukti_bayar_url
+└── verified_by
 
-## 🚀 Roadmap
+ipl_tarif                # Pengaturan tarif IPL
+├── id, wilayah, tarif_dasar
+└── berlaku_mulai
 
-- [x] Phase 1: CRUD Warga dengan form lengkap A-H
-- [x] Phase 1: Kendaraan & Usaha management
-- [x] Phase 1: Dashboard statistik
-- [ ] Phase 2: Upload foto warga
-- [ ] Phase 2: Manajemen dokumen
-- [ ] Phase 2: Notifikasi
-- [ ] Phase 3: Modul Keuangan (Iuran)
-- [ ] Phase 3: Modul Kegiatan
-- [ ] Phase 3: Laporan & Export
+kategori_pengeluaran     # Kategori untuk budget & transaksi
+├── id, kode, nama
+├── deskripsi
+└── is_active
 
-## 📝 License
+pengajuan_pembelian      # Pengajuan pembelian/pengeluaran
+├── id (uuid, PK)
+├── nomor_pengajuan (unique, auto: PB/YYYY/MM/XXXX)
+├── pemohon_id (FK → users)
+├── nama_pemohon, jabatan_pemohon, no_wa
+├── deskripsi_pembelian
+├── wilayah (Timur/Barat)
+├── tanggal_pengajuan, tanggal_target
+├── kategori_id (FK)
+├── nilai_transaksi
+├── link_referensi
+├── nota_invoice_url (path, bukan full URL)
+├── bukti_transaksi_url
+├── bukti_transfer_url
+├── bukti_persetujuan_url
+├── rekening_penerima, nama_pemilik_rekening, bank
+├── catatan_tambahan
+├── status (diajukan/direvisi/disetujui/ditolak/dibayar/selesai)
+├── riwayat_status (jsonb array)
+└── transaksi_id (FK → kas_transaksi)
 
-MIT License
+kas_transaksi            # Transaksi kas masuk/keluar
+├── id (uuid, PK)
+├── tanggal_transaksi
+├── jenis (masuk/keluar)
+├── wilayah
+├── kategori_id
+├── nilai_transaksi
+├── keterangan
+├── sumber_dana
+├── pengajuan_id (FK, nullable)
+├── bukti_url
+└── created_by
 
-## 👨‍💻 Developer
+budget_tahunan           # Budget per tahun/wilayah/kategori
+├── id, tahun, wilayah
+├── kategori_id
+├── jumlah_budget
+└── created_by
+```
 
-Dibuat oleh Ichsan Yudha Pratama untuk RW 013 Permata Discovery
+### Enums
+
+```sql
+-- user_role enum
+CREATE TYPE user_role AS ENUM (
+  'warga',
+  'ketua_rt',
+  'sekretaris_rt',
+  'bendahara_rt',
+  'ketua_rw',
+  'wakil_ketua_rw',
+  'sekretaris_rw',
+  'bendahara_rw',
+  'koordinator_rw'  -- BARU ditambahkan
+);
+```
+
+### Storage Buckets
+
+```
+pengajuan/               # File pengajuan pembelian
+├── nota/                # Nota/invoice dari pemohon
+├── transaksi/           # Bukti transaksi dari pemohon
+├── transfer/            # Bukti transfer dari bendahara
+└── persetujuan/         # Bukti persetujuan
+
+ipl/                     # Bukti bayar IPL
+└── bukti/
+
+warga/                   # Foto warga
+└── foto/
+```
+
+---
+
+## 👤 Role System
+
+### Role Hierarchy
+
+| Role | Level | Akses |
+|------|-------|-------|
+| `ketua_rw` | RW | Semua fitur, assign role, approve pengajuan |
+| `wakil_ketua_rw` | RW | Sama dengan ketua_rw |
+| `sekretaris_rw` | RW | Administrasi, data warga |
+| `bendahara_rw` | RW | Keuangan, verifikasi IPL, pembayaran |
+| `koordinator_rw` | RW | Keuangan (view & submit), kegiatan |
+| `ketua_rt` | RT | Data warga RT, submit pengajuan |
+| `sekretaris_rt` | RT | Administrasi RT |
+| `bendahara_rt` | RT | Keuangan RT |
+| `warga` | - | Data pribadi, bayar IPL |
+
+### Role Checks in Code
+
+```typescript
+// hooks/useUser.ts
+const rwRoles: UserRole[] = [
+  'ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 
+  'bendahara_rw', 'koordinator_rw'
+]
+
+// utils/helpers.ts
+export const isRWRole = (role: string): boolean => {
+  return ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 
+          'bendahara_rw', 'koordinator_rw'].includes(role)
+}
+```
+
+---
+
+## 🔐 RLS Policies (Key Policies)
+
+### users table
+```sql
+-- Ketua RW can update any user (untuk assign role)
+CREATE POLICY "Users update policy" ON users
+FOR UPDATE USING (
+  (SELECT role FROM users WHERE id = auth.uid()) = 'ketua_rw'
+  OR auth.uid() = id
+);
+```
+
+### pengajuan_pembelian table
+```sql
+-- SELECT: Semua pengurus bisa lihat
+-- INSERT: Semua pengurus bisa buat
+-- UPDATE: Semua pengurus bisa update
+-- DELETE: Ketua, Wakil, Sekretaris, Bendahara, Koordinator RW
+
+CREATE POLICY "Pengurus can delete pengajuan"
+ON pengajuan_pembelian FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM users u
+    WHERE u.id = auth.uid()
+    AND u.role IN (
+      'ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 
+      'bendahara_rw', 'koordinator_rw'
+    )
+  )
+);
+```
+
+### storage.objects (pengajuan bucket)
+```sql
+-- DELETE: Authenticated users can delete files
+CREATE POLICY "Delete pengajuan files"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (bucket_id = 'pengajuan');
+```
+
+---
+
+## 🧭 Navigation (Sidebar Menu)
+
+```typescript
+// components/Sidebar.tsx - Menu Structure
+
+const menuItems = [
+  // WARGA
+  { title: 'Dashboard', href: '/dashboard', icon: FiHome, roles: ['all'] },
+  { title: 'Profil Saya', href: '/profile', roles: ['all'] },
+  
+  // IPL
+  { title: 'Tagihan IPL', href: '/ipl/tagihan', roles: ['pengurus'] },
+  { title: 'Bayar IPL', href: '/ipl/bayar', roles: ['warga'] },
+  { title: 'Verifikasi', href: '/ipl/verifikasi', roles: ['bendahara'] },
+  { title: 'Pengaturan Tarif', href: '/pengaturan/tarif', roles: ['ketua_rw'] },
+  
+  // ADMINISTRASI
+  { title: 'Kegiatan', href: '/kegiatan', roles: ['pengurus'] },
+  
+  // KEUANGAN (koordinator_rw included)
+  { title: 'Dashboard Kas', href: '/keuangan', roles: ['keuangan_roles'] },
+  { title: 'Pengajuan', href: '/keuangan/pengajuan', roles: ['keuangan_roles'] },
+  { title: 'Transaksi Kas', href: '/keuangan/transaksi', roles: ['keuangan_roles'] },
+  { title: 'Budget Tahunan', href: '/keuangan/budget', roles: ['ketua_bendahara'] },
+  { title: 'Laporan Bulanan', href: '/keuangan/laporan', roles: ['keuangan_roles'] },
+  
+  // DATA MASTER
+  { title: 'Daftar Warga', href: '/warga', roles: ['pengurus'] },
+  { title: 'Daftar Rumah', href: '/rumah', roles: ['pengurus'] },
+  { title: 'Kelola Pengurus', href: '/admin/roles', roles: ['ketua_rw'] },
+]
+```
+
+---
+
+## 📦 Key Files & Their Purpose
+
+### Core Components
+
+| File | Purpose |
+|------|---------|
+| `components/Sidebar.tsx` | Navigation dengan role-based menu |
+| `components/Header.tsx` | Top bar dengan user info |
+| `components/AuthGuard.tsx` | Route protection |
+| `components/WargaForm.tsx` | Form warga lengkap |
+| `hooks/useUser.ts` | User state, role checks |
+| `utils/helpers.ts` | formatRupiah, isRWRole, getRoleLabel |
+| `types/index.ts` | TypeScript interfaces |
+
+### Keuangan Module
+
+| File | Purpose |
+|------|---------|
+| `app/keuangan/page.tsx` | Dashboard kas (saldo, chart) |
+| `app/keuangan/pengajuan/page.tsx` | List pengajuan + delete dengan file cleanup |
+| `app/keuangan/pengajuan/[id]/page.tsx` | Detail pengajuan + approve/reject/revisi |
+| `app/keuangan/pengajuan/[id]/edit/page.tsx` | Edit pengajuan + riwayat status |
+| `app/keuangan/pengajuan/tambah/page.tsx` | Form tambah pengajuan |
+| `app/keuangan/transaksi/page.tsx` | List transaksi kas |
+| `app/keuangan/budget/page.tsx` | Budget tahunan management |
+| `app/keuangan/laporan/page.tsx` | Laporan bulanan + PDF |
+
+---
+
+## 🔄 Pengajuan Workflow
+
+```
+┌──────────────┐
+│   DIAJUKAN   │ ← Pemohon submit
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐     ┌──────────────┐
+│  DISETUJUI   │ ←── │   DIREVISI   │ ← Ketua minta revisi
+└──────┬───────┘     └──────────────┘
+       │                    ↑
+       │                    │
+       │              Pemohon edit & resubmit
+       ▼
+┌──────────────┐
+│   DIBAYAR    │ ← Bendahara upload bukti transfer
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│   SELESAI    │ ← Pemohon konfirmasi
+└──────────────┘
+```
+
+### Status Colors & Icons
+
+| Status | Badge Color | Icon |
+|--------|-------------|------|
+| diajukan | warning | FiFileText |
+| direvisi | info | FiRefreshCw |
+| disetujui | success | FiCheckCircle |
+| ditolak | danger | FiXCircle |
+| dibayar | primary | FiDollarSign |
+| selesai | success | FiCheckCircle |
+
+---
+
+## 🛠️ Development
+
+### Prerequisites
+- Node.js 18+
+- npm/yarn
+- Git
+- VS Code (recommended)
+
+### Setup
+```bash
+git clone [repository-url]
+cd sirw13
+npm install
+cp .env.example .env.local
+# Edit .env.local dengan Supabase credentials
+npm run dev
+```
+
+### Environment Variables
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
+```
+
+### Build & Deploy
+```bash
+npm run build    # Check TypeScript errors
+git push         # Auto deploy to Vercel
+```
+
+---
+
+## 📝 Recent Updates (March 2026)
+
+### Session: TypeScript Fixes & Koordinator RW Access
+
+1. **TypeScript Strict Mode Compliance**
+   - Fixed implicit `any` types in filter/map/reduce callbacks
+   - Fixed union type errors for Wilayah field
+
+2. **Koordinator RW Role**
+   - Added to `user_role` enum
+   - Added to menu access in Sidebar.tsx
+   - Added to `isRWRole()` helper
+   - Added to `rwRoles` array in useUser.ts
+   - Full access to Keuangan menu (except Budget Tahunan)
+
+3. **Delete Pengajuan with File Cleanup**
+   - `extractStoragePath()` function handles both:
+     - Relative paths: `nota/file.jpg`
+     - Full URLs: `https://xxx.supabase.co/storage/v1/object/sign/pengajuan/nota/file.jpg?token=...`
+   - Deletes all related files from storage:
+     - nota_invoice_url
+     - bukti_transaksi_url
+     - bukti_transfer_url
+     - bukti_persetujuan_url
+     - Files from riwayat_status
+
+4. **RLS Policies Updated**
+   - users: Ketua RW can update any user
+   - pengajuan_pembelian: All pengurus can CRUD
+   - storage.objects: Authenticated can delete pengajuan files
+
+5. **Edit Pengajuan Page**
+   - Added Riwayat Status section matching Detail page design
+   - Timeline with colored icons, dates, names, and notes
+
+---
+
+## 🐛 Known Issues & Solutions
+
+### TypeScript Strict Mode
+```typescript
+// Problem: Parameter 'u' implicitly has 'any' type
+users.filter(u => u.id === id)
+
+// Solution: Add explicit type
+users.filter((u: UserWithWarga) => u.id === id)
+```
+
+### Storage File Deletion
+```typescript
+// Problem: URL stored has token query string
+// nota_invoice_url: "nota/file.jpg" (relative path)
+
+// Solution: Check if relative path first
+const extractStoragePath = (url: string): string | null => {
+  if (!url) return null
+  if (!url.startsWith('http')) {
+    return url.split('?')[0]  // Return path directly
+  }
+  const match = url.match(/\/pengajuan\/([^?]+)/)
+  return match ? match[1] : null
+}
+```
+
+### RLS Silent Failures
+```sql
+-- Problem: UPDATE succeeds in frontend but data unchanged
+-- Cause: RLS policy blocking silently
+
+-- Solution: Check policies
+SELECT policyname, cmd FROM pg_policies WHERE tablename = 'table_name';
+
+-- And ensure proper USING clause
+CREATE POLICY "..." ON table FOR UPDATE
+USING (proper_condition);
+```
+
+---
+
+## 📚 Transcripts Reference
+
+All development sessions are documented in `/mnt/transcripts/`:
+
+| Date | File | Summary |
+|------|------|---------|
+| 21 Feb | `sirw13-nextjs-supabase-setup.txt` | Initial project setup |
+| 21 Feb | `sirw13-form-update-complete.txt` | Form redesign |
+| 22 Feb | `fase2-manajemen-rumah-keluarga.txt` | Rumah & keluarga |
+| 22 Feb | `fase3-ipl-implementation.txt` | IPL system |
+| 28 Feb | `fase4-keuangan-implementation.txt` | Keuangan start |
+| 28 Feb | `fase4-budget-tahunan-setup.txt` | Budget feature |
+| 28 Feb | `fase4-kelola-pengurus-sidebar-fix.txt` | Admin roles page |
+| 01 Mar | `fase4-kelola-pengurus-typescript-fixes.txt` | TypeScript fixes |
+
+---
+
+## 🚀 Next Steps / TODO
+
+- [ ] Dashboard charts (penggunaan budget, trend IPL)
+- [ ] Export to Excel/CSV
+- [ ] IPL → Kas automation
+- [ ] Notification system (WhatsApp/Email)
+- [ ] Kegiatan management module
+- [ ] Mobile responsive improvements
+- [ ] Unit tests
+
+---
+
+## 👥 Contributors
+
+- **Ichsan Yudha Pratama** - Ketua RW 013, Business Process Manager
+
+---
+
+*Last updated: 01 March 2026*
