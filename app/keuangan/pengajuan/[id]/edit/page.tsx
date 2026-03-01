@@ -18,44 +18,63 @@ import {
   FiXCircle,
   FiEdit,
   FiSend,
-  FiDollarSign
+  FiDollarSign,
+  FiFileText,
+  FiRefreshCw,
+  FiUser,
+  FiCalendar
 } from 'react-icons/fi'
 
+// Helper untuk mendapatkan info status timeline
+const getStatusInfo = (status: string) => {
+  const statusMap: Record<string, { label: string; color: string; icon: JSX.Element }> = {
+    'diajukan': { 
+      label: 'Pengajuan Dibuat', 
+      color: 'primary',
+      icon: <FiFileText />
+    },
+    'disetujui': { 
+      label: 'Disetujui oleh Ketua RW', 
+      color: 'success',
+      icon: <FiCheckCircle />
+    },
+    'ditolak': { 
+      label: 'Ditolak oleh Ketua RW', 
+      color: 'danger',
+      icon: <FiXCircle />
+    },
+    'direvisi': { 
+      label: 'Diminta Revisi oleh Ketua RW', 
+      color: 'info',
+      icon: <FiRefreshCw />
+    },
+    'dibayar': { 
+      label: 'Pembayaran Dilakukan', 
+      color: 'warning',
+      icon: <FiDollarSign />
+    },
+    'selesai': { 
+      label: 'Pengajuan Selesai', 
+      color: 'success',
+      icon: <FiCheckCircle />
+    }
+  }
+  return statusMap[status] || { label: status, color: 'secondary', icon: <FiClock /> }
+}
+
 // Helper untuk format tanggal
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
+const formatDateTime = (dateString: string) => {
+  const date = new Date(dateString)
+  const tanggal = date.toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  })
+  const waktu = date.toLocaleTimeString('id-ID', {
     hour: '2-digit',
     minute: '2-digit'
   })
-}
-
-// Helper untuk icon status
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case 'diajukan': return <FiSend className="text-warning" />
-    case 'disetujui': return <FiCheckCircle className="text-success" />
-    case 'ditolak': return <FiXCircle className="text-danger" />
-    case 'direvisi': return <FiEdit className="text-info" />
-    case 'dibayar': return <FiDollarSign className="text-primary" />
-    case 'selesai': return <FiCheckCircle className="text-success" />
-    default: return <FiClock className="text-secondary" />
-  }
-}
-
-// Helper untuk label status
-const getStatusLabel = (status: string) => {
-  const labels: Record<string, string> = {
-    'diajukan': 'Diajukan',
-    'disetujui': 'Disetujui',
-    'ditolak': 'Ditolak',
-    'direvisi': 'Perlu Revisi',
-    'dibayar': 'Sudah Dibayar',
-    'selesai': 'Selesai'
-  }
-  return labels[status] || status
+  return tanggal + ' pukul ' + waktu
 }
 
 export default function EditPengajuanPage() {
@@ -485,48 +504,62 @@ export default function EditPengajuanPage() {
             {/* Riwayat Status */}
             {pengajuan.riwayat_status && pengajuan.riwayat_status.length > 0 && (
               <div className="card position-sticky" style={{ top: '1rem' }}>
-                <div className="card-header bg-secondary text-white">
+                <div className="card-header bg-primary text-white">
                   <h6 className="mb-0 fw-bold">
                     <FiClock className="me-2" />
                     Riwayat Status
                   </h6>
                 </div>
                 <div className="card-body p-0">
-                  <div className="list-group list-group-flush">
-                    {[...pengajuan.riwayat_status].reverse().map((riwayat: {
-                      status: string
-                      tanggal: string
-                      catatan?: string
-                      nama_user?: string
-                      oleh?: string
-                      bukti_url?: string
-                    }, index: number) => (
-                      <div key={index} className="list-group-item">
-                        <div className="d-flex align-items-start">
-                          <div className="me-3 mt-1">
-                            {getStatusIcon(riwayat.status)}
-                          </div>
-                          <div className="flex-grow-1">
-                            <div className="d-flex justify-content-between align-items-start">
-                              <strong className="small">{getStatusLabel(riwayat.status)}</strong>
-                              <small className="text-muted">
-                                {formatDate(riwayat.tanggal)}
-                              </small>
+                  <div className="p-3">
+                    <div className="timeline">
+                      {[...pengajuan.riwayat_status].reverse().map((riwayat: {
+                        status: string
+                        tanggal: string
+                        catatan?: string
+                        nama_user?: string
+                        oleh?: string
+                        bukti_url?: string
+                      }, index: number) => {
+                        const statusInfo = getStatusInfo(riwayat.status)
+                        const isLast = index === pengajuan.riwayat_status.length - 1
+                        
+                        return (
+                          <div key={index} className={`timeline-item ${!isLast ? 'pb-3 mb-3 border-bottom' : ''}`}>
+                            <div className="d-flex">
+                              <div className="flex-shrink-0 me-3">
+                                <div 
+                                  className={`rounded-circle bg-${statusInfo.color} bg-opacity-10 p-2 d-flex align-items-center justify-content-center`}
+                                  style={{ width: '40px', height: '40px' }}
+                                >
+                                  <span className={`text-${statusInfo.color}`}>
+                                    {statusInfo.icon}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex-grow-1">
+                                <h6 className="mb-1 fw-bold small">{statusInfo.label}</h6>
+                                <p className="mb-1 small text-muted">
+                                  <FiCalendar className="me-1" style={{ width: '12px', height: '12px' }} />
+                                  {formatDateTime(riwayat.tanggal)}
+                                </p>
+                                {riwayat.nama_user && (
+                                  <p className="mb-1 small text-muted">
+                                    <FiUser className="me-1" style={{ width: '12px', height: '12px' }} />
+                                    {riwayat.nama_user}
+                                  </p>
+                                )}
+                                {riwayat.catatan && (
+                                  <p className="mb-0 small fst-italic text-secondary">
+                                    "{riwayat.catatan}"
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                            {riwayat.nama_user && (
-                              <small className="text-muted d-block">
-                                oleh: {riwayat.nama_user}
-                              </small>
-                            )}
-                            {riwayat.catatan && (
-                              <small className="text-secondary d-block mt-1 fst-italic">
-                                "{riwayat.catatan}"
-                              </small>
-                            )}
                           </div>
-                        </div>
-                      </div>
-                    ))}
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
