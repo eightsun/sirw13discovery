@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
 import { formatRupiah } from '@/utils/helpers'
@@ -19,8 +20,9 @@ interface KategoriSummary {
 }
 
 export default function LaporanBulananPage() {
-  const { userData } = useUser()
+  const { userData, isPengurus } = useUser()
   const supabase = createClient()
+  const router = useRouter()
   const printRef = useRef<HTMLDivElement>(null)
   
   const [loading, setLoading] = useState(true)
@@ -116,21 +118,23 @@ export default function LaporanBulananPage() {
       )
       setKategoriSummary(sortedKategori)
 
-      // Fetch pejabat
+      // Fetch pejabat dari tabel users (yang punya kolom role)
       const { data: ketuaData } = await supabase
-        .from('warga')
+        .from('users')
         .select('nama_lengkap')
         .eq('role', 'ketua_rw')
-        .single()
-      
-      const { data: bendaharaData } = await supabase
-        .from('warga')
-        .select('nama_lengkap')
-        .eq('role', 'bendahara_rw')
+        .eq('is_active', true)
         .single()
 
-      if (ketuaData) setKetuaRW(ketuaData.nama_lengkap)
-      if (bendaharaData) setBendaharaRW(bendaharaData.nama_lengkap)
+      if (ketuaData && ketuaData.nama_lengkap) setKetuaRW(ketuaData.nama_lengkap)
+      
+      // Bendahara per wilayah - default sudah di-set sesuai wilayah yang dipilih
+      // Tabel users tidak punya kolom wilayah, jadi gunakan mapping default
+      const bendaharaMap: Record<string, string> = {
+        'Timur': 'Ferdinan Rakhmad Yanuar',
+        'Barat': 'Achmad Rizaq'
+      }
+      setBendaharaRW(bendaharaMap[selectedWilayah] || '')
       
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -236,12 +240,12 @@ export default function LaporanBulananPage() {
       {/* Page Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <Link href="/keuangan" className="btn btn-sm btn-outline-secondary mb-2">
+          <Link href={isPengurus ? '/keuangan' : '/dashboard'} className="btn btn-sm btn-outline-secondary mb-2">
             <FiArrowLeft className="me-1" /> Kembali
           </Link>
           <h1 className="page-title mb-1">Laporan Keuangan Bulanan</h1>
           <p className="text-muted mb-0">
-            Generate laporan kas RW per bulan
+            Laporan kas RW 013 Permata Discovery per bulan
           </p>
         </div>
         <button 

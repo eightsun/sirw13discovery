@@ -16,7 +16,10 @@ import {
   FiDownload,
   FiUpload,
   FiFileText,
-  FiFile
+  FiFile,
+  FiEdit2,
+  FiTrash2,
+  FiAlertCircle
 } from 'react-icons/fi'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
@@ -53,9 +56,27 @@ export default function TransaksiKasPage() {
     bendaharaBarat: 'Achmad Rizaq'
   })
 
+  // Edit & Delete state
+  const [kategoriList, setKategoriList] = useState<{ id: number; kode: string; nama: string }[]>([])
+  const [editTarget, setEditTarget] = useState<KasTransaksi | null>(null)
+  const [editForm, setEditForm] = useState({
+    jenis_kas: '',
+    wilayah: '',
+    tipe: '',
+    tanggal: '',
+    kategori_id: '' as string | number,
+    jumlah: 0,
+    keterangan: ''
+  })
+  const [deleteTarget, setDeleteTarget] = useState<KasTransaksi | null>(null)
+  const [processing, setProcessing] = useState(false)
+
+  const isAdmin = userData?.role === 'ketua_rw' || userData?.role === 'bendahara_rw'
+
   useEffect(() => {
     fetchTransaksi()
     fetchPejabat()
+    fetchKategori()
   }, [filterJenisKas, filterWilayah, filterTipe, filterBulan])
 
   const fetchPejabat = async () => {
@@ -74,6 +95,79 @@ export default function TransaksiKasPage() {
     // Catatan: Bendahara Timur dan Barat tidak bisa dibedakan dari tabel users
     // karena tidak ada kolom wilayah. Nama default sudah di-set di state awal.
     // Jika ingin dinamis, perlu menambahkan kolom wilayah di tabel users.
+  }
+
+  const fetchKategori = async () => {
+    const { data } = await supabase
+      .from('kategori_pengeluaran')
+      .select('id, kode, nama')
+      .eq('is_active', true)
+      .order('kode')
+    if (data) setKategoriList(data)
+  }
+
+  // Edit handlers
+  const openEdit = (t: KasTransaksi) => {
+    setEditTarget(t)
+    setEditForm({
+      jenis_kas: t.jenis_kas,
+      wilayah: t.wilayah,
+      tipe: t.tipe,
+      tanggal: t.tanggal,
+      kategori_id: t.kategori_id || '',
+      jumlah: t.jumlah,
+      keterangan: t.keterangan || ''
+    })
+  }
+
+  const handleEditSubmit = async () => {
+    if (!editTarget) return
+    try {
+      setProcessing(true)
+      const { error } = await supabase
+        .from('kas_transaksi')
+        .update({
+          jenis_kas: editForm.jenis_kas,
+          wilayah: editForm.wilayah,
+          tipe: editForm.tipe,
+          tanggal: editForm.tanggal,
+          kategori_id: editForm.kategori_id || null,
+          jumlah: Number(editForm.jumlah),
+          keterangan: editForm.keterangan || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editTarget.id)
+
+      if (error) throw error
+      setEditTarget(null)
+      fetchTransaksi()
+    } catch (error) {
+      console.error('Error updating transaksi:', error)
+      alert('Gagal mengupdate transaksi')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  // Delete handlers
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    try {
+      setProcessing(true)
+      const { error } = await supabase
+        .from('kas_transaksi')
+        .delete()
+        .eq('id', deleteTarget.id)
+
+      if (error) throw error
+      setDeleteTarget(null)
+      fetchTransaksi()
+    } catch (error) {
+      console.error('Error deleting transaksi:', error)
+      alert('Gagal menghapus transaksi')
+    } finally {
+      setProcessing(false)
+    }
   }
 
   const fetchTransaksi = async () => {
@@ -409,19 +503,22 @@ export default function TransaksiKasPage() {
           </p>
         </div>
         <div className="d-flex flex-wrap gap-2">
-          {/* Download Template */}
-          <button 
-            className="btn btn-outline-info"
-            onClick={downloadTemplate}
-          >
-            <FiDownload className="me-1" /> Template Excel
-          </button>
-          
-          {/* Import Excel */}
-          {isPengurus && (
-            <Link href="/keuangan/transaksi/import" className="btn btn-outline-success">
-              <FiUpload className="me-1" /> Import Excel
-            </Link>
+          {/* Tombol khusus Ketua RW & Bendahara RW */}
+          {(userData?.role === 'ketua_rw' || userData?.role === 'bendahara_rw') && (
+            <>
+              {/* Download Template */}
+              <button 
+                className="btn btn-outline-info"
+                onClick={downloadTemplate}
+              >
+                <FiDownload className="me-1" /> Template Excel
+              </button>
+              
+              {/* Import Excel */}
+              <Link href="/keuangan/transaksi/import" className="btn btn-outline-success">
+                <FiUpload className="me-1" /> Import Excel
+              </Link>
+            </>
           )}
           
           {/* Download Excel */}
@@ -442,8 +539,8 @@ export default function TransaksiKasPage() {
             <FiFileText className="me-1" /> Download PDF
           </button>
           
-          {/* Tambah Manual */}
-          {isPengurus && (
+          {/* Tambah Manual - Ketua RW & Bendahara RW */}
+          {(userData?.role === 'ketua_rw' || userData?.role === 'bendahara_rw') && (
             <Link href="/keuangan/transaksi/tambah" className="btn btn-primary">
               <FiPlus className="me-1" /> Tambah Manual
             </Link>
@@ -607,6 +704,7 @@ export default function TransaksiKasPage() {
                     <th>Kategori</th>
                     <th>Keterangan</th>
                     <th className="text-end">Jumlah</th>
+                    {isAdmin && <th className="text-center" style={{ width: '90px' }}>Aksi</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -645,6 +743,24 @@ export default function TransaksiKasPage() {
                       <td className={`text-end fw-bold ${t.tipe === 'pemasukan' ? 'text-success' : 'text-danger'}`}>
                         {t.tipe === 'pemasukan' ? '+' : '-'}{formatRupiah(t.jumlah)}
                       </td>
+                      {isAdmin && (
+                        <td className="text-center">
+                          <button
+                            className="btn btn-sm btn-outline-warning me-1 p-1"
+                            title="Edit"
+                            onClick={() => openEdit(t)}
+                          >
+                            <FiEdit2 size={14} />
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline-danger p-1"
+                            title="Hapus"
+                            onClick={() => setDeleteTarget(t)}
+                          >
+                            <FiTrash2 size={14} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -661,6 +777,184 @@ export default function TransaksiKasPage() {
           {filterBulan && ` untuk bulan ${new Date(filterBulan + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`}
         </p>
       </div>
+
+      {/* Edit Modal */}
+      {editTarget && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered modal-lg">
+            <div className="modal-content">
+              <div className="modal-header bg-warning text-dark">
+                <h5 className="modal-title">
+                  <FiEdit2 className="me-2" />
+                  Edit Transaksi
+                </h5>
+                <button type="button" className="btn-close" onClick={() => setEditTarget(null)} disabled={processing} />
+              </div>
+              <div className="modal-body">
+                <div className="row g-3">
+                  <div className="col-md-4">
+                    <label className="form-label small fw-bold">Tanggal <span className="text-danger">*</span></label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={editForm.tanggal}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, tanggal: e.target.value }))}
+                    />
+                  </div>
+                  <div className="col-md-4">
+                    <label className="form-label small fw-bold">Jenis Kas <span className="text-danger">*</span></label>
+                    <select
+                      className="form-select"
+                      value={editForm.jenis_kas}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, jenis_kas: e.target.value }))}
+                    >
+                      <option value="rw">Kas RW</option>
+                      <option value="rt">Kas RT</option>
+                    </select>
+                  </div>
+                  <div className="col-md-4">
+                    <label className="form-label small fw-bold">Wilayah <span className="text-danger">*</span></label>
+                    <select
+                      className="form-select"
+                      value={editForm.wilayah}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, wilayah: e.target.value }))}
+                    >
+                      <option value="Timur">Discovery Timur</option>
+                      <option value="Barat">Discovery Barat</option>
+                    </select>
+                  </div>
+                  <div className="col-md-4">
+                    <label className="form-label small fw-bold">Tipe <span className="text-danger">*</span></label>
+                    <select
+                      className={`form-select ${editForm.tipe === 'pemasukan' ? 'border-success' : 'border-danger'}`}
+                      value={editForm.tipe}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, tipe: e.target.value }))}
+                    >
+                      <option value="pemasukan">Pemasukan (+)</option>
+                      <option value="pengeluaran">Pengeluaran (-)</option>
+                    </select>
+                  </div>
+                  <div className="col-md-4">
+                    <label className="form-label small fw-bold">Jumlah <span className="text-danger">*</span></label>
+                    <div className="input-group">
+                      <span className="input-group-text">Rp</span>
+                      <input
+                        type="number"
+                        className="form-control"
+                        value={editForm.jumlah}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, jumlah: Number(e.target.value) }))}
+                        min={1}
+                      />
+                    </div>
+                  </div>
+                  <div className="col-md-4">
+                    <label className="form-label small fw-bold">Kategori</label>
+                    <select
+                      className="form-select"
+                      value={editForm.kategori_id}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, kategori_id: e.target.value ? Number(e.target.value) : '' }))}
+                    >
+                      <option value="">-- Tanpa Kategori --</option>
+                      {kategoriList.map((k) => (
+                        <option key={k.id} value={k.id}>{k.kode}. {k.nama}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-12">
+                    <label className="form-label small fw-bold">Keterangan <span className="text-danger">*</span></label>
+                    <textarea
+                      className="form-control"
+                      rows={2}
+                      value={editForm.keterangan}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, keterangan: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                {editTarget.sumber !== 'manual' && (
+                  <div className="alert alert-info small mt-3 mb-0">
+                    <FiAlertCircle className="me-1" />
+                    Transaksi ini berasal dari <strong>{getSumberLabel(editTarget.sumber)}</strong>. Perubahan hanya mempengaruhi data kas, bukan sumber asalnya.
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setEditTarget(null)} disabled={processing}>Batal</button>
+                <button
+                  className="btn btn-warning"
+                  onClick={handleEditSubmit}
+                  disabled={processing || !editForm.tanggal || !editForm.jumlah || !editForm.keterangan}
+                >
+                  {processing ? (
+                    <><span className="spinner-border spinner-border-sm me-2" />Menyimpan...</>
+                  ) : (
+                    <><FiEdit2 className="me-1" /> Simpan Perubahan</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-danger text-white">
+                <h5 className="modal-title">
+                  <FiTrash2 className="me-2" />
+                  Hapus Transaksi
+                </h5>
+                <button type="button" className="btn-close btn-close-white" onClick={() => setDeleteTarget(null)} disabled={processing} />
+              </div>
+              <div className="modal-body">
+                <p>Apakah Anda yakin ingin menghapus transaksi ini?</p>
+                <div className="bg-light rounded p-3">
+                  <div className="row small">
+                    <div className="col-4 text-muted">Tanggal</div>
+                    <div className="col-8 fw-bold">{new Date(deleteTarget.tanggal).toLocaleDateString('id-ID')}</div>
+                    <div className="col-4 text-muted">Tipe</div>
+                    <div className="col-8">
+                      <span className={`fw-bold ${deleteTarget.tipe === 'pemasukan' ? 'text-success' : 'text-danger'}`}>
+                        {deleteTarget.tipe === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}
+                      </span>
+                    </div>
+                    <div className="col-4 text-muted">Jumlah</div>
+                    <div className="col-8 fw-bold text-primary">{formatRupiah(deleteTarget.jumlah)}</div>
+                    <div className="col-4 text-muted">Keterangan</div>
+                    <div className="col-8">{deleteTarget.keterangan || '-'}</div>
+                    <div className="col-4 text-muted">Sumber</div>
+                    <div className="col-8">{getSumberLabel(deleteTarget.sumber)}</div>
+                  </div>
+                </div>
+
+                {deleteTarget.sumber !== 'manual' && (
+                  <div className="alert alert-warning small mt-3 mb-0">
+                    <FiAlertCircle className="me-1" />
+                    Transaksi ini berasal dari <strong>{getSumberLabel(deleteTarget.sumber)}</strong>. Menghapus hanya menghilangkan catatan kas, bukan data {getSumberLabel(deleteTarget.sumber)} terkait.
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setDeleteTarget(null)} disabled={processing}>Batal</button>
+                <button
+                  className="btn btn-danger"
+                  onClick={handleDelete}
+                  disabled={processing}
+                >
+                  {processing ? (
+                    <><span className="spinner-border spinner-border-sm me-2" />Menghapus...</>
+                  ) : (
+                    <><FiTrash2 className="me-1" /> Hapus Transaksi</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

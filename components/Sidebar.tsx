@@ -126,13 +126,13 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           href: '/keuangan/budget', 
           label: 'Budget Tahunan', 
           icon: <FiDatabase />,
-          roles: ['ketua_rw', 'wakil_ketua_rw', 'bendahara_rw']
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'bendahara_rw', 'koordinator_rw']
         },
         { 
           href: '/keuangan/laporan', 
           label: 'Laporan Bulanan', 
           icon: <FiFileText />,
-          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'koordinator_rw']
+          // Aksesibel untuk semua user termasuk warga (transparansi keuangan)
         },
       ],
     },
