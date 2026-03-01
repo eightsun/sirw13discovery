@@ -12,8 +12,51 @@ import {
   FiSave, 
   FiArrowLeft, 
   FiX, 
-  FiAlertTriangle
+  FiAlertTriangle,
+  FiClock,
+  FiCheckCircle,
+  FiXCircle,
+  FiEdit,
+  FiSend,
+  FiDollarSign
 } from 'react-icons/fi'
+
+// Helper untuk format tanggal
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// Helper untuk icon status
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case 'diajukan': return <FiSend className="text-warning" />
+    case 'disetujui': return <FiCheckCircle className="text-success" />
+    case 'ditolak': return <FiXCircle className="text-danger" />
+    case 'direvisi': return <FiEdit className="text-info" />
+    case 'dibayar': return <FiDollarSign className="text-primary" />
+    case 'selesai': return <FiCheckCircle className="text-success" />
+    default: return <FiClock className="text-secondary" />
+  }
+}
+
+// Helper untuk label status
+const getStatusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    'diajukan': 'Diajukan',
+    'disetujui': 'Disetujui',
+    'ditolak': 'Ditolak',
+    'direvisi': 'Perlu Revisi',
+    'dibayar': 'Sudah Dibayar',
+    'selesai': 'Selesai'
+  }
+  return labels[status] || status
+}
 
 export default function EditPengajuanPage() {
   const params = useParams()
@@ -427,7 +470,8 @@ export default function EditPengajuanPage() {
 
           {/* Sidebar */}
           <div className="col-lg-4">
-            <div className="card position-sticky" style={{ top: '1rem' }}>
+            {/* Action Buttons */}
+            <div className="card mb-4">
               <div className="card-body">
                 <button type="submit" className="btn btn-primary w-100 mb-3" disabled={submitting}>
                   {submitting ? <><span className="spinner-border spinner-border-sm me-2" />Menyimpan...</> : <><FiSave className="me-2" />Simpan Perubahan</>}
@@ -437,6 +481,56 @@ export default function EditPengajuanPage() {
                 </Link>
               </div>
             </div>
+
+            {/* Riwayat Status */}
+            {pengajuan.riwayat_status && pengajuan.riwayat_status.length > 0 && (
+              <div className="card position-sticky" style={{ top: '1rem' }}>
+                <div className="card-header bg-secondary text-white">
+                  <h6 className="mb-0 fw-bold">
+                    <FiClock className="me-2" />
+                    Riwayat Status
+                  </h6>
+                </div>
+                <div className="card-body p-0">
+                  <div className="list-group list-group-flush">
+                    {[...pengajuan.riwayat_status].reverse().map((riwayat: {
+                      status: string
+                      tanggal: string
+                      catatan?: string
+                      nama_user?: string
+                      oleh?: string
+                      bukti_url?: string
+                    }, index: number) => (
+                      <div key={index} className="list-group-item">
+                        <div className="d-flex align-items-start">
+                          <div className="me-3 mt-1">
+                            {getStatusIcon(riwayat.status)}
+                          </div>
+                          <div className="flex-grow-1">
+                            <div className="d-flex justify-content-between align-items-start">
+                              <strong className="small">{getStatusLabel(riwayat.status)}</strong>
+                              <small className="text-muted">
+                                {formatDate(riwayat.tanggal)}
+                              </small>
+                            </div>
+                            {riwayat.nama_user && (
+                              <small className="text-muted d-block">
+                                oleh: {riwayat.nama_user}
+                              </small>
+                            )}
+                            {riwayat.catatan && (
+                              <small className="text-secondary d-block mt-1 fst-italic">
+                                "{riwayat.catatan}"
+                              </small>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </form>
