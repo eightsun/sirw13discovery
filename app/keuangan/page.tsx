@@ -51,9 +51,9 @@ export default function KeuanganDashboardPage() {
   const [kasSummary, setKasSummary] = useState<KasSummary[]>([])
   const [pengajuanSummary, setPengajuanSummary] = useState<PengajuanSummary[]>([])
   const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([])
-  const [currentMonth, setCurrentMonth] = useState({
-    pemasukan: 0,
-    pengeluaran: 0
+  const [currentMonth, setCurrentMonth] = useState<Record<string, { pemasukan: number; pengeluaran: number }>>({
+    'Timur': { pemasukan: 0, pengeluaran: 0 },
+    'Barat': { pemasukan: 0, pengeluaran: 0 }
   })
 
   useEffect(() => {
@@ -117,24 +117,33 @@ export default function KeuanganDashboardPage() {
           setRecentTransactions(recentData)
         }
 
-        // Calculate current month totals
-        const startOfMonth = new Date()
-        startOfMonth.setDate(1)
-        startOfMonth.setHours(0, 0, 0, 0)
+        // Calculate current month totals (gunakan local timezone, bukan UTC)
+        const now = new Date()
+        const year = now.getFullYear()
+        const month = now.getMonth() + 1
+        const currentMonthStr = `${year}-${String(month).padStart(2, '0')}-01`
+        const lastDay = new Date(year, month, 0).getDate()
+        const endMonthStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
         
         const { data: monthData } = await supabase
           .from('kas_transaksi')
-          .select('tipe, jumlah')
-          .gte('tanggal', startOfMonth.toISOString().split('T')[0])
+          .select('tipe, jumlah, wilayah')
+          .eq('jenis_kas', 'rw')
+          .gte('tanggal', currentMonthStr)
+          .lte('tanggal', endMonthStr)
 
         if (monthData) {
-          let pemasukan = 0
-          let pengeluaran = 0
-          monthData.forEach((t: { tipe: string; jumlah: number }) => {
-            if (t.tipe === 'pemasukan') pemasukan += t.jumlah
-            else pengeluaran += t.jumlah
+          const monthByWilayah: Record<string, { pemasukan: number; pengeluaran: number }> = {
+            'Timur': { pemasukan: 0, pengeluaran: 0 },
+            'Barat': { pemasukan: 0, pengeluaran: 0 }
+          }
+          monthData.forEach((t: { tipe: string; jumlah: number; wilayah: string }) => {
+            const w = t.wilayah || 'Timur'
+            if (!monthByWilayah[w]) monthByWilayah[w] = { pemasukan: 0, pengeluaran: 0 }
+            if (t.tipe === 'pemasukan') monthByWilayah[w].pemasukan += t.jumlah
+            else monthByWilayah[w].pengeluaran += t.jumlah
           })
-          setCurrentMonth({ pemasukan, pengeluaran })
+          setCurrentMonth(monthByWilayah)
         }
 
       } catch (error) {
@@ -243,63 +252,111 @@ export default function KeuanganDashboardPage() {
         </Link>
       </div>
 
-      {/* Summary Cards - Kas RW */}
+      {/* Summary Cards - Per Wilayah */}
+      {['Timur', 'Barat'].map((wilayah) => {
+        const kasWilayah = kasSummary.find(k => k.jenis_kas === 'rw' && k.wilayah === wilayah)
+        const saldo = kasWilayah?.saldo || 0
+        const monthW = currentMonth[wilayah] || { pemasukan: 0, pengeluaran: 0 }
+        return (
+          <div key={wilayah} className="mb-3">
+            <h6 className="fw-bold text-muted mb-2">
+              <span className="badge bg-primary me-2">RW</span>
+              Discovery {wilayah}
+            </h6>
+            <div className="row g-3 mb-2">
+              <div className="col-md-4">
+                <div className="card h-100 border-start border-primary border-4">
+                  <div className="card-body py-2">
+                    <div className="d-flex align-items-center">
+                      <div className="flex-shrink-0 me-3">
+                        <div className="bg-primary bg-opacity-10 rounded-circle p-2">
+                          <RupiahIcon className="text-primary" size={20} />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-muted mb-0 small">Saldo Kas</p>
+                        <h5 className="mb-0 fw-bold">{formatRupiah(saldo)}</h5>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="card h-100 border-start border-success border-4">
+                  <div className="card-body py-2">
+                    <div className="d-flex align-items-center">
+                      <div className="flex-shrink-0 me-3">
+                        <div className="bg-success bg-opacity-10 rounded-circle p-2">
+                          <FiTrendingUp className="text-success" size={20} />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-muted mb-0 small">Pemasukan Bulan Ini</p>
+                        <h5 className="mb-0 fw-bold text-success">{formatRupiah(monthW.pemasukan)}</h5>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="card h-100 border-start border-danger border-4">
+                  <div className="card-body py-2">
+                    <div className="d-flex align-items-center">
+                      <div className="flex-shrink-0 me-3">
+                        <div className="bg-danger bg-opacity-10 rounded-circle p-2">
+                          <FiTrendingDown className="text-danger" size={20} />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-muted mb-0 small">Pengeluaran Bulan Ini</p>
+                        <h5 className="mb-0 fw-bold text-danger">{formatRupiah(monthW.pengeluaran)}</h5>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })}
+
+      {/* Total & Pengajuan */}
       <div className="row g-3 mb-4">
-        <div className="col-md-6 col-lg-3">
-          <div className="card h-100 border-start border-primary border-4">
+        <div className="col-md-4">
+          <div className="card h-100 border-start border-info border-4">
             <div className="card-body">
               <div className="d-flex align-items-center">
                 <div className="flex-shrink-0 me-3">
-                  <div className="bg-primary bg-opacity-10 rounded-circle p-3">
-                    <RupiahIcon className="text-primary" size={24} />
+                  <div className="bg-info bg-opacity-10 rounded-circle p-3">
+                    <RupiahIcon className="text-info" size={24} />
                   </div>
                 </div>
                 <div>
-                  <p className="text-muted mb-1 small">Saldo Kas RW</p>
+                  <p className="text-muted mb-1 small">Total Saldo RW</p>
                   <h4 className="mb-0 fw-bold">{formatRupiah(totalSaldoRW)}</h4>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        <div className="col-md-6 col-lg-3">
-          <div className="card h-100 border-start border-success border-4">
+        <div className="col-md-4">
+          <div className="card h-100 border-start border-secondary border-4">
             <div className="card-body">
               <div className="d-flex align-items-center">
                 <div className="flex-shrink-0 me-3">
-                  <div className="bg-success bg-opacity-10 rounded-circle p-3">
-                    <FiTrendingUp className="text-success" size={24} />
+                  <div className="bg-secondary bg-opacity-10 rounded-circle p-3">
+                    <RupiahIcon className="text-secondary" size={24} />
                   </div>
                 </div>
                 <div>
-                  <p className="text-muted mb-1 small">Pemasukan Bulan Ini</p>
-                  <h4 className="mb-0 fw-bold text-success">{formatRupiah(currentMonth.pemasukan)}</h4>
+                  <p className="text-muted mb-1 small">Total Saldo RT</p>
+                  <h4 className="mb-0 fw-bold">{formatRupiah(totalSaldoRT)}</h4>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        <div className="col-md-6 col-lg-3">
-          <div className="card h-100 border-start border-danger border-4">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="flex-shrink-0 me-3">
-                  <div className="bg-danger bg-opacity-10 rounded-circle p-3">
-                    <FiTrendingDown className="text-danger" size={24} />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-muted mb-1 small">Pengeluaran Bulan Ini</p>
-                  <h4 className="mb-0 fw-bold text-danger">{formatRupiah(currentMonth.pengeluaran)}</h4>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-md-6 col-lg-3">
+        <div className="col-md-4">
           <div className="card h-100 border-start border-warning border-4">
             <div className="card-body">
               <div className="d-flex align-items-center">

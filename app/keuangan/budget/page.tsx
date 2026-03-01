@@ -95,19 +95,20 @@ export default function BudgetTahunanPage() {
         .order('kategori_id')
 
       if (budgetData) {
-        // Calculate realisasi for each budget
+        // Calculate realisasi dari kas_transaksi (pengeluaran aktual)
         const budgetWithRealisasi = await Promise.all(
           budgetData.map(async (budget: BudgetItem) => {
             const { data: realisasiData } = await supabase
-              .from('pengajuan_pembelian')
-              .select('nilai_transaksi')
+              .from('kas_transaksi')
+              .select('jumlah')
               .eq('kategori_id', budget.kategori_id)
               .eq('wilayah', budget.wilayah)
-              .eq('status', 'selesai')
-              .gte('tanggal_pengajuan', `${budget.tahun}-01-01`)
-              .lte('tanggal_pengajuan', `${budget.tahun}-12-31`)
+              .eq('tipe', 'pengeluaran')
+              .eq('jenis_kas', 'rw')
+              .gte('tanggal', `${budget.tahun}-01-01`)
+              .lte('tanggal', `${budget.tahun}-12-31`)
 
-            const realisasi = realisasiData?.reduce((sum: number, item: { nilai_transaksi: number }) => sum + item.nilai_transaksi, 0) || 0
+            const realisasi = realisasiData?.reduce((sum: number, item: { jumlah: number }) => sum + item.jumlah, 0) || 0
             return { ...budget, realisasi }
           })
         )
