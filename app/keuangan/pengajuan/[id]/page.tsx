@@ -334,9 +334,10 @@ export default function DetailPengajuanPage() {
         updateData.bukti_transfer_url = buktiTransferUrl
       }
 
-      // Simpan bukti invoice/kwitansi ke field nota_invoice_url
+      // Simpan bukti invoice/kwitansi dari Bendahara ke bukti_persetujuan_url
+      // (nota_invoice_url tetap untuk Nota/Invoice asli dari Pemohon)
       if (buktiInvoiceUrl) {
-        updateData.nota_invoice_url = buktiInvoiceUrl
+        updateData.bukti_persetujuan_url = buktiInvoiceUrl
       }
 
       // Update pengajuan
@@ -579,14 +580,13 @@ export default function DetailPengajuanPage() {
                 <div className="col-md-6">
                   <div className="border rounded p-3 h-100">
                     <label className="text-muted small d-block mb-2">Nota/Invoice (dari Pemohon)</label>
-                    {pengajuan.nota_invoice_url && pengajuan.status !== 'selesai' ? (
+                    {pengajuan.nota_invoice_url ? (
                       <button className="btn btn-sm btn-outline-primary" onClick={() => openFile(pengajuan.nota_invoice_url)}>
                         <FiDownload className="me-1" /> Lihat File
                       </button>
-                    ) : !pengajuan.nota_invoice_url ? (
+                    ) : (
                       <span className="text-muted">Belum diupload</span>
-                    ) : null}
-                    {/* Jika status selesai, nota_invoice_url dipakai untuk invoice dari Bendahara */}
+                    )}
                   </div>
                 </div>
 
@@ -628,8 +628,8 @@ export default function DetailPengajuanPage() {
                           <FiCheckCircle className="me-1 text-success" />
                           Invoice/Kwitansi Pelunasan (dari Bendahara)
                         </label>
-                        {pengajuan.nota_invoice_url ? (
-                          <button className="btn btn-sm btn-outline-success" onClick={() => openFile(pengajuan.nota_invoice_url)}>
+                        {pengajuan.bukti_persetujuan_url ? (
+                          <button className="btn btn-sm btn-outline-success" onClick={() => openFile(pengajuan.bukti_persetujuan_url)}>
                             <FiDownload className="me-1" /> Lihat File
                           </button>
                         ) : (
