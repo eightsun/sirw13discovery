@@ -642,4 +642,5 @@ export default function DetailWargaPage() {
       </div>
     </div>
   )
-}
+}  
+

@@ -524,3 +524,6 @@ export default function DetailRumahPage() {
     </div>
   )
 }
+
+
+    

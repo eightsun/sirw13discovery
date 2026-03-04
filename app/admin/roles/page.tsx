@@ -557,6 +557,9 @@ export default function ManageRolesPage() {
                   </table>
                 </div>
 
+
+              )}
+
                 {/* Mobile Card View - RW */}
                 <div className="mobile-card-list">
                   {rwLevel.map((user: UserWithWarga) => (
@@ -571,23 +574,17 @@ export default function ManageRolesPage() {
                       {user.role !== 'ketua_rw' && (
                         <div className="mc-actions">
                           {editingId === user.id ? (
-                            <>
                               <button className="btn btn-sm btn-success" onClick={() => handleSaveRole(user.id)} disabled={saving}><FiSave className="me-1" /> Simpan</button>
                               <button className="btn btn-sm btn-secondary" onClick={() => setEditingId(null)} disabled={saving}>Batal</button>
-                            </>
                           ) : (
-                            <>
                               <button className="btn btn-sm btn-outline-primary" onClick={() => startEditRole(user)}><FiEdit2 className="me-1" /> Ubah</button>
                               <button className="btn btn-sm btn-outline-danger" onClick={() => handleRemoveRole(user.id)}><FiUserX className="me-1" /> Hapus</button>
-                            </>
                           )}
                         </div>
                       )}
                     </div>
                   ))}
                 </div>
-
-              )}
             </div>
 
 
@@ -688,6 +685,9 @@ export default function ManageRolesPage() {
                   </table>
                 </div>
 
+
+              )}
+
                 {/* Mobile Card View - RT */}
                 <div className="mobile-card-list">
                   {rtLevel.map((user: UserWithWarga) => (
@@ -710,8 +710,6 @@ export default function ManageRolesPage() {
                     </div>
                   ))}
                 </div>
-
-              )}
             </div>
 
 

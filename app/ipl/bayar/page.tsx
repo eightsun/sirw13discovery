@@ -460,6 +460,8 @@ export default function BayarIPLPage() {
                     </table>
                   </div>
 
+                )}
+
                   {/* Mobile Card View */}
                   <div className="mobile-card-list">
                     {tagihanList.map((t) => {
@@ -486,7 +488,6 @@ export default function BayarIPLPage() {
                       )
                     })}
                   </div>
-                )}
               </div>
             </div>
           </div>
@@ -635,15 +636,9 @@ export default function BayarIPLPage() {
                   disabled={submitting || uploading || compressing || selectedCount === 0}
                 >
                   {submitting ? (
-                    <>
-                      <FiLoader className="spin me-2" />
-                      Menyimpan...
-                    </>
+                      <><FiLoader className="spin me-2" />Menyimpan...</>
                   ) : (
-                    <>
-                      <span className="me-2 fw-bold">Rp</span>
-                      Kirim Pembayaran
-                    </>
+                      <><span className="me-2 fw-bold">Rp</span>Kirim Pembayaran</>
                   )}
                 </button>
                 

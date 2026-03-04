@@ -394,7 +394,6 @@ export default function PengajuanListPage() {
                           
                           {/* Approval buttons for Ketua RW */}
                           {isKetuaRW && item.status === 'diajukan' && (
-                            <>
                               <button
                                 className="btn btn-sm btn-success"
                                 title="Setujui"
@@ -416,7 +415,6 @@ export default function PengajuanListPage() {
                               >
                                 <FiRefreshCw />
                               </button>
-                            </>
                           )}
 
                           {/* Edit for pemohon (only own pengajuan with status diajukan/direvisi) */}
@@ -448,6 +446,9 @@ export default function PengajuanListPage() {
               </table>
             </div>
 
+
+          )}
+
             {/* Mobile Card View */}
             <div className="mobile-card-list">
               {pengajuan.map((item) => (
@@ -468,21 +469,17 @@ export default function PengajuanListPage() {
                       <FiEye className="me-1" /> Detail
                     </Link>
                     {isKetuaRW && item.status === 'diajukan' && (
-                      <>
                         <button className="btn btn-sm btn-success" onClick={() => handleApprovalClick(item, 'setujui')}>
                           <FiCheck />
                         </button>
                         <button className="btn btn-sm btn-danger" onClick={() => handleApprovalClick(item, 'tolak')}>
                           <FiX />
                         </button>
-                      </>
                     )}
                   </div>
                 </div>
               ))}
             </div>
-
-          )}
         </div>
       </div>
 
@@ -545,15 +542,9 @@ export default function PengajuanListPage() {
                   disabled={deleting}
                 >
                   {deleting ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" />
-                      Menghapus...
-                    </>
+                      <><span className="spinner-border spinner-border-sm me-2" />Menghapus...</>
                   ) : (
-                    <>
-                      <FiTrash2 className="me-2" />
-                      Ya, Hapus Pengajuan
-                    </>
+                      <><FiTrash2 className="me-2" />Ya, Hapus Pengajuan</>
                   )}
                 </button>
               </div>
@@ -621,16 +612,9 @@ export default function PengajuanListPage() {
                   disabled={processing || (approvalAction === 'revisi' && !approvalNote)}
                 >
                   {processing ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" />
-                      Memproses...
-                    </>
+                      <><span className="spinner-border spinner-border-sm me-2" />Memproses...</>
                   ) : (
-                    <>
-                      {approvalAction === 'setujui' && 'Setujui'}
-                      {approvalAction === 'tolak' && 'Tolak'}
-                      {approvalAction === 'revisi' && 'Kirim ke Revisi'}
-                    </>
+                      <>{approvalAction === 'setujui' && 'Setujui'}{approvalAction === 'tolak' && 'Tolak'}{approvalAction === 'revisi' && 'Kirim ke Revisi'}</>
                   )}
                 </button>
               </div>

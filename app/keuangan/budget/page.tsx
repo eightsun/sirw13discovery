@@ -443,6 +443,7 @@ export default function BudgetTahunanPage() {
               )}
             </div>
           ) : (
+            <>
             <div className="table-responsive desktop-table">
               <table className="table table-hover mb-0">
                 <thead className="table-light">
@@ -611,6 +612,10 @@ export default function BudgetTahunanPage() {
                 )
               })}
             </div>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Add Budget Modal */}
       {showAddModal && (
@@ -786,11 +791,5 @@ export default function BudgetTahunanPage() {
         </div>
       )}
     </div>
-
-          )}
-        </div>
-      </div>
-
-
   )
 }

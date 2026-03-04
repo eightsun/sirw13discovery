@@ -371,6 +371,8 @@ export default function KeuanganDashboardPage() {
                   </table>
                 </div>
 
+              )}
+
                 {/* Mobile Saldo Cards */}
                 <div className="mobile-card-list">
                   {kasSummary.map((kas, idx) => (
@@ -391,7 +393,6 @@ export default function KeuanganDashboardPage() {
                     <div className="d-flex justify-content-between"><strong>Total Kas RT</strong><strong>{formatRupiah(totalSaldoRT)}</strong></div>
                   </div>
                 </div>
-              )}
             </div>
           </div>
         </div>
@@ -478,6 +479,9 @@ export default function KeuanganDashboardPage() {
                   </table>
                 </div>
 
+
+              )}
+
                 {/* Mobile Recent Transactions */}
                 <div className="mobile-card-list px-3">
                   {recentTransactions.map((t) => (
@@ -494,8 +498,6 @@ export default function KeuanganDashboardPage() {
                     </div>
                   ))}
                 </div>
-
-              )}
             </div>
 
 

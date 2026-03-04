@@ -356,15 +356,9 @@ export default function TarifIPLPage() {
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={submitting}>
                   {submitting ? (
-                    <>
-                      <FiLoader className="spin me-2" />
-                      Menyimpan...
-                    </>
+                      <><FiLoader className="spin me-2" />Menyimpan...</>
                   ) : (
-                    <>
-                      <FiCheck className="me-2" />
-                      Simpan
-                    </>
+                      <><FiCheck className="me-2" />Simpan</>
                   )}
                 </button>
               </div>
@@ -455,6 +449,9 @@ export default function TarifIPLPage() {
               </table>
             </div>
 
+
+          )}
+
             {/* Mobile Card View */}
             <div className="mobile-card-list">
               {tarifList.map((tarif) => (
@@ -492,8 +489,6 @@ export default function TarifIPLPage() {
                 </div>
               ))}
             </div>
-
-          )}
         </div>
 
 
@@ -599,15 +594,9 @@ export default function TarifIPLPage() {
                     disabled={generating || !generateBulan}
                   >
                     {generating ? (
-                      <>
-                        <FiLoader className="spin me-2" />
-                        Generating...
-                      </>
+                        <><FiLoader className="spin me-2" />Generating...</>
                     ) : (
-                      <>
-                        <FiPlay className="me-2" />
-                        Generate Tagihan
-                      </>
+                        <><FiPlay className="me-2" />Generate Tagihan</>
                     )}
                   </button>
                 )}

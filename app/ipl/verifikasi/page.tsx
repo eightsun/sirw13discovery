@@ -443,6 +443,9 @@ export default function VerifikasiIPLPage() {
               </table>
             </div>
 
+
+          )}
+
             {/* Mobile Card View */}
             <div className="mobile-card-list">
               {pembayaranList.map((p) => (
@@ -481,8 +484,6 @@ export default function VerifikasiIPLPage() {
                 </div>
               ))}
             </div>
-
-          )}
         </div>
 
 

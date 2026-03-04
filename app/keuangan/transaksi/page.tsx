@@ -626,6 +626,8 @@ export default function TransaksiKasPage() {
               </table>
             </div>
 
+          )}
+
             {/* Mobile Card View */}
             <div className="mobile-card-list">
               {transaksi.map((t) => (
@@ -660,7 +662,6 @@ export default function TransaksiKasPage() {
                 </div>
               ))}
             </div>
-          )}
         </div>
       </div>
 
