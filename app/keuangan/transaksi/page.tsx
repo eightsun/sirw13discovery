@@ -698,10 +698,10 @@ export default function TransaksiKasPage() {
                   <tr>
                     <th>Tanggal</th>
                     <th>Kas</th>
-                    <th>Wilayah</th>
+                    <th className="d-none d-md-table-cell">Wilayah</th>
                     <th>Tipe</th>
-                    <th>Sumber</th>
-                    <th>Kategori</th>
+                    <th className="d-none d-lg-table-cell">Sumber</th>
+                    <th className="d-none d-md-table-cell">Kategori</th>
                     <th>Keterangan</th>
                     <th className="text-end">Jumlah</th>
                     {isAdmin && <th className="text-center" style={{ width: '90px' }}>Aksi</th>}
@@ -716,7 +716,7 @@ export default function TransaksiKasPage() {
                           {t.jenis_kas.toUpperCase()}
                         </span>
                       </td>
-                      <td>{t.wilayah}</td>
+                      <td className="d-none d-md-table-cell">{t.wilayah}</td>
                       <td>
                         {t.tipe === 'pemasukan' ? (
                           <span className="text-success">
@@ -728,7 +728,7 @@ export default function TransaksiKasPage() {
                           </span>
                         )}
                       </td>
-                      <td>
+                      <td className="d-none d-lg-table-cell">
                         <span className={`badge bg-${
                           t.sumber === 'ipl' ? 'info' : 
                           t.sumber === 'pengajuan' ? 'warning' : 'secondary'
@@ -736,7 +736,7 @@ export default function TransaksiKasPage() {
                           {getSumberLabel(t.sumber)}
                         </span>
                       </td>
-                      <td>{t.kategori ? `${t.kategori.kode}. ${t.kategori.nama}` : '-'}</td>
+                      <td className="d-none d-md-table-cell">{t.kategori ? `${t.kategori.kode}. ${t.kategori.nama}` : '-'}</td>
                       <td style={{ whiteSpace: 'normal', wordWrap: 'break-word' }}>
                         {t.keterangan || '-'}
                       </td>

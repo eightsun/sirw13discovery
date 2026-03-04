@@ -306,17 +306,19 @@ export default function WargaListPage() {
               <p>Tidak ada data warga ditemukan</p>
             </div>
           ) : (
-            <div className="table-responsive">
+            <>
+            {/* Desktop Table View */}
+            <div className="table-responsive desktop-table">
               <table className="table table-hover">
                 <thead>
                   <tr>
-                    <th>#</th>
+                    <th className="d-none d-md-table-cell">#</th>
                     <th>Nama Lengkap</th>
-                    <th>NIK</th>
+                    <th className="d-none d-lg-table-cell">NIK</th>
                     <th>RT</th>
                     <th>Alamat</th>
-                    <th>No. HP</th>
-                    <th>Status</th>
+                    <th className="d-none d-md-table-cell">No. HP</th>
+                    <th className="d-none d-lg-table-cell">Status</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
@@ -325,11 +327,11 @@ export default function WargaListPage() {
                     const masked = shouldMask(warga)
                     return (
                       <tr key={warga.id}>
-                        <td>{index + 1}</td>
+                        <td className="d-none d-md-table-cell">{index + 1}</td>
                         <td>
                           <strong>{masked ? maskName(warga.nama_lengkap) : warga.nama_lengkap}</strong>
                         </td>
-                        <td>
+                        <td className="d-none d-lg-table-cell">
                           <code className="small">{masked ? maskNIK(warga.nik) : warga.nik}</code>
                         </td>
                         <td>
@@ -342,10 +344,10 @@ export default function WargaListPage() {
                             {(warga.jalan as Jalan)?.nama_jalan || '-'} No. {warga.nomor_rumah}
                           </small>
                         </td>
-                        <td>
+                        <td className="d-none d-md-table-cell">
                           <small>{masked ? '08**********' : warga.no_hp}</small>
                         </td>
-                        <td>
+                        <td className="d-none d-lg-table-cell">
                           <span className={`badge ${
                             warga.status_kependudukan === 'penduduk_tetap' ? 'bg-success' :
                             warga.status_kependudukan === 'penduduk_kontrak' ? 'bg-info' :
@@ -399,6 +401,53 @@ export default function WargaListPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Card View */}
+            <div className="mobile-card-list">
+              {filteredWarga.map((warga) => {
+                const masked = shouldMask(warga)
+                return (
+                  <div key={warga.id} className="mobile-card-item">
+                    <div className="d-flex justify-content-between align-items-start">
+                      <div className="card-title mb-0">
+                        {masked ? maskName(warga.nama_lengkap) : warga.nama_lengkap}
+                      </div>
+                      <span className="badge bg-primary">RT {(warga.rt as RT)?.nomor_rt || '-'}</span>
+                    </div>
+                    <div className="card-detail">
+                      <span>{(warga.jalan as Jalan)?.nama_jalan || '-'} No. {warga.nomor_rumah}</span>
+                      <span className={`badge ${
+                        warga.status_kependudukan === 'penduduk_tetap' ? 'bg-success' :
+                        warga.status_kependudukan === 'penduduk_kontrak' ? 'bg-info' :
+                        warga.status_kependudukan === 'menumpang' ? 'bg-warning' :
+                        'bg-secondary'
+                      }`} style={{ fontSize: '0.65rem' }}>
+                        {getStatusKependudukanLabel(warga.status_kependudukan).replace('Penduduk ', '')}
+                      </span>
+                    </div>
+                    <div className="card-detail">
+                      <span>{masked ? '08**********' : warga.no_hp || '-'}</span>
+                    </div>
+                    <div className="card-actions">
+                      <Link href={`/warga/${warga.id}`} className="btn btn-sm btn-outline-primary">
+                        <FiEye className="me-1" /> Detail
+                      </Link>
+                      {warga.jalan_id && warga.nomor_rumah && (
+                        <Link href={`/rumah/${encodeURIComponent(warga.jalan_id)}/${encodeURIComponent(warga.nomor_rumah)}`} className="btn btn-sm btn-outline-info">
+                          <FiHome className="me-1" /> Rumah
+                        </Link>
+                      )}
+                      {(isPengurus || warga.id === userData?.warga_id) && (
+                        <Link href={`/warga/edit/${warga.id}`} className="btn btn-sm btn-outline-warning">
+                          <FiEdit className="me-1" /> Edit
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            </>
           )}
         </div>
       </div>

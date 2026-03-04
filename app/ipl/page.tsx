@@ -499,12 +499,12 @@ export default function IPLPage() {
                 <thead>
                   <tr>
                     <th>Bulan</th>
-                    {isPengurus && <th>Alamat</th>}
-                    {isPengurus && <th>Kepala Keluarga</th>}
+                    {isPengurus && <th className="d-none d-md-table-cell">Alamat</th>}
+                    {isPengurus && <th className="d-none d-lg-table-cell">Kepala Keluarga</th>}
                     <th className="text-end">Tagihan</th>
                     <th className="text-end">Terbayar</th>
                     <th className="text-center">Status</th>
-                    <th>Tgl Lunas</th>
+                    <th className="d-none d-md-table-cell">Tgl Lunas</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -514,7 +514,7 @@ export default function IPLPage() {
                         <strong>{formatBulan(t.bulan)}</strong>
                       </td>
                       {isPengurus && (
-                        <td>
+                        <td className="d-none d-md-table-cell">
                           <small>
                             {t.rumah?.jalan?.nama_jalan} No. {t.rumah?.nomor_rumah}
                             <br />
@@ -523,7 +523,7 @@ export default function IPLPage() {
                         </td>
                       )}
                       {isPengurus && (
-                        <td>
+                        <td className="d-none d-lg-table-cell">
                           <small>{t.rumah?.kepala_keluarga?.nama_lengkap || '-'}</small>
                         </td>
                       )}
@@ -556,7 +556,7 @@ export default function IPLPage() {
                           </span>
                         )}
                       </td>
-                      <td>
+                      <td className="d-none d-md-table-cell">
                         {t.tanggal_lunas ? (
                           <small>{new Date(t.tanggal_lunas).toLocaleDateString('id-ID')}</small>
                         ) : (

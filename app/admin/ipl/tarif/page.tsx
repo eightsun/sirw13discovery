@@ -398,10 +398,10 @@ export default function TarifIPLPage() {
                   <tr>
                     <th>Blok</th>
                     <th>Periode Mulai</th>
-                    <th>Periode Selesai</th>
+                    <th className="d-none d-lg-table-cell">Periode Selesai</th>
                     <th className="text-end">Tarif Berpenghuni</th>
-                    <th className="text-end">Tarif Tidak Berpenghuni</th>
-                    <th>Keterangan</th>
+                    <th className="d-none d-md-table-cell text-end">Tarif Tidak Berpenghuni</th>
+                    <th className="d-none d-md-table-cell">Keterangan</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
@@ -418,19 +418,19 @@ export default function TarifIPLPage() {
                         </span>
                       </td>
                       <td>{formatDate(tarif.periode_mulai)}</td>
-                      <td>
+                      <td className="d-none d-lg-table-cell">
                         {tarif.periode_selesai ? formatDate(tarif.periode_selesai) : (
                           <span className="badge bg-success">Berlaku</span>
                         )}
                       </td>
                       <td className="text-end">{formatCurrency(tarif.tarif_berpenghuni)}</td>
-                      <td className="text-end">
+                      <td className="d-none d-md-table-cell text-end">
                         {tarif.tarif_tidak_berpenghuni 
                           ? formatCurrency(tarif.tarif_tidak_berpenghuni)
                           : <span className="text-muted">-</span>
                         }
                       </td>
-                      <td><small>{tarif.keterangan || '-'}</small></td>
+                      <td className="d-none d-md-table-cell"><small>{tarif.keterangan || '-'}</small></td>
                       <td>
                         <div className="btn-group btn-group-sm">
                           <button

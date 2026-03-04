@@ -395,8 +395,8 @@ export default function KeuanganDashboardPage() {
                       <tr>
                         <th>Kas</th>
                         <th>Wilayah</th>
-                        <th className="text-end">Pemasukan</th>
-                        <th className="text-end">Pengeluaran</th>
+                        <th className="d-none d-md-table-cell text-end">Pemasukan</th>
+                        <th className="d-none d-md-table-cell text-end">Pengeluaran</th>
                         <th className="text-end">Saldo</th>
                       </tr>
                     </thead>
@@ -409,8 +409,8 @@ export default function KeuanganDashboardPage() {
                             </span>
                           </td>
                           <td>{kas.wilayah}</td>
-                          <td className="text-end text-success">{formatRupiah(kas.total_pemasukan)}</td>
-                          <td className="text-end text-danger">{formatRupiah(kas.total_pengeluaran)}</td>
+                          <td className="d-none d-md-table-cell text-end text-success">{formatRupiah(kas.total_pemasukan)}</td>
+                          <td className="d-none d-md-table-cell text-end text-danger">{formatRupiah(kas.total_pengeluaran)}</td>
                           <td className="text-end fw-bold">{formatRupiah(kas.saldo)}</td>
                         </tr>
                       ))}
@@ -489,7 +489,7 @@ export default function KeuanganDashboardPage() {
                       <tr>
                         <th>Tanggal</th>
                         <th>Kas</th>
-                        <th>Wilayah</th>
+                        <th className="d-none d-md-table-cell">Wilayah</th>
                         <th>Keterangan</th>
                         <th className="text-end">Jumlah</th>
                       </tr>
@@ -503,7 +503,7 @@ export default function KeuanganDashboardPage() {
                               {t.jenis_kas.toUpperCase()}
                             </span>
                           </td>
-                          <td>{t.wilayah}</td>
+                          <td className="d-none d-md-table-cell">{t.wilayah}</td>
                           <td>{t.keterangan || '-'}</td>
                           <td className={`text-end fw-bold text-${t.tipe === 'pemasukan' ? 'success' : 'danger'}`}>
                             {t.tipe === 'pemasukan' ? '+' : '-'}{formatRupiah(t.jumlah)}

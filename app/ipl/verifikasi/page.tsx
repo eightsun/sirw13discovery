@@ -333,12 +333,12 @@ export default function VerifikasiIPLPage() {
                 <thead>
                   <tr>
                     <th>Tanggal</th>
-                    <th>Alamat</th>
-                    <th>Kepala Keluarga</th>
+                    <th className="d-none d-md-table-cell">Alamat</th>
+                    <th className="d-none d-lg-table-cell">Kepala Keluarga</th>
                     <th>Bulan Dibayar</th>
                     <th className="text-end">Jumlah</th>
-                    <th>Metode</th>
-                    <th>Bukti</th>
+                    <th className="d-none d-md-table-cell">Metode</th>
+                    <th className="d-none d-lg-table-cell">Bukti</th>
                     <th>Status</th>
                     <th>Aksi</th>
                   </tr>
@@ -349,14 +349,14 @@ export default function VerifikasiIPLPage() {
                       <td>
                         <small>{formatDate(p.tanggal_bayar)}</small>
                       </td>
-                      <td>
+                      <td className="d-none d-md-table-cell">
                         <small>
                           {p.rumah?.jalan?.nama_jalan} No. {p.rumah?.nomor_rumah}
                           <br />
                           <span className="text-muted">RT {p.rumah?.rt?.nomor_rt}</span>
                         </small>
                       </td>
-                      <td>
+                      <td className="d-none d-lg-table-cell">
                         <small>{p.rumah?.kepala_keluarga?.nama_lengkap || '-'}</small>
                       </td>
                       <td>
@@ -365,7 +365,7 @@ export default function VerifikasiIPLPage() {
                       <td className="text-end">
                         <strong>{formatCurrency(p.jumlah_dibayar)}</strong>
                       </td>
-                      <td>
+                      <td className="d-none d-md-table-cell">
                         <span className={`badge ${
                           p.metode === 'transfer' ? 'bg-info' : 
                           p.metode === 'tunai' ? 'bg-success' : 'bg-secondary'
@@ -373,7 +373,7 @@ export default function VerifikasiIPLPage() {
                           {p.metode}
                         </span>
                       </td>
-                      <td>
+                      <td className="d-none d-lg-table-cell">
                         {p.bukti_url ? (
                           <a 
                             href={p.bukti_url} 

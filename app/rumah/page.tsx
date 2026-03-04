@@ -306,23 +306,25 @@ export default function RumahListPage() {
               <p>Tidak ada data rumah ditemukan</p>
             </div>
           ) : (
-            <div className="table-responsive">
+            <>
+            {/* Desktop Table */}
+            <div className="table-responsive desktop-table">
               <table className="table table-hover">
                 <thead>
                   <tr>
-                    <th>#</th>
+                    <th className="d-none d-md-table-cell">#</th>
                     <th>Alamat</th>
                     <th>RT</th>
-                    <th>Jumlah KK</th>
-                    <th>Penghuni</th>
-                    <th>Kepala Keluarga</th>
+                    <th className="d-none d-md-table-cell">Jumlah KK</th>
+                    <th className="d-none d-lg-table-cell">Penghuni</th>
+                    <th className="d-none d-md-table-cell">Kepala Keluarga</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredRumah.map((rumah, index) => (
                     <tr key={`${rumah.jalan_id}-${rumah.nomor_rumah}`}>
-                      <td>{index + 1}</td>
+                      <td className="d-none d-md-table-cell">{index + 1}</td>
                       <td>
                         <strong>{rumah.jalan_nama} No. {rumah.nomor_rumah}</strong>
                       </td>
@@ -331,15 +333,15 @@ export default function RumahListPage() {
                           RT {rumah.rt_nomor}
                         </span>
                       </td>
-                      <td>
+                      <td className="d-none d-md-table-cell">
                         <span className={`badge ${rumah.jumlah_kk >= 2 ? 'bg-warning text-dark' : 'bg-success'}`}>
                           {rumah.jumlah_kk} KK
                         </span>
                       </td>
-                      <td>
+                      <td className="d-none d-lg-table-cell">
                         <small>{rumah.jumlah_penghuni} orang</small>
                       </td>
-                      <td>
+                      <td className="d-none d-md-table-cell">
                         <small>
                           {rumah.kepala_keluarga.map((kk, i) => (
                             <div key={i}>{i + 1}. {kk}</div>
@@ -360,6 +362,40 @@ export default function RumahListPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Card View */}
+            <div className="mobile-card-list">
+              {filteredRumah.map((rumah) => (
+                <Link 
+                  key={`${rumah.jalan_id}-${rumah.nomor_rumah}`}
+                  href={`/rumah/${encodeURIComponent(rumah.jalan_id)}/${encodeURIComponent(rumah.nomor_rumah)}`}
+                  className="text-decoration-none"
+                >
+                  <div className="mobile-card-item">
+                    <div className="d-flex justify-content-between align-items-start">
+                      <div className="card-title mb-0 text-dark">
+                        {rumah.jalan_nama} No. {rumah.nomor_rumah}
+                      </div>
+                      <span className="badge bg-primary">RT {rumah.rt_nomor}</span>
+                    </div>
+                    <div className="card-detail">
+                      <span>
+                        <span className={`badge ${rumah.jumlah_kk >= 2 ? 'bg-warning text-dark' : 'bg-success'}`} style={{ fontSize: '0.65rem' }}>
+                          {rumah.jumlah_kk} KK
+                        </span>
+                        <span className="ms-2">{rumah.jumlah_penghuni} penghuni</span>
+                      </span>
+                    </div>
+                    {rumah.kepala_keluarga.length > 0 && (
+                      <div className="card-detail">
+                        <small className="text-muted">{rumah.kepala_keluarga.join(', ')}</small>
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+            </>
           )}
         </div>
       </div>

@@ -477,9 +477,9 @@ export default function ManageRolesPage() {
                     <thead className="table-light">
                       <tr>
                         <th>Nama</th>
-                        <th>Email</th>
+                        <th className="d-none d-md-table-cell">Email</th>
                         <th>Jabatan</th>
-                        <th>Alamat</th>
+                        <th className="d-none d-lg-table-cell">Alamat</th>
                         <th className="text-center" style={{ width: '150px' }}>Aksi</th>
                       </tr>
                     </thead>
@@ -490,7 +490,7 @@ export default function ManageRolesPage() {
                             <div className="fw-bold">{user.warga?.nama_lengkap || '-'}</div>
                             <small className="text-muted">{user.warga?.no_hp || '-'}</small>
                           </td>
-                          <td>{user.email}</td>
+                          <td className="d-none d-md-table-cell">{user.email}</td>
                           <td>
                             {editingId === user.id ? (
                               <select
@@ -509,7 +509,7 @@ export default function ManageRolesPage() {
                               </span>
                             )}
                           </td>
-                          <td>
+                          <td className="d-none d-lg-table-cell">
                             <small>{user.warga?.nomor_rumah ? `No. ${user.warga.nomor_rumah}, ${user.warga.kelurahan || ''}` : '-'}</small>
                           </td>
                           <td className="text-center">
@@ -577,9 +577,9 @@ export default function ManageRolesPage() {
                     <thead className="table-light">
                       <tr>
                         <th>Nama</th>
-                        <th>Email</th>
+                        <th className="d-none d-md-table-cell">Email</th>
                         <th>Jabatan</th>
-                        <th>Alamat</th>
+                        <th className="d-none d-lg-table-cell">Alamat</th>
                         <th className="text-center" style={{ width: '150px' }}>Aksi</th>
                       </tr>
                     </thead>
@@ -590,7 +590,7 @@ export default function ManageRolesPage() {
                             <div className="fw-bold">{user.warga?.nama_lengkap || '-'}</div>
                             <small className="text-muted">{user.warga?.no_hp || '-'}</small>
                           </td>
-                          <td>{user.email}</td>
+                          <td className="d-none d-md-table-cell">{user.email}</td>
                           <td>
                             {editingId === user.id ? (
                               <select
@@ -609,7 +609,7 @@ export default function ManageRolesPage() {
                               </span>
                             )}
                           </td>
-                          <td>
+                          <td className="d-none d-lg-table-cell">
                             <small>{user.warga?.nomor_rumah ? `No. ${user.warga.nomor_rumah}, ${user.warga.kelurahan || ''}` : '-'}</small>
                           </td>
                           <td className="text-center">

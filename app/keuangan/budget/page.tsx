@@ -452,9 +452,9 @@ export default function BudgetTahunanPage() {
                     <th>Kategori</th>
                     <th className="text-end" style={{ width: '150px' }}>Budget</th>
                     <th className="text-end" style={{ width: '150px' }}>Realisasi</th>
-                    <th className="text-end" style={{ width: '150px' }}>Sisa</th>
-                    <th style={{ width: '200px' }}>Progress</th>
-                    <th style={{ width: '120px' }}>Status</th>
+                    <th className="d-none d-md-table-cell text-end" style={{ width: '150px' }}>Sisa</th>
+                    <th className="d-none d-lg-table-cell" style={{ width: '200px' }}>Progress</th>
+                    <th className="d-none d-md-table-cell" style={{ width: '120px' }}>Status</th>
                     {canEdit && <th className="text-center" style={{ width: '100px' }}>Aksi</th>}
                   </tr>
                 </thead>
@@ -485,10 +485,10 @@ export default function BudgetTahunanPage() {
                         <td className="text-end text-danger">
                           {formatRupiah(item.realisasi || 0)}
                         </td>
-                        <td className={`text-end fw-bold ${sisa >= 0 ? 'text-success' : 'text-danger'}`}>
+                        <td className={`d-none d-md-table-cell text-end fw-bold ${sisa >= 0 ? 'text-success' : 'text-danger'}`}>
                           {formatRupiah(sisa)}
                         </td>
-                        <td>
+                        <td className="d-none d-lg-table-cell">
                           <div className="d-flex align-items-center gap-2">
                             <div className="progress flex-grow-1" style={{ height: '8px' }}>
                               <div 
@@ -501,7 +501,7 @@ export default function BudgetTahunanPage() {
                             </small>
                           </div>
                         </td>
-                        <td>{getStatusBadge(persen)}</td>
+                        <td className="d-none d-md-table-cell">{getStatusBadge(persen)}</td>
                         {canEdit && (
                           <td className="text-center">
                             {editingId === item.id ? (

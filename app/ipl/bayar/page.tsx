@@ -426,7 +426,7 @@ export default function BayarIPLPage() {
                           <th style={{ width: '50px' }}>Pilih</th>
                           <th>Bulan</th>
                           <th className="text-end">Tagihan</th>
-                          <th className="text-end">Terbayar</th>
+                          <th className="d-none d-md-table-cell text-end">Terbayar</th>
                           <th className="text-end">Sisa</th>
                         </tr>
                       </thead>
@@ -451,7 +451,7 @@ export default function BayarIPLPage() {
                               </td>
                               <td><strong>{formatBulan(t.bulan)}</strong></td>
                               <td className="text-end">{formatCurrency(t.jumlah_tagihan)}</td>
-                              <td className="text-end">{formatCurrency(t.jumlah_terbayar)}</td>
+                              <td className="d-none d-md-table-cell text-end">{formatCurrency(t.jumlah_terbayar)}</td>
                               <td className="text-end text-danger fw-bold">{formatCurrency(sisa)}</td>
                             </tr>
                           )
