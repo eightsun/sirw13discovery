@@ -476,7 +476,7 @@ export default function VerifikasiIPLPage() {
                       <button className="btn btn-sm btn-success" onClick={() => handleVerify(p.id)} disabled={processing === p.id}>
                         <FiCheck className="me-1" /> Verifikasi
                       </button>
-                      <button className="btn btn-sm btn-danger" onClick={() => handleReject(p.id)} disabled={processing === p.id}>
+                      <button className="btn btn-sm btn-danger" onClick={() => openRejectModal(p.id)} disabled={processing === p.id}>
                         <FiX className="me-1" /> Tolak
                       </button>
                     </div>
@@ -539,5 +539,3 @@ export default function VerifikasiIPLPage() {
     </div>
   )
 }
-
-

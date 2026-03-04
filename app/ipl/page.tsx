@@ -375,8 +375,10 @@ export default function IPLPage() {
               <h4 className="mb-0">
                 <span className="text-success">{summary.lunas}</span>
                 {summary.menungguVerifikasi > 0 && (
+                  <>
                     <span className="text-muted mx-1">/</span>
                     <span className="text-info">{summary.menungguVerifikasi}</span>
+                  </>
                 )}
                 <span className="text-muted mx-1">/</span>
                 <span className="text-danger">{summary.belumLunas}</span>
@@ -602,3 +604,5 @@ export default function IPLPage() {
     </div>
   )
 }
+
+   

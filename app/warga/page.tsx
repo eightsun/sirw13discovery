@@ -463,5 +463,6 @@ export default function WargaListPage() {
       `}</style>
     </div>
   )
-} 
+}
+
   

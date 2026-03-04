@@ -394,6 +394,7 @@ export default function PengajuanListPage() {
                           
                           {/* Approval buttons for Ketua RW */}
                           {isKetuaRW && item.status === 'diajukan' && (
+                            <>
                               <button
                                 className="btn btn-sm btn-success"
                                 title="Setujui"
@@ -415,6 +416,7 @@ export default function PengajuanListPage() {
                               >
                                 <FiRefreshCw />
                               </button>
+                            </>
                           )}
 
                           {/* Edit for pemohon (only own pengajuan with status diajukan/direvisi) */}
@@ -469,12 +471,14 @@ export default function PengajuanListPage() {
                       <FiEye className="me-1" /> Detail
                     </Link>
                     {isKetuaRW && item.status === 'diajukan' && (
+                      <>
                         <button className="btn btn-sm btn-success" onClick={() => handleApprovalClick(item, 'setujui')}>
                           <FiCheck />
                         </button>
                         <button className="btn btn-sm btn-danger" onClick={() => handleApprovalClick(item, 'tolak')}>
                           <FiX />
                         </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -626,3 +630,4 @@ export default function PengajuanListPage() {
   )
 }
 
+  

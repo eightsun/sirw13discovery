@@ -649,16 +649,6 @@ export default function TransaksiKasPage() {
                       {t.kategori ? `${t.kategori.kode}. ${t.kategori.nama}` : ''}
                     </span>
                   </div>
-                  {isAdmin && (
-                    <div className="mc-actions">
-                      <button className="btn btn-sm btn-outline-warning" onClick={() => openEdit(t)}>
-                        <FiEdit2 size={12} className="me-1" /> Edit
-                      </button>
-                      <button className="btn btn-sm btn-outline-danger" onClick={() => setDeleteTarget(t)}>
-                        <FiTrash2 size={12} className="me-1" /> Hapus
-                      </button>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
@@ -675,5 +665,3 @@ export default function TransaksiKasPage() {
     </div>
   )
 }
-
-

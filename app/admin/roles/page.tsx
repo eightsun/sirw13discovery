@@ -574,11 +574,15 @@ export default function ManageRolesPage() {
                       {user.role !== 'ketua_rw' && (
                         <div className="mc-actions">
                           {editingId === user.id ? (
+                            <>
                               <button className="btn btn-sm btn-success" onClick={() => handleSaveRole(user.id)} disabled={saving}><FiSave className="me-1" /> Simpan</button>
                               <button className="btn btn-sm btn-secondary" onClick={() => setEditingId(null)} disabled={saving}>Batal</button>
+                            </>
                           ) : (
-                              <button className="btn btn-sm btn-outline-primary" onClick={() => startEditRole(user)}><FiEdit2 className="me-1" /> Ubah</button>
+                            <>
+                              <button className="btn btn-sm btn-outline-primary" onClick={() => handleEditClick(user)}><FiEdit2 className="me-1" /> Ubah</button>
                               <button className="btn btn-sm btn-outline-danger" onClick={() => handleRemoveRole(user.id)}><FiUserX className="me-1" /> Hapus</button>
+                            </>
                           )}
                         </div>
                       )}
@@ -711,9 +715,7 @@ export default function ManageRolesPage() {
                   ))}
                 </div>
             </div>
-
-
-</div>
+          </div>
 
           {/* Role Legend */}
           <div className="card">
@@ -877,5 +879,3 @@ export default function ManageRolesPage() {
     </div>
   )
 }
-
-
