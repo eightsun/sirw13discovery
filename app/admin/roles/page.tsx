@@ -477,9 +477,9 @@ export default function ManageRolesPage() {
                     <thead className="table-light">
                       <tr>
                         <th>Nama</th>
-                        <th className="d-none d-md-table-cell">Email</th>
+                        <th>Email</th>
                         <th>Jabatan</th>
-                        <th className="d-none d-lg-table-cell">Alamat</th>
+                        <th>Alamat</th>
                         <th className="text-center" style={{ width: '150px' }}>Aksi</th>
                       </tr>
                     </thead>
@@ -490,7 +490,7 @@ export default function ManageRolesPage() {
                             <div className="fw-bold">{user.warga?.nama_lengkap || '-'}</div>
                             <small className="text-muted">{user.warga?.no_hp || '-'}</small>
                           </td>
-                          <td className="d-none d-md-table-cell">{user.email}</td>
+                          <td>{user.email}</td>
                           <td>
                             {editingId === user.id ? (
                               <select
@@ -509,7 +509,7 @@ export default function ManageRolesPage() {
                               </span>
                             )}
                           </td>
-                          <td className="d-none d-lg-table-cell">
+                          <td>
                             <small>{user.warga?.nomor_rumah ? `No. ${user.warga.nomor_rumah}, ${user.warga.kelurahan || ''}` : '-'}</small>
                           </td>
                           <td className="text-center">
@@ -566,15 +566,7 @@ export default function ManageRolesPage() {
                           <div className="mc-title">{user.warga?.nama_lengkap || '-'}</div>
                           <small className="text-muted">{user.warga?.no_hp || '-'}</small>
                         </div>
-                        {editingId === user.id ? (
-                          <select className="form-select form-select-sm" style={{width:'140px'}} value={editRole} onChange={(e) => setEditRole(e.target.value as UserRole)}>
-                            {ASSIGNABLE_ROLES.filter(r => r.value !== 'ketua_rw').map(r => (
-                              <option key={r.value} value={r.value}>{r.label}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span className={`badge ${getRoleBadgeColor(user.role)}`}>{getRoleLabel(user.role)}</span>
-                        )}
+                        <span className={`badge ${getRoleBadgeColor(user.role)}`}>{getRoleLabel(user.role)}</span>
                       </div>
                       {user.role !== 'ketua_rw' && (
                         <div className="mc-actions">
@@ -594,9 +586,12 @@ export default function ManageRolesPage() {
                     </div>
                   ))}
                 </div>
+
               )}
             </div>
-          </div>
+
+
+</div>
 
           {/* Pengurus RT */}
           <div className="card mb-4">
@@ -615,9 +610,9 @@ export default function ManageRolesPage() {
                     <thead className="table-light">
                       <tr>
                         <th>Nama</th>
-                        <th className="d-none d-md-table-cell">Email</th>
+                        <th>Email</th>
                         <th>Jabatan</th>
-                        <th className="d-none d-lg-table-cell">Alamat</th>
+                        <th>Alamat</th>
                         <th className="text-center" style={{ width: '150px' }}>Aksi</th>
                       </tr>
                     </thead>
@@ -628,7 +623,7 @@ export default function ManageRolesPage() {
                             <div className="fw-bold">{user.warga?.nama_lengkap || '-'}</div>
                             <small className="text-muted">{user.warga?.no_hp || '-'}</small>
                           </td>
-                          <td className="d-none d-md-table-cell">{user.email}</td>
+                          <td>{user.email}</td>
                           <td>
                             {editingId === user.id ? (
                               <select
@@ -647,7 +642,7 @@ export default function ManageRolesPage() {
                               </span>
                             )}
                           </td>
-                          <td className="d-none d-lg-table-cell">
+                          <td>
                             <small>{user.warga?.nomor_rumah ? `No. ${user.warga.nomor_rumah}, ${user.warga.kelurahan || ''}` : '-'}</small>
                           </td>
                           <td className="text-center">
@@ -715,9 +710,12 @@ export default function ManageRolesPage() {
                     </div>
                   ))}
                 </div>
+
               )}
             </div>
-          </div>
+
+
+</div>
 
           {/* Role Legend */}
           <div className="card">

@@ -95,20 +95,19 @@ export default function BudgetTahunanPage() {
         .order('kategori_id')
 
       if (budgetData) {
-        // Calculate realisasi dari kas_transaksi (pengeluaran aktual)
+        // Calculate realisasi for each budget
         const budgetWithRealisasi = await Promise.all(
           budgetData.map(async (budget: BudgetItem) => {
             const { data: realisasiData } = await supabase
-              .from('kas_transaksi')
-              .select('jumlah')
+              .from('pengajuan_pembelian')
+              .select('nilai_transaksi')
               .eq('kategori_id', budget.kategori_id)
               .eq('wilayah', budget.wilayah)
-              .eq('tipe', 'pengeluaran')
-              .eq('jenis_kas', 'rw')
-              .gte('tanggal', `${budget.tahun}-01-01`)
-              .lte('tanggal', `${budget.tahun}-12-31`)
+              .eq('status', 'selesai')
+              .gte('tanggal_pengajuan', `${budget.tahun}-01-01`)
+              .lte('tanggal_pengajuan', `${budget.tahun}-12-31`)
 
-            const realisasi = realisasiData?.reduce((sum: number, item: { jumlah: number }) => sum + item.jumlah, 0) || 0
+            const realisasi = realisasiData?.reduce((sum: number, item: { nilai_transaksi: number }) => sum + item.nilai_transaksi, 0) || 0
             return { ...budget, realisasi }
           })
         )
@@ -452,9 +451,9 @@ export default function BudgetTahunanPage() {
                     <th>Kategori</th>
                     <th className="text-end" style={{ width: '150px' }}>Budget</th>
                     <th className="text-end" style={{ width: '150px' }}>Realisasi</th>
-                    <th className="d-none d-md-table-cell text-end" style={{ width: '150px' }}>Sisa</th>
-                    <th className="d-none d-lg-table-cell" style={{ width: '200px' }}>Progress</th>
-                    <th className="d-none d-md-table-cell" style={{ width: '120px' }}>Status</th>
+                    <th className="text-end" style={{ width: '150px' }}>Sisa</th>
+                    <th style={{ width: '200px' }}>Progress</th>
+                    <th style={{ width: '120px' }}>Status</th>
                     {canEdit && <th className="text-center" style={{ width: '100px' }}>Aksi</th>}
                   </tr>
                 </thead>
@@ -485,10 +484,10 @@ export default function BudgetTahunanPage() {
                         <td className="text-end text-danger">
                           {formatRupiah(item.realisasi || 0)}
                         </td>
-                        <td className={`d-none d-md-table-cell text-end fw-bold ${sisa >= 0 ? 'text-success' : 'text-danger'}`}>
+                        <td className={`text-end fw-bold ${sisa >= 0 ? 'text-success' : 'text-danger'}`}>
                           {formatRupiah(sisa)}
                         </td>
-                        <td className="d-none d-lg-table-cell">
+                        <td>
                           <div className="d-flex align-items-center gap-2">
                             <div className="progress flex-grow-1" style={{ height: '8px' }}>
                               <div 
@@ -501,7 +500,7 @@ export default function BudgetTahunanPage() {
                             </small>
                           </div>
                         </td>
-                        <td className="d-none d-md-table-cell">{getStatusBadge(persen)}</td>
+                        <td>{getStatusBadge(persen)}</td>
                         {canEdit && (
                           <td className="text-center">
                             {editingId === item.id ? (
@@ -612,9 +611,6 @@ export default function BudgetTahunanPage() {
                 )
               })}
             </div>
-          )}
-        </div>
-      </div>
 
       {/* Add Budget Modal */}
       {showAddModal && (
@@ -790,5 +786,11 @@ export default function BudgetTahunanPage() {
         </div>
       )}
     </div>
+
+          )}
+        </div>
+      </div>
+
+
   )
 }

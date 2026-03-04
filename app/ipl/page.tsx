@@ -499,12 +499,12 @@ export default function IPLPage() {
                 <thead>
                   <tr>
                     <th>Bulan</th>
-                    {isPengurus && <th className="d-none d-md-table-cell">Alamat</th>}
-                    {isPengurus && <th className="d-none d-lg-table-cell">Kepala Keluarga</th>}
+                    {isPengurus && <th>Alamat</th>}
+                    {isPengurus && <th>Kepala Keluarga</th>}
                     <th className="text-end">Tagihan</th>
                     <th className="text-end">Terbayar</th>
                     <th className="text-center">Status</th>
-                    <th className="d-none d-md-table-cell">Tgl Lunas</th>
+                    <th>Tgl Lunas</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -514,7 +514,7 @@ export default function IPLPage() {
                         <strong>{formatBulan(t.bulan)}</strong>
                       </td>
                       {isPengurus && (
-                        <td className="d-none d-md-table-cell">
+                        <td>
                           <small>
                             {t.rumah?.jalan?.nama_jalan} No. {t.rumah?.nomor_rumah}
                             <br />
@@ -523,7 +523,7 @@ export default function IPLPage() {
                         </td>
                       )}
                       {isPengurus && (
-                        <td className="d-none d-lg-table-cell">
+                        <td>
                           <small>{t.rumah?.kepala_keluarga?.nama_lengkap || '-'}</small>
                         </td>
                       )}
@@ -556,7 +556,7 @@ export default function IPLPage() {
                           </span>
                         )}
                       </td>
-                      <td className="d-none d-md-table-cell">
+                      <td>
                         {t.tanggal_lunas ? (
                           <small>{new Date(t.tanggal_lunas).toLocaleDateString('id-ID')}</small>
                         ) : (
@@ -579,17 +579,10 @@ export default function IPLPage() {
                       <span className="badge bg-success">Lunas</span>
                     ) : t.status === 'sebagian' ? (
                       <span className="badge bg-warning text-dark">Sebagian</span>
-                    ) : getPendingForBulan(t.bulan, t.rumah_id) ? (
-                      <span className="badge bg-info">Proses</span>
                     ) : (
                       <span className="badge bg-danger">Belum Lunas</span>
                     )}
                   </div>
-                  {isPengurus && (
-                    <div className="mc-row">
-                      <small>{t.rumah?.jalan?.nama_jalan} No. {t.rumah?.nomor_rumah} · RT {t.rumah?.rt?.nomor_rt}</small>
-                    </div>
-                  )}
                   <div className="mc-row">
                     <span className="mc-label">Tagihan</span>
                     <span>{formatCurrency(t.jumlah_tagihan)}</span>
@@ -601,8 +594,11 @@ export default function IPLPage() {
                 </div>
               ))}
             </div>
+
           )}
         </div>
+
+
       </div>
     </div>
   )

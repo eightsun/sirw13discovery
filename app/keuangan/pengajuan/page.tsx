@@ -353,12 +353,12 @@ export default function PengajuanListPage() {
               <table className="table table-hover mb-0">
                 <thead className="table-light">
                   <tr>
-                    <th className="d-none d-md-table-cell">No. Pengajuan</th>
+                    <th>No. Pengajuan</th>
                     <th>Tanggal</th>
                     <th>Pemohon</th>
-                    <th className="d-none d-lg-table-cell">Deskripsi</th>
-                    <th className="d-none d-md-table-cell">Wilayah</th>
-                    <th className="d-none d-lg-table-cell">Kategori</th>
+                    <th>Deskripsi</th>
+                    <th>Wilayah</th>
+                    <th>Kategori</th>
                     <th className="text-end">Nilai</th>
                     <th>Status</th>
                     <th className="text-center">Aksi</th>
@@ -367,19 +367,19 @@ export default function PengajuanListPage() {
                 <tbody>
                   {pengajuan.map((item) => (
                     <tr key={item.id}>
-                      <td className="d-none d-md-table-cell fw-bold">{item.nomor_pengajuan}</td>
+                      <td className="fw-bold">{item.nomor_pengajuan}</td>
                       <td>{new Date(item.tanggal_pengajuan).toLocaleDateString('id-ID')}</td>
                       <td>
                         <div>{item.nama_pemohon}</div>
                         <small className="text-muted">{item.jabatan_pemohon}</small>
                       </td>
-                      <td className="d-none d-lg-table-cell">
+                      <td>
                         <div style={{ whiteSpace: 'normal', wordWrap: 'break-word' }}>
                           {item.deskripsi_pembelian}
                         </div>
                       </td>
-                      <td className="d-none d-md-table-cell">{item.wilayah}</td>
-                      <td className="d-none d-lg-table-cell">{item.kategori?.nama || '-'}</td>
+                      <td>{item.wilayah}</td>
+                      <td>{item.kategori?.nama || '-'}</td>
                       <td className="text-end fw-bold">{formatRupiah(item.nilai_transaksi)}</td>
                       <td>{getStatusBadge(item.status)}</td>
                       <td>
@@ -481,9 +481,11 @@ export default function PengajuanListPage() {
                 </div>
               ))}
             </div>
+
           )}
         </div>
       </div>
+
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && deleteTarget && (
