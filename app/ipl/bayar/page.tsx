@@ -419,7 +419,7 @@ export default function BayarIPLPage() {
                     <p>Tidak ada tagihan yang belum lunas</p>
                   </div>
                 ) : (
-                  <div className="table-responsive">
+                  <div className="table-responsive desktop-table">
                     <table className="table table-hover">
                       <thead>
                         <tr>
@@ -458,6 +458,33 @@ export default function BayarIPLPage() {
                         })}
                       </tbody>
                     </table>
+                  </div>
+
+                  {/* Mobile Card View */}
+                  <div className="mobile-card-list">
+                    {tagihanList.map((t) => {
+                      const sisa = t.jumlah_tagihan - t.jumlah_terbayar
+                      return (
+                        <div 
+                          key={t.id}
+                          className={`mobile-card-item ${t.selected ? 'border-primary' : ''}`}
+                          style={{cursor:'pointer', borderLeftWidth: t.selected ? '3px' : '1px'}}
+                          onClick={() => toggleTagihan(t.id)}
+                        >
+                          <div className="d-flex justify-content-between align-items-center">
+                            <div className="d-flex align-items-center gap-2">
+                              <input type="checkbox" className="form-check-input" checked={t.selected} onChange={() => toggleTagihan(t.id)} onClick={(e) => e.stopPropagation()} />
+                              <strong>{formatBulan(t.bulan)}</strong>
+                            </div>
+                            <span className="text-danger fw-bold">{formatCurrency(sisa)}</span>
+                          </div>
+                          <div className="mc-row mt-1">
+                            <span className="mc-label">Tagihan</span>
+                            <span>{formatCurrency(t.jumlah_tagihan)}</span>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>

@@ -494,7 +494,7 @@ export default function IPLPage() {
               <p>Tidak ada data tagihan</p>
             </div>
           ) : (
-            <div className="table-responsive">
+            <div className="table-responsive desktop-table">
               <table className="table table-hover">
                 <thead>
                   <tr>
@@ -567,6 +567,39 @@ export default function IPLPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="mobile-card-list">
+              {filteredTagihan.map((t) => (
+                <div key={t.id} className="mobile-card-item">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="mc-title">{formatBulan(t.bulan)}</div>
+                    {t.status === 'lunas' ? (
+                      <span className="badge bg-success">Lunas</span>
+                    ) : t.status === 'sebagian' ? (
+                      <span className="badge bg-warning text-dark">Sebagian</span>
+                    ) : getPendingForBulan(t.bulan, t.rumah_id) ? (
+                      <span className="badge bg-info">Proses</span>
+                    ) : (
+                      <span className="badge bg-danger">Belum Lunas</span>
+                    )}
+                  </div>
+                  {isPengurus && (
+                    <div className="mc-row">
+                      <small>{t.rumah?.jalan?.nama_jalan} No. {t.rumah?.nomor_rumah} · RT {t.rumah?.rt?.nomor_rt}</small>
+                    </div>
+                  )}
+                  <div className="mc-row">
+                    <span className="mc-label">Tagihan</span>
+                    <span>{formatCurrency(t.jumlah_tagihan)}</span>
+                  </div>
+                  <div className="mc-row">
+                    <span className="mc-label">Terbayar</span>
+                    <span className="text-success">{formatCurrency(t.jumlah_terbayar)}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

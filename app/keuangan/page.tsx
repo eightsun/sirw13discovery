@@ -389,7 +389,7 @@ export default function KeuanganDashboardPage() {
               {kasSummary.length === 0 ? (
                 <p className="text-muted text-center py-4">Belum ada data transaksi</p>
               ) : (
-                <div className="table-responsive">
+                <div className="table-responsive desktop-table">
                   <table className="table table-hover mb-0">
                     <thead>
                       <tr>
@@ -426,6 +426,27 @@ export default function KeuanganDashboardPage() {
                       </tr>
                     </tfoot>
                   </table>
+                </div>
+
+                {/* Mobile Saldo Cards */}
+                <div className="mobile-card-list">
+                  {kasSummary.map((kas, idx) => (
+                    <div key={idx} className="mobile-card-item">
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                          <span className={`badge bg-${kas.jenis_kas === 'rw' ? 'primary' : 'info'} me-1`}>{kas.jenis_kas.toUpperCase()}</span>
+                          <span className="text-muted">{kas.wilayah}</span>
+                        </div>
+                        <strong>{formatRupiah(kas.saldo)}</strong>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="mobile-card-item" style={{background:'#f8f9fc'}}>
+                    <div className="d-flex justify-content-between"><strong>Total Kas RW</strong><strong>{formatRupiah(totalSaldoRW)}</strong></div>
+                  </div>
+                  <div className="mobile-card-item" style={{background:'#f8f9fc'}}>
+                    <div className="d-flex justify-content-between"><strong>Total Kas RT</strong><strong>{formatRupiah(totalSaldoRT)}</strong></div>
+                  </div>
                 </div>
               )}
             </div>
@@ -483,7 +504,7 @@ export default function KeuanganDashboardPage() {
               {recentTransactions.length === 0 ? (
                 <p className="text-muted text-center py-4">Belum ada transaksi</p>
               ) : (
-                <div className="table-responsive">
+                <div className="table-responsive desktop-table">
                   <table className="table table-hover mb-0">
                     <thead className="table-light">
                       <tr>
@@ -512,6 +533,23 @@ export default function KeuanganDashboardPage() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="mobile-card-list px-3">
+                  {recentTransactions.map((t) => (
+                    <div key={t.id} className="mobile-card-item">
+                      <div className="d-flex justify-content-between align-items-start">
+                        <div style={{flex:1,minWidth:0}}>
+                          <div className="mc-title" style={{whiteSpace:'normal',wordBreak:'break-word'}}>{t.keterangan || '-'}</div>
+                          <small className="text-muted">{new Date(t.tanggal).toLocaleDateString('id-ID')}</small>
+                        </div>
+                        <span className={`mc-amount ms-2 text-nowrap ${t.tipe === 'pemasukan' ? 'text-success' : 'text-danger'}`}>
+                          {t.tipe === 'pemasukan' ? '+' : '-'}{formatRupiah(t.jumlah)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

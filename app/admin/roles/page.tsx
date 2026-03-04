@@ -472,7 +472,7 @@ export default function ManageRolesPage() {
               {rwLevel.length === 0 ? (
                 <p className="text-muted text-center py-4">Tidak ada pengurus RW</p>
               ) : (
-                <div className="table-responsive">
+                <div className="table-responsive desktop-table">
                   <table className="table table-hover mb-0">
                     <thead className="table-light">
                       <tr>
@@ -556,6 +556,44 @@ export default function ManageRolesPage() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Mobile Card View - RW */}
+                <div className="mobile-card-list">
+                  {rwLevel.map((user: UserWithWarga) => (
+                    <div key={user.id} className="mobile-card-item">
+                      <div className="d-flex justify-content-between align-items-start">
+                        <div>
+                          <div className="mc-title">{user.warga?.nama_lengkap || '-'}</div>
+                          <small className="text-muted">{user.warga?.no_hp || '-'}</small>
+                        </div>
+                        {editingId === user.id ? (
+                          <select className="form-select form-select-sm" style={{width:'140px'}} value={editRole} onChange={(e) => setEditRole(e.target.value as UserRole)}>
+                            {ASSIGNABLE_ROLES.filter(r => r.value !== 'ketua_rw').map(r => (
+                              <option key={r.value} value={r.value}>{r.label}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className={`badge ${getRoleBadgeColor(user.role)}`}>{getRoleLabel(user.role)}</span>
+                        )}
+                      </div>
+                      {user.role !== 'ketua_rw' && (
+                        <div className="mc-actions">
+                          {editingId === user.id ? (
+                            <>
+                              <button className="btn btn-sm btn-success" onClick={() => handleSaveRole(user.id)} disabled={saving}><FiSave className="me-1" /> Simpan</button>
+                              <button className="btn btn-sm btn-secondary" onClick={() => setEditingId(null)} disabled={saving}>Batal</button>
+                            </>
+                          ) : (
+                            <>
+                              <button className="btn btn-sm btn-outline-primary" onClick={() => startEditRole(user)}><FiEdit2 className="me-1" /> Ubah</button>
+                              <button className="btn btn-sm btn-outline-danger" onClick={() => handleRemoveRole(user.id)}><FiUserX className="me-1" /> Hapus</button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>
@@ -572,7 +610,7 @@ export default function ManageRolesPage() {
               {rtLevel.length === 0 ? (
                 <p className="text-muted text-center py-4">Tidak ada pengurus RT</p>
               ) : (
-                <div className="table-responsive">
+                <div className="table-responsive desktop-table">
                   <table className="table table-hover mb-0">
                     <thead className="table-light">
                       <tr>
@@ -653,6 +691,29 @@ export default function ManageRolesPage() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Mobile Card View - RT */}
+                <div className="mobile-card-list">
+                  {rtLevel.map((user: UserWithWarga) => (
+                    <div key={user.id} className="mobile-card-item">
+                      <div className="d-flex justify-content-between align-items-start">
+                        <div>
+                          <div className="mc-title">{user.warga?.nama_lengkap || '-'}</div>
+                          <small className="text-muted">{user.warga?.no_hp || '-'}</small>
+                        </div>
+                        <span className={`badge ${getRoleBadgeColor(user.role)}`}>{getRoleLabel(user.role)}</span>
+                      </div>
+                      <div className="mc-actions">
+                        <button className="btn btn-sm btn-outline-primary" onClick={() => handleEditClick(user)}>
+                          <FiEdit2 className="me-1" /> Ubah
+                        </button>
+                        <button className="btn btn-sm btn-outline-danger" onClick={() => handleRemoveRole(user.id)}>
+                          <FiUserX className="me-1" /> Hapus
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

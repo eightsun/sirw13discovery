@@ -328,7 +328,7 @@ export default function VerifikasiIPLPage() {
               <p>Tidak ada data pembayaran</p>
             </div>
           ) : (
-            <div className="table-responsive">
+            <div className="table-responsive desktop-table">
               <table className="table table-hover">
                 <thead>
                   <tr>
@@ -441,6 +441,45 @@ export default function VerifikasiIPLPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="mobile-card-list">
+              {pembayaranList.map((p) => (
+                <div key={p.id} className="mobile-card-item">
+                  <div className="d-flex justify-content-between align-items-start">
+                    <div>
+                      <div className="mc-title">{p.rumah?.jalan?.nama_jalan} No. {p.rumah?.nomor_rumah}</div>
+                      <small className="text-muted">{formatDate(p.tanggal_bayar)} · {p.metode}</small>
+                    </div>
+                    {p.status === 'pending' ? (
+                      <span className="badge bg-warning text-dark">Pending</span>
+                    ) : p.status === 'verified' ? (
+                      <span className="badge bg-success">Verified</span>
+                    ) : (
+                      <span className="badge bg-danger">Rejected</span>
+                    )}
+                  </div>
+                  <div className="mc-row">
+                    <span className="mc-label">Bulan</span>
+                    <span>{formatBulanList(p.bulan_dibayar)}</span>
+                  </div>
+                  <div className="mc-row">
+                    <span className="mc-label">Jumlah</span>
+                    <strong>{formatCurrency(p.jumlah_dibayar)}</strong>
+                  </div>
+                  {p.status === 'pending' && (
+                    <div className="mc-actions">
+                      <button className="btn btn-sm btn-success" onClick={() => handleVerify(p.id)} disabled={processing === p.id}>
+                        <FiCheck className="me-1" /> Verifikasi
+                      </button>
+                      <button className="btn btn-sm btn-danger" onClick={() => handleReject(p.id)} disabled={processing === p.id}>
+                        <FiX className="me-1" /> Tolak
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>

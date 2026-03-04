@@ -475,7 +475,7 @@ export default function DetailWargaPage() {
                 <>
                   <hr />
                   <h6 className="text-primary mb-2">Anggota Keluarga ({anggotaKeluarga.length})</h6>
-                  <div className="table-responsive">
+                  <div className="table-responsive desktop-table">
                     <table className="table table-sm mb-0">
                       <thead>
                         <tr>
@@ -564,7 +564,7 @@ export default function DetailWargaPage() {
                 </h6>
               </div>
               <div className="card-body">
-                <div className="table-responsive">
+                <div className="table-responsive desktop-table">
                   <table className="table table-sm mb-0">
                     <thead>
                       <tr>
@@ -585,6 +585,17 @@ export default function DetailWargaPage() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+                <div className="mobile-card-list">
+                  {kendaraanList.map(k => (
+                    <div key={k.id} className="mobile-card-item">
+                      <div className="d-flex justify-content-between">
+                        <strong>{getJenisKendaraanLabel(k.jenis_kendaraan)}</strong>
+                        <code>{k.nomor_polisi}</code>
+                      </div>
+                      <small className="text-muted">{k.merek} {k.tipe} · {k.tahun_pembuatan || '-'}</small>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

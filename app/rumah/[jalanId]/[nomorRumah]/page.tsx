@@ -366,7 +366,7 @@ export default function DetailRumahPage() {
             </div>
           </div>
           <div className="card-body">
-            <div className="table-responsive">
+            <div className="table-responsive desktop-table">
               <table className="table table-hover">
                 <thead>
                   <tr>
@@ -448,6 +448,50 @@ export default function DetailRumahPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="mobile-card-list">
+              {/* Kepala Keluarga */}
+              <div className="mobile-card-item" style={{borderLeft:'3px solid #4e73df'}}>
+                <div className="d-flex justify-content-between align-items-start">
+                  <div>
+                    <div className="mc-title">{kk.kepala.nama_lengkap}</div>
+                    <span className="badge bg-primary" style={{fontSize:'0.65rem'}}>{getHubunganKeluargaLabel(kk.kepala.hubungan_keluarga)}</span>
+                  </div>
+                  <div className="d-flex gap-1">
+                    <Link href={`/warga/${kk.kepala.id}`} className="btn btn-sm btn-outline-primary py-0 px-1"><FiUser size={14}/></Link>
+                    {(isPengurus || kk.kepala.id === userData?.warga_id) && (
+                      <Link href={`/warga/edit/${kk.kepala.id}`} className="btn btn-sm btn-outline-warning py-0 px-1"><FiEdit size={14}/></Link>
+                    )}
+                  </div>
+                </div>
+                <div className="mc-row mt-1">
+                  <span>{getJenisKelaminLabel(kk.kepala.jenis_kelamin)}</span>
+                  <span>{kk.kepala.no_hp || '-'}</span>
+                </div>
+              </div>
+              {/* Anggota */}
+              {kk.anggota.map((anggota) => (
+                <div key={anggota.id} className="mobile-card-item">
+                  <div className="d-flex justify-content-between align-items-start">
+                    <div>
+                      <div className="mc-title">{anggota.nama_lengkap}</div>
+                      <span className="badge bg-secondary" style={{fontSize:'0.65rem'}}>{getHubunganKeluargaLabel(anggota.hubungan_keluarga)}</span>
+                    </div>
+                    <div className="d-flex gap-1">
+                      <Link href={`/warga/${anggota.id}`} className="btn btn-sm btn-outline-primary py-0 px-1"><FiUser size={14}/></Link>
+                      {(isPengurus || kk.kepala.id === userData?.warga_id || anggota.id === userData?.warga_id) && (
+                        <Link href={`/warga/edit/${anggota.id}`} className="btn btn-sm btn-outline-warning py-0 px-1"><FiEdit size={14}/></Link>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mc-row mt-1">
+                    <span>{getJenisKelaminLabel(anggota.jenis_kelamin)} · {anggota.pekerjaan || '-'}</span>
+                    <span>{anggota.no_hp || '-'}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

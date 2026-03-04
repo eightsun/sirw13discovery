@@ -349,7 +349,7 @@ export default function PengajuanListPage() {
               <p className="text-muted mb-0">Belum ada pengajuan</p>
             </div>
           ) : (
-            <div className="table-responsive">
+            <div className="table-responsive desktop-table">
               <table className="table table-hover mb-0">
                 <thead className="table-light">
                   <tr>
@@ -446,6 +446,40 @@ export default function PengajuanListPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="mobile-card-list">
+              {pengajuan.map((item) => (
+                <div key={item.id} className="mobile-card-item">
+                  <div className="d-flex justify-content-between align-items-start">
+                    <div className="mc-title" style={{flex:1,whiteSpace:'normal'}}>{item.deskripsi_pembelian}</div>
+                    {getStatusBadge(item.status)}
+                  </div>
+                  <div className="mc-row">
+                    <small className="text-muted">{new Date(item.tanggal_pengajuan).toLocaleDateString('id-ID')} · {item.nama_pemohon}</small>
+                  </div>
+                  <div className="mc-row">
+                    <span className="mc-label">Nilai</span>
+                    <strong>{formatRupiah(item.nilai_transaksi)}</strong>
+                  </div>
+                  <div className="mc-actions">
+                    <Link href={`/keuangan/pengajuan/${item.id}`} className="btn btn-sm btn-outline-primary">
+                      <FiEye className="me-1" /> Detail
+                    </Link>
+                    {isKetuaRW && item.status === 'diajukan' && (
+                      <>
+                        <button className="btn btn-sm btn-success" onClick={() => handleApprovalClick(item, 'setujui')}>
+                          <FiCheck />
+                        </button>
+                        <button className="btn btn-sm btn-danger" onClick={() => handleApprovalClick(item, 'tolak')}>
+                          <FiX />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

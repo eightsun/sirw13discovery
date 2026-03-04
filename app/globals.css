@@ -526,7 +526,8 @@ body {
 }
 
 @media (max-width: 576px) {
-  .desktop-table {
+  .desktop-table,
+  .table-responsive.desktop-table {
     display: none !important;
   }
   
@@ -540,13 +541,51 @@ body {
     border-radius: 8px;
     padding: 12px;
     margin-bottom: 8px;
-    transition: box-shadow 0.2s;
   }
 
-  .mobile-card-item:active {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  .mobile-card-item .mc-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+    color: #333;
   }
 
+  .mobile-card-item .mc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 2px;
+  }
+
+  .mobile-card-item .mc-label {
+    color: #999;
+    font-size: 0.72rem;
+    min-width: 65px;
+    flex-shrink: 0;
+  }
+
+  .mobile-card-item .mc-amount {
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+
+  .mobile-card-item .mc-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #f0f0f0;
+  }
+
+  .mobile-card-item .mc-actions .btn {
+    flex: 1;
+    font-size: 0.75rem;
+    padding: 0.3rem;
+  }
+
+  /* Also support old class names for warga/rumah */
   .mobile-card-item .card-title {
     font-weight: 600;
     font-size: 0.9rem;

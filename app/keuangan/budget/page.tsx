@@ -444,7 +444,7 @@ export default function BudgetTahunanPage() {
               )}
             </div>
           ) : (
-            <div className="table-responsive">
+            <div className="table-responsive desktop-table">
               <table className="table table-hover mb-0">
                 <thead className="table-light">
                   <tr>
@@ -561,6 +561,56 @@ export default function BudgetTahunanPage() {
                   </tr>
                 </tfoot>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="mobile-card-list">
+              {budgetList.map((item: BudgetItem) => {
+                const sisa = item.jumlah_budget - (item.realisasi || 0)
+                const persen = item.jumlah_budget > 0 ? ((item.realisasi || 0) / item.jumlah_budget) * 100 : 0
+                return (
+                  <div key={item.id} className="mobile-card-item">
+                    <div className="d-flex justify-content-between align-items-start">
+                      <div className="mc-title">{item.kategori?.kode}. {item.kategori?.nama}</div>
+                      {canEdit && (
+                        editingId === item.id ? (
+                          <div className="d-flex gap-1">
+                            <button className="btn btn-sm btn-success py-0 px-1" onClick={() => handleSaveEdit(item.id)} disabled={saving}><FiSave size={14}/></button>
+                            <button className="btn btn-sm btn-secondary py-0 px-1" onClick={handleCancelEdit} disabled={saving}><FiX size={14}/></button>
+                          </div>
+                        ) : (
+                          <button className="btn btn-sm btn-outline-primary py-0 px-1" onClick={() => handleEdit(item)}><FiEdit2 size={14}/></button>
+                        )
+                      )}
+                    </div>
+                    <div className="mc-row">
+                      <span className="mc-label">Budget</span>
+                      {editingId === item.id ? (
+                        <input type="number" className="form-control form-control-sm text-end" style={{width:'140px'}} value={editValue} onChange={(e) => setEditValue(e.target.value)} autoFocus />
+                      ) : (
+                        <strong>{formatRupiah(item.jumlah_budget)}</strong>
+                      )}
+                    </div>
+                    <div className="mc-row">
+                      <span className="mc-label">Realisasi</span>
+                      <span className="text-danger">{formatRupiah(item.realisasi || 0)}</span>
+                    </div>
+                    <div className="mc-row">
+                      <span className="mc-label">Sisa</span>
+                      <strong className={sisa >= 0 ? 'text-success' : 'text-danger'}>{formatRupiah(sisa)}</strong>
+                    </div>
+                    <div className="mt-1">
+                      <div className="progress" style={{height:'6px'}}>
+                        <div className={`progress-bar ${getProgressColor(persen)}`} style={{width:`${Math.min(persen,100)}%`}} />
+                      </div>
+                      <div className="d-flex justify-content-between mt-1">
+                        <small className="text-muted">{persen.toFixed(0)}%</small>
+                        {getStatusBadge(persen)}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

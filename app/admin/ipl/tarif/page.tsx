@@ -392,7 +392,7 @@ export default function TarifIPLPage() {
               </button>
             </div>
           ) : (
-            <div className="table-responsive">
+            <div className="table-responsive desktop-table">
               <table className="table table-hover">
                 <thead>
                   <tr>
@@ -453,6 +453,44 @@ export default function TarifIPLPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="mobile-card-list">
+              {tarifList.map((tarif) => (
+                <div key={tarif.id} className="mobile-card-item">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <span className={`badge ${tarif.blok === 'Timur' ? 'bg-info' : tarif.blok === 'Barat' ? 'bg-warning text-dark' : 'bg-primary'}`}>
+                      {tarif.blok}
+                    </span>
+                    {tarif.periode_selesai ? (
+                      <small className="text-muted">s.d. {formatDate(tarif.periode_selesai)}</small>
+                    ) : (
+                      <span className="badge bg-success">Berlaku</span>
+                    )}
+                  </div>
+                  <div className="mc-row mt-2">
+                    <span className="mc-label">Mulai</span>
+                    <span>{formatDate(tarif.periode_mulai)}</span>
+                  </div>
+                  <div className="mc-row">
+                    <span className="mc-label">Berpenghuni</span>
+                    <strong>{formatCurrency(tarif.tarif_berpenghuni)}</strong>
+                  </div>
+                  <div className="mc-row">
+                    <span className="mc-label">Tdk Berpenghuni</span>
+                    <span>{tarif.tarif_tidak_berpenghuni ? formatCurrency(tarif.tarif_tidak_berpenghuni) : '-'}</span>
+                  </div>
+                  <div className="mc-actions">
+                    <button className="btn btn-sm btn-outline-warning" onClick={() => handleEdit(tarif)}>
+                      <FiEdit className="me-1" /> Edit
+                    </button>
+                    <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(tarif.id)}>
+                      <FiTrash2 className="me-1" /> Hapus
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

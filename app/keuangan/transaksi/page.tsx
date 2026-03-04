@@ -692,7 +692,7 @@ export default function TransaksiKasPage() {
               <p className="text-muted mb-0">Tidak ada transaksi ditemukan</p>
             </div>
           ) : (
-            <div className="table-responsive">
+            <div className="table-responsive desktop-table">
               <table className="table table-hover mb-0">
                 <thead className="table-light">
                   <tr>
@@ -765,6 +765,41 @@ export default function TransaksiKasPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="mobile-card-list">
+              {transaksi.map((t) => (
+                <div key={t.id} className="mobile-card-item">
+                  <div className="d-flex justify-content-between align-items-start">
+                    <div style={{flex:1, minWidth:0}}>
+                      <div className="mc-title" style={{whiteSpace:'normal',wordBreak:'break-word'}}>{t.keterangan || 'Transaksi'}</div>
+                      <small className="text-muted">{new Date(t.tanggal).toLocaleDateString('id-ID')} · {t.wilayah}</small>
+                    </div>
+                    <span className={`mc-amount ms-2 text-nowrap ${t.tipe === 'pemasukan' ? 'text-success' : 'text-danger'}`}>
+                      {t.tipe === 'pemasukan' ? '+' : '-'}{formatRupiah(t.jumlah)}
+                    </span>
+                  </div>
+                  <div className="mc-row mt-1">
+                    <span>
+                      <span className={`badge bg-${t.jenis_kas === 'rw' ? 'primary' : 'secondary'} me-1`} style={{fontSize:'0.65rem'}}>
+                        {t.jenis_kas.toUpperCase()}
+                      </span>
+                      {t.kategori ? `${t.kategori.kode}. ${t.kategori.nama}` : ''}
+                    </span>
+                  </div>
+                  {isAdmin && (
+                    <div className="mc-actions">
+                      <button className="btn btn-sm btn-outline-warning" onClick={() => openEdit(t)}>
+                        <FiEdit2 size={12} className="me-1" /> Edit
+                      </button>
+                      <button className="btn btn-sm btn-outline-danger" onClick={() => setDeleteTarget(t)}>
+                        <FiTrash2 size={12} className="me-1" /> Hapus
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>
