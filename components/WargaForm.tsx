@@ -403,6 +403,18 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
 
       // Save kendaraan
       if (savedWargaId) {
+        // Jika onboarding, update users.warga_id DULU
+        // agar RLS policy kendaraan/usaha bisa jalan (users.warga_id = X.warga_id)
+        if (isOnboarding && mode === 'create') {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            await supabase
+              .from('users')
+              .update({ warga_id: savedWargaId })
+              .eq('id', user.id)
+          }
+        }
+
         // Delete existing kendaraan
         if (mode === 'edit') {
           await supabase.from('kendaraan').delete().eq('warga_id', savedWargaId)
@@ -439,17 +451,6 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
             link_twitter: u.link_twitter,
           }))
           await supabase.from('usaha').insert(usahaToInsert)
-        }
-
-        // Jika onboarding, update users.warga_id
-        if (isOnboarding && mode === 'create') {
-          const { data: { user } } = await supabase.auth.getUser()
-          if (user) {
-            await supabase
-              .from('users')
-              .update({ warga_id: savedWargaId })
-              .eq('id', user.id)
-          }
         }
 
         // Jika kepala keluarga, buat/update rumah DAN update rumah_id di warga
