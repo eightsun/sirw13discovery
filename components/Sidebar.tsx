@@ -151,21 +151,10 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       title: 'Lainnya',
       items: [
         { 
-          href: '/pengumuman', 
-          label: 'Pengumuman', 
-          icon: <FiMessageSquare />,
-        },
-        { 
           href: '/laporan', 
           label: 'Laporan', 
           icon: <FiBarChart2 />,
           roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'ketua_rt']
-        },
-        { 
-          href: '/master', 
-          label: 'Data Master', 
-          icon: <FiDatabase />,
-          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw']
         },
         { 
           href: '/admin/roles', 
@@ -270,6 +259,12 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
               <br />
               Permata Discovery
             </small>
+            <div className="mt-2 pt-2 border-top border-light border-opacity-25" style={{ fontSize: '0.75rem' }}>
+              <span className="text-white-50">SIRW13 develop by </span>
+              <a href="https://wa.me/6285716876881" target="_blank" rel="noopener noreferrer" className="text-white fw-bold text-decoration-none" style={{ borderBottom: '1px dotted rgba(255,255,255,0.5)' }}>
+                eightsun
+              </a>
+            </div>
           </div>
         </div>
       </aside>
