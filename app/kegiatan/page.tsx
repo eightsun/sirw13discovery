@@ -228,89 +228,58 @@ export default function KegiatanPage() {
         </div>
       ) : (
         <>
-          {/* Event Cards */}
-          <div className="row">
-            {kegiatanList.map((k) => (
-              <div key={k.id} className="col-lg-6 mb-3">
-                <Link href={`/kegiatan/${k.id}`} className="text-decoration-none">
-                  <div className="card h-100 border-0 shadow-sm" style={{ transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'pointer' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.1)' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}
-                  >
+          {/* Event Cards - Compact List */}
+          {kegiatanList.map((k) => (
+            <Link key={k.id} href={`/kegiatan/${k.id}`} className="text-decoration-none d-block mb-3">
+              <div className="card border-0 shadow-sm" style={{ transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer' }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.08)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}
+              >
+                <div className="card-body py-3 px-3">
+                  <div className="d-flex gap-3">
+                    {/* Thumbnail */}
                     {k.banner_url && (
-                      <div style={{ height: '160px', overflow: 'hidden', borderRadius: '0.5rem 0.5rem 0 0' }}>
-                        <img 
-                          src={k.banner_url} 
-                          alt={k.nama_kegiatan}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
+                      <div className="flex-shrink-0 d-none d-sm-block" style={{ width: '120px', height: '80px', borderRadius: '0.375rem', overflow: 'hidden' }}>
+                        <img src={k.banner_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       </div>
                     )}
-                    <div className="card-body">
-                      <div className="d-flex justify-content-between align-items-start mb-2">
-                        <span className={`badge ${KATEGORI_COLORS[k.kategori]} me-2`}>
-                          {KATEGORI_ICONS[k.kategori]} {KATEGORI_LABELS[k.kategori]}
-                        </span>
-                        {k.tipe_biaya === 'berbayar' ? (
-                          <span className="badge bg-warning text-dark">
-                            <FiDollarSign size={10} className="me-1" />
-                            {formatRupiah(k.biaya_per_orang)}
+
+                    {/* Content */}
+                    <div className="flex-grow-1 min-width-0">
+                      <div className="d-flex justify-content-between align-items-start mb-1">
+                        <div className="d-flex flex-wrap gap-1 align-items-center">
+                          <span className={`badge ${KATEGORI_COLORS[k.kategori]}`} style={{fontSize:'0.7rem'}}>
+                            {KATEGORI_ICONS[k.kategori]} {KATEGORI_LABELS[k.kategori]}
                           </span>
+                          {k.target_rt_ids && k.target_rt_ids.length > 0 && k.target_rt_ids.map((rtId: string) => (
+                            <span key={rtId} className="badge border text-dark" style={{fontSize:'0.6rem'}}>RT {rtMap[rtId] || '?'}</span>
+                          ))}
+                          {!isUpcoming(k.tanggal_mulai) && <span className="badge bg-secondary" style={{fontSize:'0.65rem'}}>Selesai</span>}
+                        </div>
+                        {k.tipe_biaya === 'berbayar' ? (
+                          <span className="badge bg-warning text-dark ms-2 flex-shrink-0" style={{fontSize:'0.65rem'}}>{formatRupiah(k.biaya_per_orang)}</span>
                         ) : (
-                          <span className="badge bg-success">Gratis</span>
+                          <span className="badge bg-success ms-2 flex-shrink-0" style={{fontSize:'0.65rem'}}>Gratis</span>
                         )}
                       </div>
 
-                      <h6 className="fw-bold text-dark mb-2" style={{ lineHeight: 1.3 }}>
-                        {k.nama_kegiatan}
-                      </h6>
+                      <h6 className="fw-bold text-dark mb-1" style={{ lineHeight: 1.3, fontSize: '0.95rem' }}>{k.nama_kegiatan}</h6>
 
-                      {/* RT Target */}
-                      {k.target_rt_ids && k.target_rt_ids.length > 0 && (
-                        <div className="mb-2">
-                          <small className="text-muted me-1">Untuk:</small>
-                          {k.target_rt_ids.map((rtId: string) => (
-                            <span key={rtId} className="badge bg-outline-secondary border text-dark me-1" style={{fontSize:'0.65rem'}}>
-                              RT {rtMap[rtId] || '?'}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="small text-muted mb-1">
-                        <FiCalendar className="me-1" size={13} />
-                        {formatTanggal(k.tanggal_mulai)} · {formatJam(k.tanggal_mulai)}
-                        {k.tanggal_selesai && ` - ${formatJam(k.tanggal_selesai)}`}
-                      </div>
-                      
-                      <div className="small text-muted mb-2">
-                        <FiMapPin className="me-1" size={13} />
-                        {k.lokasi}
+                      <div className="d-flex flex-wrap gap-2 small text-muted">
+                        <span><FiCalendar size={12} className="me-1" />{formatTanggal(k.tanggal_mulai)} · {formatJam(k.tanggal_mulai)}{k.tanggal_selesai ? ' - ' + formatJam(k.tanggal_selesai) : ''}</span>
+                        <span><FiMapPin size={12} className="me-1" />{k.lokasi}</span>
                       </div>
 
-                      <div className="d-flex justify-content-between align-items-center mt-auto pt-2 border-top">
-                        <div className="small text-muted">
-                          <FiUsers className="me-1" size={13} />
-                          {k.partisipasi_count || 0} peserta
-                          {k.max_peserta && ` / ${k.max_peserta}`}
-                        </div>
-                        <div className="small text-muted">
-                          oleh {(k.penyelenggara as { nama_lengkap: string })?.nama_lengkap || 'Unknown'}
-                        </div>
+                      <div className="d-flex justify-content-between align-items-center mt-1">
+                        <span className="small text-muted"><FiUsers size={12} className="me-1" />{k.partisipasi_count || 0} peserta{k.max_peserta ? ' / ' + k.max_peserta : ''}</span>
+                        <span className="small text-muted">oleh {(k.penyelenggara as { nama_lengkap: string })?.nama_lengkap || 'Unknown'}</span>
                       </div>
                     </div>
-
-                    {/* Status ribbon */}
-                    {!isUpcoming(k.tanggal_mulai) && (
-                      <div className="position-absolute top-0 end-0 m-2">
-                        <span className="badge bg-secondary">Selesai</span>
-                      </div>
-                    )}
                   </div>
-                </Link>
+                </div>
               </div>
-            ))}
-          </div>
+            </Link>
+          ))}
 
           {/* Pagination */}
           {totalPages > 1 && (

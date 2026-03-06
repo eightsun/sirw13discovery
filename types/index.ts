@@ -743,6 +743,7 @@ export interface Kegiatan {
   nama_bank: string | null;
   no_whatsapp_penyelenggara: string | null;
   banner_url: string | null;
+  link_online: string | null;
   catatan_keamanan: string | null;
   max_peserta: number | null;
   notulen_url: string | null;
@@ -767,4 +768,12 @@ export interface KegiatanPartisipasi {
   // Joined
   user?: { nama_lengkap: string; email: string; warga_id: string };
   warga?: { nama_lengkap: string; no_hp: string };
+}
+
+export interface NotulenReader {
+  id: string;
+  kegiatan_id: string;
+  user_id: string;
+  read_at: string;
+  user?: { nama_lengkap: string; email: string };
 }

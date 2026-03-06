@@ -8,7 +8,7 @@ import { useUser } from '@/hooks/useUser'
 import { KategoriKegiatan } from '@/types'
 import { 
   FiArrowLeft, FiSave, FiImage, FiCalendar, FiMapPin,
-  FiDollarSign, FiShield, FiUsers, FiPhone, FiLoader
+  FiDollarSign, FiShield, FiUsers, FiPhone, FiLoader, FiLink
 } from 'react-icons/fi'
 
 const KATEGORI_OPTIONS: { value: KategoriKegiatan; label: string; icon: string }[] = [
@@ -64,6 +64,7 @@ export default function BuatKegiatanPage() {
     no_whatsapp_penyelenggara: '',
     max_peserta: '',
     catatan_keamanan: '',
+    link_online: '',
   })
 
   const updateForm = (field: string, value: string) => {
@@ -172,6 +173,7 @@ export default function BuatKegiatanPage() {
         nama_bank: form.tipe_biaya === 'berbayar' ? form.nama_bank.trim() : null,
         no_whatsapp_penyelenggara: noWa || null,
         banner_url: bannerUrl,
+        link_online: form.link_online.trim() || null,
         catatan_keamanan: form.catatan_keamanan.trim(),
         max_peserta: form.max_peserta ? Number(form.max_peserta) : null,
         target_rt_ids: targetRtMode === 'tertentu' ? selectedRtIds : null,
@@ -249,7 +251,8 @@ export default function BuatKegiatanPage() {
 
               <div className="mb-3">
                 <label className="form-label">Deskripsi / Detail Kegiatan</label>
-                <textarea className="form-control" rows={5} placeholder="Jelaskan detail kegiatan, agenda, dan informasi penting lainnya..." value={form.deskripsi} onChange={(e) => updateForm('deskripsi', e.target.value)} />
+                <textarea className="form-control" rows={5} placeholder="Jelaskan detail kegiatan, agenda, dan informasi penting lainnya...&#10;&#10;Tips formatting:&#10;**teks** untuk bold&#10;Link URL otomatis terdeteksi" value={form.deskripsi} onChange={(e) => updateForm('deskripsi', e.target.value)} />
+                <small className="text-muted">Gunakan **teks** untuk <strong>bold</strong>. Link URL otomatis menjadi klik-able.</small>
               </div>
 
               <div className="row">
@@ -333,6 +336,11 @@ export default function BuatKegiatanPage() {
               <div className="mb-3">
                 <label className="form-label">Alamat Lengkap</label>
                 <textarea className="form-control" rows={2} placeholder="Alamat detail lokasi kegiatan" value={form.alamat_lengkap} onChange={(e) => updateForm('alamat_lengkap', e.target.value)} />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Link Online Meeting</label>
+                <input type="url" className="form-control" placeholder="https://meet.google.com/... atau https://zoom.us/... atau link YouTube" value={form.link_online} onChange={(e) => updateForm('link_online', e.target.value)} />
+                <small className="text-muted">Opsional. Google Meet, Zoom, YouTube, atau link lainnya untuk kegiatan daring/hybrid</small>
               </div>
             </div>
           </div>
