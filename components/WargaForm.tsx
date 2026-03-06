@@ -8,7 +8,8 @@ import { WargaFormInput, KendaraanFormInput, UsahaFormInput, RT, Jalan, Warga, K
 import { validateNIK, validateNoKK, validatePhone, MINAT_OLAHRAGA_OPTIONS } from '@/utils/helpers'
 import { 
   FiSave, FiX, FiUser, FiMapPin, FiPhone, FiHome, FiFileText, 
-  FiUsers, FiAlertCircle, FiPlus, FiTrash2, FiTruck, FiBriefcase
+  FiUsers, FiAlertCircle, FiPlus, FiTrash2, FiTruck, FiBriefcase,
+  FiEdit2, FiCheck
 } from 'react-icons/fi'
 
 // Type untuk dropdown kepala keluarga
@@ -96,6 +97,7 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
     link_website: '',
     link_twitter: ''
   })
+  const [editingUsahaIndex, setEditingUsahaIndex] = useState<number | null>(null)
 
   // Load draft on mount (for create mode, including tambah anggota)
   const draft = mode === 'create' ? loadDraft() : null
@@ -297,13 +299,44 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
     setKendaraanList(kendaraanList.filter((_, i) => i !== index))
   }
 
-  // Add usaha
+  // Add or update usaha
   const handleAddUsaha = () => {
     if (!newUsaha.nama_usaha) {
       alert('Nama usaha wajib diisi')
       return
     }
-    setUsahaList([...usahaList, { ...newUsaha, id: `temp-${Date.now()}`, warga_id: wargaId || '', created_at: '', updated_at: '' } as Usaha])
+    if (editingUsahaIndex !== null) {
+      // Update existing
+      const updated = [...usahaList]
+      updated[editingUsahaIndex] = { ...updated[editingUsahaIndex], ...newUsaha }
+      setUsahaList(updated)
+      setEditingUsahaIndex(null)
+    } else {
+      // Add new
+      setUsahaList([...usahaList, { ...newUsaha, id: `temp-${Date.now()}`, warga_id: wargaId || '', created_at: '', updated_at: '' } as Usaha])
+    }
+    setNewUsaha({ nama_usaha: '', deskripsi_usaha: '', alamat_usaha: '', no_whatsapp_usaha: '', link_instagram: '', link_tiktok: '', link_website: '', link_twitter: '' })
+  }
+
+  // Edit usaha - load into form
+  const handleEditUsaha = (index: number) => {
+    const u = usahaList[index]
+    setNewUsaha({
+      nama_usaha: u.nama_usaha,
+      deskripsi_usaha: u.deskripsi_usaha || '',
+      alamat_usaha: u.alamat_usaha || '',
+      no_whatsapp_usaha: u.no_whatsapp_usaha || '',
+      link_instagram: u.link_instagram || '',
+      link_tiktok: u.link_tiktok || '',
+      link_website: u.link_website || '',
+      link_twitter: u.link_twitter || '',
+    })
+    setEditingUsahaIndex(index)
+  }
+
+  // Cancel edit
+  const handleCancelEditUsaha = () => {
+    setEditingUsahaIndex(null)
     setNewUsaha({ nama_usaha: '', deskripsi_usaha: '', alamat_usaha: '', no_whatsapp_usaha: '', link_instagram: '', link_tiktok: '', link_website: '', link_twitter: '' })
   }
 
@@ -1367,7 +1400,7 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
                       <th>Alamat</th>
                       <th>WhatsApp</th>
                       <th className="social-col">Social Media</th>
-                      <th style={{ width: '50px' }}></th>
+                      <th style={{ width: '80px' }}>Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1385,9 +1418,14 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
                           {!u.link_instagram && !u.link_tiktok && !u.link_website && !u.link_twitter && '-'}
                         </td>
                         <td>
-                          <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => handleRemoveUsaha(idx)}>
-                            <FiTrash2 />
-                          </button>
+                          <div className="d-flex gap-1">
+                            <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => handleEditUsaha(idx)} title="Edit">
+                              <FiEdit2 size={13} />
+                            </button>
+                            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => handleRemoveUsaha(idx)} title="Hapus">
+                              <FiTrash2 size={13} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1397,6 +1435,12 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
             )}
 
             {/* Form Input Usaha - Baris 1 */}
+            {editingUsahaIndex !== null && (
+              <div className="alert alert-info small py-2 mb-2">
+                <FiEdit2 className="me-1" /> Mengedit: <strong>{usahaList[editingUsahaIndex]?.nama_usaha}</strong>
+                <button type="button" className="btn btn-sm btn-link text-danger p-0 ms-2" onClick={handleCancelEditUsaha}>Batal Edit</button>
+              </div>
+            )}
             <div className="row g-2 mb-2">
               <div className="col-md-3">
                 <label className="form-label small">Nama Usaha *</label>
@@ -1410,10 +1454,11 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
               </div>
               <div className="col-md-4">
                 <label className="form-label small">Deskripsi Usaha</label>
-                <input
-                  type="text"
+                <textarea
                   className="form-control form-control-sm"
-                  placeholder="Jenis/kategori usaha"
+                  placeholder="Jelaskan jenis usaha, produk/jasa yang ditawarkan..."
+                  rows={2}
+                  style={{ resize: 'vertical' }}
                   value={newUsaha.deskripsi_usaha || ''}
                   onChange={e => setNewUsaha({ ...newUsaha, deskripsi_usaha: e.target.value })}
                 />
@@ -1495,9 +1540,16 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
                 </div>
               </div>
               <div className="col-md-1">
-                <button type="button" className="btn btn-sm btn-success" onClick={handleAddUsaha}>
-                  <FiPlus />
-                </button>
+                <div className="d-flex gap-1">
+                  <button type="button" className={`btn btn-sm ${editingUsahaIndex !== null ? 'btn-primary' : 'btn-success'}`} onClick={handleAddUsaha} title={editingUsahaIndex !== null ? 'Simpan' : 'Tambah'}>
+                    {editingUsahaIndex !== null ? <FiCheck /> : <FiPlus />}
+                  </button>
+                  {editingUsahaIndex !== null && (
+                    <button type="button" className="btn btn-sm btn-outline-secondary" onClick={handleCancelEditUsaha} title="Batal">
+                      <FiX />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>

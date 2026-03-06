@@ -14,6 +14,7 @@ import {
   FiCalendar,
   FiMessageSquare,
   FiBarChart2,
+  FiBriefcase,
   FiX
 } from 'react-icons/fi'
 
@@ -98,6 +99,11 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           href: '/kegiatan', 
           label: 'Kegiatan', 
           icon: <FiCalendar />,
+        },
+        { 
+          href: '/usaha', 
+          label: 'Direktori Usaha', 
+          icon: <FiBriefcase />,
         },
       ],
     },

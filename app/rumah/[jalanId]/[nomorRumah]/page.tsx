@@ -357,10 +357,9 @@ export default function DetailRumahPage() {
               {(isPengurus || kk.kepala.id === userData?.warga_id) && (
                 <Link 
                   href={`/warga/tambah?kepala_keluarga_id=${kk.kepala.id}&jalan_id=${jalanId}&nomor_rumah=${nomorRumah}&rt_id=${rt?.id || ''}`}
-                  className="btn btn-sm btn-light"
-                  title="Tambah Anggota Keluarga"
+                  className="btn btn-sm btn-outline-light"
                 >
-                  <FiUserPlus />
+                  <FiUserPlus className="me-1" /> Tambah
                 </Link>
               )}
             </div>
@@ -524,5 +523,3 @@ export default function DetailRumahPage() {
     </div>
   )
 }
-
-   
