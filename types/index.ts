@@ -704,3 +704,67 @@ export interface BudgetSummary {
   sisa: number;
   persentase: number;
 }
+// ==========================================
+// KEGIATAN (Phase 5)
+// ==========================================
+
+export type KategoriKegiatan = 
+  | 'keagamaan'
+  | 'olahraga'
+  | 'sosial'
+  | 'rapat'
+  | 'gotong_royong'
+  | 'pendidikan'
+  | 'kesehatan'
+  | 'kesenian'
+  | 'lingkungan'
+  | 'lainnya';
+
+export type StatusKegiatan = 'draft' | 'published' | 'cancelled' | 'completed';
+
+export type TipeBiaya = 'gratis' | 'berbayar';
+
+export type StatusPartisipasi = 'registered' | 'cancelled';
+
+export interface Kegiatan {
+  id: string;
+  nama_kegiatan: string;
+  deskripsi: string | null;
+  kategori: KategoriKegiatan;
+  status: StatusKegiatan;
+  tanggal_mulai: string;
+  tanggal_selesai: string | null;
+  lokasi: string;
+  alamat_lengkap: string | null;
+  tipe_biaya: TipeBiaya;
+  biaya_per_orang: number;
+  nama_rekening: string | null;
+  nomor_rekening: string | null;
+  nama_bank: string | null;
+  no_whatsapp_penyelenggara: string | null;
+  banner_url: string | null;
+  catatan_keamanan: string | null;
+  max_peserta: number | null;
+  notulen_url: string | null;
+  notulen_filename: string | null;
+  target_rt_ids: string[] | null; // NULL = semua RT
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  // Joined
+  penyelenggara?: { nama_lengkap: string; email: string };
+  partisipasi_count?: number;
+  user_registered?: boolean;
+}
+
+export interface KegiatanPartisipasi {
+  id: string;
+  kegiatan_id: string;
+  user_id: string;
+  status: StatusPartisipasi;
+  registered_at: string;
+  cancelled_at: string | null;
+  // Joined
+  user?: { nama_lengkap: string; email: string; warga_id: string };
+  warga?: { nama_lengkap: string; no_hp: string };
+}
