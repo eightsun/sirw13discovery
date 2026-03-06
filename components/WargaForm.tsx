@@ -347,8 +347,16 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
           // Warga ada tapi belum punya user → UPDATE data warga & LINK
           if (isOnboarding) {
             // Update data warga yang sudah ada dengan data baru dari form
+            const uuidFieldsUpdate = ['rt_id', 'jalan_id', 'kepala_keluarga_id', 'rumah_id']
+            const sanitizedUpdateFields = { ...data }
+            for (const field of uuidFieldsUpdate) {
+              if ((sanitizedUpdateFields as Record<string, unknown>)[field] === '') {
+                (sanitizedUpdateFields as Record<string, unknown>)[field] = null
+              }
+            }
+            
             const updateData = {
-              ...data,
+              ...sanitizedUpdateFields,
               email: data.email || existingWarga.email, // Pertahankan email jika sudah ada
               updated_at: new Date().toISOString(),
             }
@@ -375,9 +383,17 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
 
       // Jika belum link ke existing, lakukan INSERT baru
       if (!isLinkedToExisting) {
-        // Prepare warga data
+        // Prepare warga data - sanitize empty UUID fields to null
+        const uuidFields = ['rt_id', 'jalan_id', 'kepala_keluarga_id', 'rumah_id']
+        const sanitizedData = { ...data }
+        for (const field of uuidFields) {
+          if ((sanitizedData as Record<string, unknown>)[field] === '') {
+            (sanitizedData as Record<string, unknown>)[field] = null
+          }
+        }
+        
         const wargaData = {
-          ...data,
+          ...sanitizedData,
           is_active: true,
           updated_at: new Date().toISOString(),
         }
@@ -403,6 +419,18 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
 
       // Save kendaraan
       if (savedWargaId) {
+        // Jika onboarding, update users.warga_id DULU
+        // agar RLS policy kendaraan/usaha bisa jalan (users.warga_id = X.warga_id)
+        if (isOnboarding && mode === 'create') {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            await supabase
+              .from('users')
+              .update({ warga_id: savedWargaId })
+              .eq('id', user.id)
+          }
+        }
+
         // Delete existing kendaraan
         if (mode === 'edit') {
           await supabase.from('kendaraan').delete().eq('warga_id', savedWargaId)
@@ -439,17 +467,6 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
             link_twitter: u.link_twitter,
           }))
           await supabase.from('usaha').insert(usahaToInsert)
-        }
-
-        // Jika onboarding, update users.warga_id
-        if (isOnboarding && mode === 'create') {
-          const { data: { user } } = await supabase.auth.getUser()
-          if (user) {
-            await supabase
-              .from('users')
-              .update({ warga_id: savedWargaId })
-              .eq('id', user.id)
-          }
         }
 
         // Jika kepala keluarga, buat/update rumah DAN update rumah_id di warga
