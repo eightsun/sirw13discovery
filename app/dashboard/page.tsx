@@ -53,92 +53,23 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Total warga
-        const { count: wargaCount } = await supabase
-          .from('warga')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_active', true)
-
-        // Total KK
-        const { count: kkCount } = await supabase
-          .from('warga')
-          .select('*', { count: 'exact', head: true })
-          .eq('hubungan_keluarga', 'kepala_keluarga')
-          .eq('is_active', true)
-
-        // Penduduk tetap
-        const { count: tetapCount } = await supabase
-          .from('warga')
-          .select('*', { count: 'exact', head: true })
-          .eq('status_kependudukan', 'penduduk_tetap')
-          .eq('is_active', true)
-
-        // Penduduk kontrak
-        const { count: kontrakCount } = await supabase
-          .from('warga')
-          .select('*', { count: 'exact', head: true })
-          .eq('status_kependudukan', 'penduduk_kontrak')
-          .eq('is_active', true)
-
-        // Rumah milik sendiri
-        const { count: milikCount } = await supabase
-          .from('warga')
-          .select('*', { count: 'exact', head: true })
-          .eq('status_rumah', 'milik_sendiri')
-          .eq('hubungan_keluarga', 'kepala_keluarga')
-          .eq('is_active', true)
-
-        // Rumah sewa/kontrak
-        const { count: sewaCount } = await supabase
-          .from('warga')
-          .select('*', { count: 'exact', head: true })
-          .in('status_rumah', ['sewa', 'kontrak'])
-          .eq('hubungan_keluarga', 'kepala_keluarga')
-          .eq('is_active', true)
-
-        // Total kendaraan
-        const { count: kendaraanCount } = await supabase
-          .from('kendaraan')
-          .select('*', { count: 'exact', head: true })
-
-        // Total usaha
-        const { count: usahaCount } = await supabase
-          .from('usaha')
-          .select('*', { count: 'exact', head: true })
-
-        // Warga per RT
-        const { data: rtData } = await supabase
-          .from('rt')
-          .select('nomor_rt')
-          .order('nomor_rt')
-
-        const wargaPerRT: { rt: string; jumlah: number }[] = []
-        if (rtData) {
-          for (const rt of rtData) {
-            const { count } = await supabase
-              .from('warga')
-              .select('*', { count: 'exact', head: true })
-              .eq('rt_id', (await supabase.from('rt').select('id').eq('nomor_rt', rt.nomor_rt).single()).data?.id)
-              .eq('is_active', true)
-            
-            wargaPerRT.push({
-              rt: `RT ${rt.nomor_rt}`,
-              jumlah: count || 0
-            })
-          }
+        // Use SECURITY DEFINER function to get stats for all users
+        const { data, error } = await supabase.rpc('get_dashboard_stats')
+        
+        if (error) throw error
+        if (data) {
+          setStats({
+            totalWarga: data.total_warga || 0,
+            totalKK: data.total_kk || 0,
+            pendudukTetap: data.penduduk_tetap || 0,
+            pendudukKontrak: data.penduduk_kontrak || 0,
+            rumahMilik: data.rumah_milik || 0,
+            rumahSewa: data.rumah_sewa || 0,
+            totalKendaraan: data.total_kendaraan || 0,
+            totalUsaha: data.total_usaha || 0,
+            wargaPerRT: data.warga_per_rt || []
+          })
         }
-
-        setStats({
-          totalWarga: wargaCount || 0,
-          totalKK: kkCount || 0,
-          pendudukTetap: tetapCount || 0,
-          pendudukKontrak: kontrakCount || 0,
-          rumahMilik: milikCount || 0,
-          rumahSewa: sewaCount || 0,
-          totalKendaraan: kendaraanCount || 0,
-          totalUsaha: usahaCount || 0,
-          wargaPerRT
-        })
       } catch (error) {
         console.error('Error fetching stats:', error)
       } finally {
@@ -393,26 +324,26 @@ export default function DashboardPage() {
             <div className="card-body">
               <div className="row g-3">
                 <div className="col-6">
-                  <Link href="/warga/tambah" className="btn btn-primary w-100 py-3">
-                    <FiUsers className="me-2" />
-                    Tambah Warga
+                  <Link href="/kegiatan" className="btn btn-primary w-100 py-3">
+                    <FiCalendar className="me-2" />
+                    Kegiatan
                   </Link>
                 </div>
                 <div className="col-6">
                   <Link href="/warga" className="btn btn-outline-primary w-100 py-3">
                     <FiUsers className="me-2" />
-                    Lihat Semua Warga
+                    Daftar Warga
                   </Link>
                 </div>
                 <div className="col-6">
-                  <a href="#" className="btn btn-outline-success w-100 py-3">
-                    📄 Buat Surat
-                  </a>
+                  <Link href="/ipl" className="btn btn-outline-success w-100 py-3">
+                    💰 Tagihan IPL
+                  </Link>
                 </div>
                 <div className="col-6">
-                  <a href="#" className="btn btn-outline-info w-100 py-3">
-                    📢 Pengumuman
-                  </a>
+                  <Link href="/keuangan/laporan" className="btn btn-outline-info w-100 py-3">
+                    📊 Laporan Keuangan
+                  </Link>
                 </div>
               </div>
             </div>

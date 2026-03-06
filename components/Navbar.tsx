@@ -118,13 +118,13 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
           </Dropdown.Toggle>
 
           <Dropdown.Menu className="dropdown-menu-end">
-            <Dropdown.Item href="/profil">
+            <Dropdown.Item href={userData?.warga_id ? `/warga/edit/${userData.warga_id}` : '/profil/lengkapi'}>
               <FiUser className="me-2" />
               Profil Saya
             </Dropdown.Item>
             <Dropdown.Item href="/pengaturan">
               <FiSettings className="me-2" />
-              Pengaturan
+              Ubah Password
             </Dropdown.Item>
             <Dropdown.Divider />
             <Dropdown.Item 
