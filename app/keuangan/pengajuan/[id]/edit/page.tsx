@@ -86,6 +86,8 @@ export default function EditPengajuanPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [kategoriList, setKategoriList] = useState<KategoriPengeluaran[]>([])
+  const [keluhanList, setKeluhanList] = useState<{ id: string; nomor_laporan: string; detail_keluhan: string }[]>([])
+  const [selectedKeluhanId, setSelectedKeluhanId] = useState('')
   const [pengajuan, setPengajuan] = useState<PengajuanPembelian | null>(null)
   
   // File uploads
@@ -153,6 +155,19 @@ export default function EditPengajuanPage() {
           const sorted = kategoriData.sort((a: KategoriPengeluaran, b: KategoriPengeluaran) => parseInt(a.kode) - parseInt(b.kode))
           setKategoriList(sorted)
         }
+
+        // Set keluhan_id if linked
+        if (pengajuanData.keluhan_id) {
+          setSelectedKeluhanId(pengajuanData.keluhan_id)
+        }
+
+        // Fetch keluhan list
+        const { data: keluhanData } = await supabase
+          .from('keluhan')
+          .select('id, nomor_laporan, detail_keluhan')
+          .order('created_at', { ascending: false })
+          .limit(50)
+        setKeluhanList(keluhanData || [])
 
       } catch (error) {
         console.error('Error fetching data:', error)
@@ -282,6 +297,7 @@ export default function EditPengajuanPage() {
         nama_pemilik_rekening: data.nama_pemilik_rekening || null,
         bank: data.bank || null,
         catatan_tambahan: data.catatan_tambahan || null,
+        keluhan_id: selectedKeluhanId || null,
         status: newStatus,
         riwayat_status: newRiwayat,
         updated_at: new Date().toISOString()
@@ -475,6 +491,24 @@ export default function EditPengajuanPage() {
                 </div>
               </div>
             </div>
+
+            {/* Link ke Keluhan */}
+            {keluhanList.length > 0 && (
+              <div className="card mb-4">
+                <div className="card-header bg-warning bg-opacity-25">
+                  <h6 className="mb-0 fw-bold">Terkait Laporan Keluhan</h6>
+                </div>
+                <div className="card-body">
+                  <select className="form-select" value={selectedKeluhanId} onChange={(e) => setSelectedKeluhanId(e.target.value)}>
+                    <option value="">-- Tidak terkait keluhan --</option>
+                    {keluhanList.map((k: { id: string; nomor_laporan: string; detail_keluhan: string }) => (
+                      <option key={k.id} value={k.id}>{k.nomor_laporan} - {k.detail_keluhan.slice(0, 60)}{k.detail_keluhan.length > 60 ? '...' : ''}</option>
+                    ))}
+                  </select>
+                  <small className="text-muted">Hubungkan dengan laporan keluhan jika pengajuan ini untuk menyelesaikannya</small>
+                </div>
+              </div>
+            )}
 
             {/* Catatan */}
             <div className="card mb-4">

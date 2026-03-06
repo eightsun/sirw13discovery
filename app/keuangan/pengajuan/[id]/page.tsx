@@ -74,6 +74,17 @@ export default function DetailPengajuanPage() {
         .single()
 
       if (error) throw error
+      
+      // Fetch linked keluhan if exists
+      if (data.keluhan_id) {
+        const { data: keluhanData } = await supabase
+          .from('keluhan')
+          .select('nomor_laporan, detail_keluhan')
+          .eq('id', data.keluhan_id)
+          .single()
+        if (keluhanData) data.keluhan = keluhanData
+      }
+      
       setPengajuan(data)
     } catch (error) {
       console.error('Error fetching pengajuan:', error)
@@ -563,6 +574,22 @@ export default function DetailPengajuanPage() {
                   <div className="col-12">
                     <label className="text-muted small">Catatan Tambahan</label>
                     <p className="mb-0">{pengajuan.catatan_tambahan}</p>
+                  </div>
+                )}
+                {pengajuan.keluhan_id && pengajuan.keluhan && (
+                  <div className="col-12">
+                    <div className="p-3 bg-warning bg-opacity-10 border border-warning rounded">
+                      <label className="text-muted small d-block mb-1">Terkait Laporan Keluhan</label>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                          <strong>{pengajuan.keluhan.nomor_laporan}</strong>
+                          <div className="small text-muted">{pengajuan.keluhan.detail_keluhan.slice(0, 80)}{pengajuan.keluhan.detail_keluhan.length > 80 ? '...' : ''}</div>
+                        </div>
+                        <Link href={`/keluhan/${pengajuan.keluhan_id}`} className="btn btn-sm btn-outline-warning ms-2 flex-shrink-0">
+                          Lihat Keluhan
+                        </Link>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

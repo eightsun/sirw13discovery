@@ -25,6 +25,8 @@ export default function TambahPengajuanPage() {
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [kategoriList, setKategoriList] = useState<KategoriPengeluaran[]>([])
+  const [keluhanList, setKeluhanList] = useState<{ id: string; nomor_laporan: string; detail_keluhan: string }[]>([])
+  const [selectedKeluhanId, setSelectedKeluhanId] = useState('')
   const [budgetSummary, setBudgetSummary] = useState<BudgetSummary | null>(null)
   const [budgetWarning, setBudgetWarning] = useState<string | null>(null)
   
@@ -93,6 +95,17 @@ export default function TambahPengajuanPage() {
       }
     }
     fetchKategori()
+  }, [])
+
+  // Fetch keluhan list for linking
+  useEffect(() => {
+    supabase.from('keluhan').select('id, nomor_laporan, detail_keluhan')
+      .in('status', ['dikirim', 'ditinjau', 'dikerjakan'])
+      .order('created_at', { ascending: false })
+      .limit(50)
+      .then(({ data }: { data: { id: string; nomor_laporan: string; detail_keluhan: string }[] | null }) => {
+        setKeluhanList(data || [])
+      })
   }, [])
 
   // Check budget saat kategori atau wilayah berubah
@@ -287,6 +300,7 @@ export default function TambahPengajuanPage() {
         nama_pemilik_rekening: data.nama_pemilik_rekening || null,
         bank: data.bank || null,
         catatan_tambahan: data.catatan_tambahan || null,
+        keluhan_id: selectedKeluhanId || null,
         status: 'diajukan',
         riwayat_status: [{
           status: 'diajukan',
@@ -580,6 +594,24 @@ export default function TambahPengajuanPage() {
                 </div>
               </div>
             </div>
+
+            {/* Link ke Keluhan */}
+            {keluhanList.length > 0 && (
+              <div className="card mb-4">
+                <div className="card-header bg-warning bg-opacity-25">
+                  <h6 className="mb-0 fw-bold">Terkait Laporan Keluhan (Opsional)</h6>
+                </div>
+                <div className="card-body">
+                  <select className="form-select" value={selectedKeluhanId} onChange={(e) => setSelectedKeluhanId(e.target.value)}>
+                    <option value="">-- Tidak terkait keluhan --</option>
+                    {keluhanList.map((k: { id: string; nomor_laporan: string; detail_keluhan: string }) => (
+                      <option key={k.id} value={k.id}>{k.nomor_laporan} - {k.detail_keluhan.slice(0, 60)}{k.detail_keluhan.length > 60 ? '...' : ''}</option>
+                    ))}
+                  </select>
+                  <small className="text-muted">Jika pengajuan ini untuk menyelesaikan keluhan warga, pilih nomor laporannya</small>
+                </div>
+              </div>
+            )}
 
             {/* Catatan */}
             <div className="card mb-4">

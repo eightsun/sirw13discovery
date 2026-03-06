@@ -105,6 +105,11 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           label: 'Direktori Usaha', 
           icon: <FiBriefcase />,
         },
+        { 
+          href: '/keluhan', 
+          label: 'Keluhan Warga', 
+          icon: <FiMessageSquare />,
+        },
       ],
     },
     {

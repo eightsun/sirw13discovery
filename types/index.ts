@@ -565,6 +565,9 @@ export interface PengajuanPembelian {
   bank?: string;
   // Catatan
   catatan_tambahan?: string;
+  // Link ke Keluhan
+  keluhan_id?: string | null;
+  keluhan?: { nomor_laporan: string; detail_keluhan: string } | null;
   // Status
   status: StatusPengajuan;
   riwayat_status: RiwayatStatus[];
@@ -776,4 +779,59 @@ export interface NotulenReader {
   user_id: string;
   read_at: string;
   user?: { nama_lengkap: string; email: string };
+}
+
+// ==========================================
+// KELUHAN WARGA (Phase 6)
+// ==========================================
+
+export type KategoriKeluhan =
+  | 'keselamatan'
+  | 'kebersihan'
+  | 'keamanan'
+  | 'ketertiban'
+  | 'kenyamanan'
+  | 'infrastruktur'
+  | 'fasilitas_umum'
+  | 'penerangan'
+  | 'saluran_air'
+  | 'lainnya';
+
+export type StatusKeluhan = 'dikirim' | 'ditinjau' | 'dikerjakan' | 'selesai' | 'ditolak';
+
+export interface Keluhan {
+  id: string;
+  nomor_laporan: string;
+  pelapor_id: string;
+  nama_pelapor: string;
+  blok_rumah: string | null;
+  nomor_rumah: string | null;
+  rt_id: string | null;
+  lokasi_keluhan: string | null;
+  kategori: KategoriKeluhan;
+  detail_keluhan: string;
+  tanggal_kejadian: string;
+  foto_urls: string[];
+  status: StatusKeluhan;
+  assigned_to: string | null;
+  assigned_nama: string | null;
+  alasan_ditolak: string | null;
+  foto_penyelesaian_url: string | null;
+  biaya_penyelesaian: number;
+  pengajuan_id: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined
+  rt?: { nomor_rt: string };
+  pengajuan?: { nomor_pengajuan: string; nilai_transaksi: number } | null;
+}
+
+export interface KeluhanTimeline {
+  id: string;
+  keluhan_id: string;
+  status: StatusKeluhan;
+  catatan: string | null;
+  user_id: string;
+  nama_user: string;
+  created_at: string;
 }

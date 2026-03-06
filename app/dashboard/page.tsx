@@ -7,7 +7,7 @@ import { useUser } from '@/hooks/useUser'
 import { getRoleLabel } from '@/utils/helpers'
 import { 
   FiUsers, FiHome, FiUserCheck, FiTruck, FiBriefcase, FiAlertCircle,
-  FiCalendar, FiMapPin, FiChevronRight
+  FiCalendar, FiMapPin, FiChevronRight, FiAlertTriangle
 } from 'react-icons/fi'
 
 interface Stats {
@@ -40,6 +40,7 @@ export default function DashboardPage() {
   const [upcomingKegiatan, setUpcomingKegiatan] = useState<{ id: string; nama_kegiatan: string; tanggal_mulai: string; lokasi: string; kategori: string }[]>([])
   const [kegiatanPage, setKegiatanPage] = useState(1)
   const KEGIATAN_PER_PAGE = 5
+  const [keluhanStats, setKeluhanStats] = useState<{ bulan: string; label: string; total: number; selesai: number }[]>([])
   
   const supabase = createClient()
 
@@ -95,6 +96,11 @@ export default function DashboardPage() {
 
     fetchStats()
     fetchUpcomingKegiatan()
+
+    // Fetch keluhan monthly stats
+    supabase.rpc('get_keluhan_monthly_stats', { months_back: 6 }).then(({ data }: { data: { bulan: string; label: string; total: number; selesai: number }[] | null }) => {
+      if (data) setKeluhanStats(data)
+    })
   }, [])
 
   const greeting = () => {
@@ -350,6 +356,70 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      {/* Keluhan Stats Chart */}
+      {keluhanStats.length > 0 && (() => {
+        const maxVal = Math.max(...keluhanStats.map((s: { total: number }) => s.total), 1)
+        const thisMonth = keluhanStats[keluhanStats.length - 1]
+        return (
+          <div className="row mb-4">
+            <div className="col-lg-8 mb-4">
+              <div className="card h-100">
+                <div className="card-header d-flex justify-content-between align-items-center">
+                  <h6 className="m-0 fw-bold text-primary"><FiAlertTriangle className="me-2" />Laporan Keluhan (6 Bulan)</h6>
+                  <Link href="/keluhan" className="btn btn-sm btn-outline-danger">Lihat Semua</Link>
+                </div>
+                <div className="card-body">
+                  <div className="d-flex align-items-end gap-1" style={{ height: '160px' }}>
+                    {keluhanStats.map((s: { bulan: string; label: string; total: number; selesai: number }) => (
+                      <div key={s.bulan} className="flex-fill text-center">
+                        <div className="d-flex flex-column align-items-center" style={{ height: '130px', justifyContent: 'flex-end' }}>
+                          <div className="d-flex gap-1 align-items-end" style={{ height: '100%' }}>
+                            <div style={{ width: 14, height: `${Math.max((s.total / maxVal) * 100, 4)}%`, backgroundColor: '#dc3545', borderRadius: '3px 3px 0 0', opacity: 0.7 }} title={`Total: ${s.total}`} />
+                            <div style={{ width: 14, height: `${Math.max((s.selesai / maxVal) * 100, 4)}%`, backgroundColor: '#28a745', borderRadius: '3px 3px 0 0', opacity: 0.7 }} title={`Selesai: ${s.selesai}`} />
+                          </div>
+                        </div>
+                        <div className="small text-muted mt-1" style={{ fontSize: '0.65rem' }}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="d-flex gap-3 mt-3 small">
+                    <span><span style={{ display: 'inline-block', width: 12, height: 12, backgroundColor: '#dc3545', borderRadius: 2, opacity: 0.7 }} /> Total Laporan</span>
+                    <span><span style={{ display: 'inline-block', width: 12, height: 12, backgroundColor: '#28a745', borderRadius: 2, opacity: 0.7 }} /> Diselesaikan</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-lg-4 mb-4">
+              <div className="card h-100">
+                <div className="card-header"><h6 className="m-0 fw-bold text-primary">Bulan Ini</h6></div>
+                <div className="card-body d-flex flex-column justify-content-center">
+                  {thisMonth && (
+                    <>
+                      <div className="text-center mb-3">
+                        <div className="display-4 fw-bold text-danger">{thisMonth.total}</div>
+                        <div className="text-muted small">Laporan Masuk</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="h3 fw-bold text-success">{thisMonth.selesai}</div>
+                        <div className="text-muted small">Diselesaikan</div>
+                      </div>
+                      {thisMonth.total > 0 && (
+                        <div className="mt-3">
+                          <div className="progress" style={{ height: '8px' }}>
+                            <div className="progress-bar bg-success" style={{ width: `${(thisMonth.selesai / thisMonth.total) * 100}%` }} />
+                          </div>
+                          <div className="text-center small text-muted mt-1">{((thisMonth.selesai / thisMonth.total) * 100).toFixed(0)}% selesai</div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Kegiatan Akan Datang */}
       {upcomingKegiatan.length > 0 && (
         <div className="row mt-2">
