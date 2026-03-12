@@ -6,8 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
 import { formatRupiah } from '@/utils/helpers'
 import { KasTransaksi } from '@/types'
-import { 
-  FiPlus, 
+import {
+  FiPlus,
   FiFilter,
   FiTrendingUp,
   FiTrendingDown,
@@ -16,7 +16,10 @@ import {
   FiDownload,
   FiUpload,
   FiFileText,
-  FiFile
+  FiFile,
+  FiEye,
+  FiEdit2,
+  FiTrash2
 } from 'react-icons/fi'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
@@ -30,17 +33,24 @@ const RupiahIcon = ({ className = '' }: { className?: string }) => (
 export default function TransaksiKasPage() {
   const { userData, isPengurus } = useUser()
   const supabase = createClient()
-  
+
   const [loading, setLoading] = useState(true)
   const [transaksi, setTransaksi] = useState<KasTransaksi[]>([])
   const [filterJenisKas, setFilterJenisKas] = useState<string>('')
   const [filterWilayah, setFilterWilayah] = useState<string>('')
   const [filterTipe, setFilterTipe] = useState<string>('')
   const [filterBulan, setFilterBulan] = useState<string>('')
-  
+
   // Summary
   const [totalPemasukan, setTotalPemasukan] = useState(0)
   const [totalPengeluaran, setTotalPengeluaran] = useState(0)
+
+  // Delete modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<KasTransaksi | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const isKetuaRW = userData?.role === 'ketua_rw'
 
   // Pejabat untuk tanda tangan
   const [pejabat, setPejabat] = useState<{
@@ -369,6 +379,48 @@ export default function TransaksiKasPage() {
     doc.save(fileName)
   }, [transaksi, totalPemasukan, totalPengeluaran, filterWilayah, filterBulan, pejabat])
 
+  const handleDeleteClick = (item: KasTransaksi) => {
+    setDeleteTarget(item)
+    setShowDeleteModal(true)
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+
+    try {
+      setDeleting(true)
+
+      // Hapus file bukti dari storage jika ada
+      if (deleteTarget.bukti_url) {
+        const path = deleteTarget.bukti_url.startsWith('http')
+          ? deleteTarget.bukti_url.match(/\/pengajuan\/([^?]+)/)?.[1]
+          : deleteTarget.bukti_url.split('?')[0]
+
+        if (path) {
+          await supabase.storage.from('pengajuan').remove([path])
+        }
+      }
+
+      // Hapus transaksi dari database
+      const { error } = await supabase
+        .from('kas_transaksi')
+        .delete()
+        .eq('id', deleteTarget.id)
+
+      if (error) throw error
+
+      setShowDeleteModal(false)
+      setDeleteTarget(null)
+      fetchTransaksi()
+      alert('Transaksi berhasil dihapus')
+    } catch (error) {
+      console.error('Error deleting transaksi:', error)
+      alert('Gagal menghapus transaksi')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <div className="fade-in">
       {/* Page Header */}
@@ -582,6 +634,7 @@ export default function TransaksiKasPage() {
                     <th>Kategori</th>
                     <th>Keterangan</th>
                     <th className="text-end">Jumlah</th>
+                    {isKetuaRW && <th className="text-center">Aksi</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -620,6 +673,33 @@ export default function TransaksiKasPage() {
                       <td className={`text-end fw-bold ${t.tipe === 'pemasukan' ? 'text-success' : 'text-danger'}`}>
                         {t.tipe === 'pemasukan' ? '+' : '-'}{formatRupiah(t.jumlah)}
                       </td>
+                      {isKetuaRW && (
+                        <td>
+                          <div className="d-flex justify-content-center gap-1">
+                            <Link
+                              href={`/keuangan/transaksi/${t.id}`}
+                              className="btn btn-sm btn-outline-primary"
+                              title="Lihat Detail"
+                            >
+                              <FiEye />
+                            </Link>
+                            <Link
+                              href={`/keuangan/transaksi/${t.id}/edit`}
+                              className="btn btn-sm btn-outline-warning"
+                              title="Edit"
+                            >
+                              <FiEdit2 />
+                            </Link>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              title="Hapus Transaksi"
+                              onClick={() => handleDeleteClick(t)}
+                            >
+                              <FiTrash2 />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -649,6 +729,19 @@ export default function TransaksiKasPage() {
                       {t.kategori ? `${t.kategori.kode}. ${t.kategori.nama}` : ''}
                     </span>
                   </div>
+                  {isKetuaRW && (
+                    <div className="mc-actions mt-2">
+                      <Link href={`/keuangan/transaksi/${t.id}`} className="btn btn-sm btn-outline-primary">
+                        <FiEye className="me-1" /> Detail
+                      </Link>
+                      <Link href={`/keuangan/transaksi/${t.id}/edit`} className="btn btn-sm btn-outline-warning">
+                        <FiEdit2 className="me-1" /> Edit
+                      </Link>
+                      <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteClick(t)}>
+                        <FiTrash2 className="me-1" /> Hapus
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -662,6 +755,66 @@ export default function TransaksiKasPage() {
           {filterBulan && ` untuk bulan ${new Date(filterBulan + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`}
         </p>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && deleteTarget && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-danger text-white">
+                <h5 className="modal-title">
+                  <FiTrash2 className="me-2" />
+                  Hapus Transaksi
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleting}
+                />
+              </div>
+              <div className="modal-body">
+                <p className="mb-3">
+                  Apakah Anda yakin ingin menghapus transaksi berikut?
+                </p>
+                <div className="alert alert-secondary">
+                  <strong>{new Date(deleteTarget.tanggal).toLocaleDateString('id-ID')}</strong> - {deleteTarget.wilayah}<br />
+                  {deleteTarget.keterangan || 'Tidak ada keterangan'}<br />
+                  <span className={`fw-bold ${deleteTarget.tipe === 'pemasukan' ? 'text-success' : 'text-danger'}`}>
+                    {deleteTarget.tipe === 'pemasukan' ? '+' : '-'}{formatRupiah(deleteTarget.jumlah)}
+                  </span>
+                </div>
+                <div className="alert alert-warning small mb-0">
+                  <strong>Perhatian:</strong> Tindakan ini tidak dapat dibatalkan.
+                  {deleteTarget.bukti_url && <> File bukti transaksi juga akan dihapus.</>}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleting}
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                >
+                  {deleting ? (
+                    <><span className="spinner-border spinner-border-sm me-2" />Menghapus...</>
+                  ) : (
+                    <><FiTrash2 className="me-2" />Ya, Hapus Transaksi</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

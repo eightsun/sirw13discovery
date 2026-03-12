@@ -10,8 +10,9 @@ import {
   getStatusKependudukanLabel,
   getStatusRumahLabel
 } from '@/utils/helpers'
-import { 
-  FiPlus, FiSearch, FiFilter, FiEye, FiEdit, FiTrash2, FiRefreshCw, FiDownload, FiHome
+import {
+  FiPlus, FiSearch, FiFilter, FiEye, FiEdit, FiTrash2, FiRefreshCw, FiDownload, FiHome,
+  FiChevronLeft, FiChevronRight, FiChevronsLeft, FiChevronsRight
 } from 'react-icons/fi'
 
 export default function WargaListPage() {
@@ -28,6 +29,10 @@ export default function WargaListPage() {
   const [filterRT, setFilterRT] = useState<string>('')
   const [filterJalan, setFilterJalan] = useState<string>('')
   const [filterStatus, setFilterStatus] = useState<string>('')
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
   
   const supabase = createClient()
 
@@ -146,6 +151,33 @@ export default function WargaListPage() {
     })
   }, [wargaList, searchQuery, filterRT, filterJalan, filterStatus])
 
+  // Reset halaman ke 1 saat filter berubah
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, filterRT, filterJalan, filterStatus])
+
+  // Pagination calculation
+  const totalPages = Math.ceil(filteredWarga.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedWarga = filteredWarga.slice(startIndex, startIndex + itemsPerPage)
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = []
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      pages.push(1)
+      if (currentPage > 3) pages.push('...')
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pages.push(i)
+      }
+      if (currentPage < totalPages - 2) pages.push('...')
+      pages.push(totalPages)
+    }
+    return pages
+  }
+
   // Masking untuk warga di luar KK (tidak berlaku karena sudah difilter, tapi jaga-jaga)
   const shouldMask = (warga: Warga): boolean => {
     if (isRW) return false
@@ -261,6 +293,7 @@ export default function WargaListPage() {
                   setFilterRT('')
                   setFilterJalan('')
                   setFilterStatus('')
+                  setCurrentPage(1)
                 }}
               >
                 <FiRefreshCw className="me-2" />
@@ -323,11 +356,11 @@ export default function WargaListPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredWarga.map((warga, index) => {
+                  {paginatedWarga.map((warga, index) => {
                     const masked = shouldMask(warga)
                     return (
                       <tr key={warga.id}>
-                        <td className="d-none d-md-table-cell">{index + 1}</td>
+                        <td className="d-none d-md-table-cell">{startIndex + index + 1}</td>
                         <td>
                           <strong>{masked ? maskName(warga.nama_lengkap) : warga.nama_lengkap}</strong>
                         </td>
@@ -404,7 +437,7 @@ export default function WargaListPage() {
 
             {/* Mobile Card View */}
             <div className="mobile-card-list">
-              {filteredWarga.map((warga) => {
+              {paginatedWarga.map((warga) => {
                 const masked = shouldMask(warga)
                 return (
                   <div key={warga.id} className="mobile-card-item">
@@ -447,6 +480,50 @@ export default function WargaListPage() {
                 )
               })}
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center mt-3 gap-2">
+                <small className="text-muted">
+                  Menampilkan {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredWarga.length)} dari {filteredWarga.length} warga
+                </small>
+                <nav>
+                  <ul className="pagination pagination-sm mb-0">
+                    <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                      <button className="page-link" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+                        <FiChevronsLeft />
+                      </button>
+                    </li>
+                    <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                      <button className="page-link" onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1}>
+                        <FiChevronLeft />
+                      </button>
+                    </li>
+                    {getPageNumbers().map((page, idx) => (
+                      <li key={idx} className={`page-item ${page === currentPage ? 'active' : ''} ${page === '...' ? 'disabled' : ''}`}>
+                        <button
+                          className="page-link"
+                          onClick={() => typeof page === 'number' && setCurrentPage(page)}
+                          disabled={page === '...'}
+                        >
+                          {page}
+                        </button>
+                      </li>
+                    ))}
+                    <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                      <button className="page-link" onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages}>
+                        <FiChevronRight />
+                      </button>
+                    </li>
+                    <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                      <button className="page-link" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>
+                        <FiChevronsRight />
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            )}
             </>
           )}
         </div>

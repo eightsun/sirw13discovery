@@ -5,7 +5,10 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
 import { Warga, RT, Jalan } from '@/types'
-import { FiSearch, FiEye, FiRefreshCw } from 'react-icons/fi'
+import {
+  FiSearch, FiEye, FiRefreshCw,
+  FiChevronLeft, FiChevronRight, FiChevronsLeft, FiChevronsRight
+} from 'react-icons/fi'
 
 interface RumahData {
   jalan_id: string
@@ -32,7 +35,11 @@ export default function RumahListPage() {
   const [filterRT, setFilterRT] = useState<string>('')
   const [filterJalan, setFilterJalan] = useState<string>('')
   const [filterJumlahKK, setFilterJumlahKK] = useState<string>('')
-  
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
+
   const supabase = createClient()
 
   // Fetch data warga
@@ -160,12 +167,39 @@ export default function RumahListPage() {
     })
   }, [rumahList, searchQuery, filterRT, filterJalan, filterJumlahKK])
 
+  // Reset halaman ke 1 saat filter berubah
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, filterRT, filterJalan, filterJumlahKK])
+
+  // Pagination calculation
+  const totalPages = Math.ceil(filteredRumah.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedRumah = filteredRumah.slice(startIndex, startIndex + itemsPerPage)
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = []
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      pages.push(1)
+      if (currentPage > 3) pages.push('...')
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pages.push(i)
+      }
+      if (currentPage < totalPages - 2) pages.push('...')
+      pages.push(totalPages)
+    }
+    return pages
+  }
+
   // Reset filter
   const handleResetFilter = () => {
     setSearchQuery('')
     setFilterRT('')
     setFilterJalan('')
     setFilterJumlahKK('')
+    setCurrentPage(1)
   }
 
   if (userLoading || loading) {
@@ -322,9 +356,9 @@ export default function RumahListPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRumah.map((rumah, index) => (
+                  {paginatedRumah.map((rumah, index) => (
                     <tr key={`${rumah.jalan_id}-${rumah.nomor_rumah}`}>
-                      <td className="d-none d-md-table-cell">{index + 1}</td>
+                      <td className="d-none d-md-table-cell">{startIndex + index + 1}</td>
                       <td>
                         <strong>{rumah.jalan_nama} No. {rumah.nomor_rumah}</strong>
                       </td>
@@ -365,7 +399,7 @@ export default function RumahListPage() {
 
             {/* Mobile Card View */}
             <div className="mobile-card-list">
-              {filteredRumah.map((rumah) => (
+              {paginatedRumah.map((rumah) => (
                 <Link 
                   key={`${rumah.jalan_id}-${rumah.nomor_rumah}`}
                   href={`/rumah/${encodeURIComponent(rumah.jalan_id)}/${encodeURIComponent(rumah.nomor_rumah)}`}
@@ -395,6 +429,50 @@ export default function RumahListPage() {
                 </Link>
               ))}
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center mt-3 gap-2">
+                <small className="text-muted">
+                  Menampilkan {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredRumah.length)} dari {filteredRumah.length} rumah
+                </small>
+                <nav>
+                  <ul className="pagination pagination-sm mb-0">
+                    <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                      <button className="page-link" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+                        <FiChevronsLeft />
+                      </button>
+                    </li>
+                    <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                      <button className="page-link" onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1}>
+                        <FiChevronLeft />
+                      </button>
+                    </li>
+                    {getPageNumbers().map((page, idx) => (
+                      <li key={idx} className={`page-item ${page === currentPage ? 'active' : ''} ${page === '...' ? 'disabled' : ''}`}>
+                        <button
+                          className="page-link"
+                          onClick={() => typeof page === 'number' && setCurrentPage(page)}
+                          disabled={page === '...'}
+                        >
+                          {page}
+                        </button>
+                      </li>
+                    ))}
+                    <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                      <button className="page-link" onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages}>
+                        <FiChevronRight />
+                      </button>
+                    </li>
+                    <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                      <button className="page-link" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>
+                        <FiChevronsRight />
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            )}
             </>
           )}
         </div>
