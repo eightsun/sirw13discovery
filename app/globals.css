@@ -89,7 +89,7 @@ body {
 
 .sidebar-divider {
   border-top: 1px solid rgba(255, 255, 255, 0.15);
-  margin: 0 1rem;
+  margin: 0 0.75rem;
 }
 
 .sidebar-heading {
@@ -101,6 +101,42 @@ body {
   letter-spacing: 0.05rem;
 }
 
+/* Collapsible sidebar heading button */
+.sidebar-heading-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.sidebar-heading-btn:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.sidebar-chevron {
+  transition: transform 0.25s ease;
+  transform: rotate(-90deg);
+}
+
+.sidebar-chevron.open {
+  transform: rotate(0deg);
+}
+
+/* Collapsible section items */
+.sidebar-section-items {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.sidebar-section-items.open {
+  max-height: 500px;
+}
+
 .nav-item {
   position: relative;
 }
@@ -108,9 +144,10 @@ body {
 .nav-link {
   display: flex;
   align-items: center;
-  padding: 0.75rem 1rem;
+  padding: 0.55rem 1rem;
   color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
+  font-size: 0.875rem;
   transition: all 0.2s;
 }
 

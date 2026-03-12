@@ -257,6 +257,9 @@ export interface User {
   rt?: RT;
   nama_lengkap?: string;
   is_active: boolean;
+  is_verified: boolean;
+  verified_by?: string | null;
+  verified_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -833,5 +836,19 @@ export interface KeluhanTimeline {
   catatan: string | null;
   user_id: string;
   nama_user: string;
+  created_at: string;
+}
+
+// ==================== NOTIFIKASI ====================
+export type TipeNotifikasi = 'info' | 'pengajuan' | 'pembayaran' | 'keluhan' | 'kegiatan' | 'umum'
+
+export interface Notifikasi {
+  id: string;
+  user_id: string;
+  judul: string;
+  pesan: string;
+  tipe: TipeNotifikasi;
+  link: string | null;
+  is_read: boolean;
   created_at: string;
 }

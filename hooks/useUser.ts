@@ -15,6 +15,7 @@ interface UseUserReturn {
   isRW: boolean
   isRT: boolean
   isPengurus: boolean
+  isVerified: boolean
   refresh: () => Promise<void>
 }
 
@@ -159,6 +160,7 @@ export function useUser(): UseUserReturn {
   const isRW = role ? rwRoles.includes(role) : false
   const isRT = role ? rtRoles.includes(role) : false
   const isPengurus = role ? pengurusRoles.includes(role) : false
+  const isVerified = userState.userData?.is_verified ?? false
 
   return {
     user: userState.user,
@@ -169,6 +171,7 @@ export function useUser(): UseUserReturn {
     isRW,
     isRT,
     isPengurus,
+    isVerified,
     refresh: fetchUserData,
   }
 }

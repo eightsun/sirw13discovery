@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
 import { Keluhan, KeluhanTimeline, StatusKeluhan, KategoriKeluhan } from '@/types'
+import { createNotifikasi } from '@/lib/notifikasi'
 import {
   FiArrowLeft, FiEdit2, FiTrash2, FiLoader, FiCamera, FiX,
   FiCheckCircle, FiClock, FiEye, FiSearch, FiCalendar,
@@ -47,6 +48,7 @@ export default function KeluhanDetailPage() {
   const [koordinatorList, setKoordinatorList] = useState<{ id: string; nama_lengkap: string }[]>([])
   const [selectedKoordinator, setSelectedKoordinator] = useState('')
   const [rejectReason, setRejectReason] = useState('')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const id = params.id as string
   const isCreator = keluhan?.pelapor_id === user?.id
@@ -136,6 +138,37 @@ export default function KeluhanDetailPage() {
         user_id: user.id,
         nama_user: userData.nama_lengkap || user.email || 'Pengurus',
       })
+
+      // Kirim notifikasi
+      try {
+        const statusLabel = STATUS_CONFIG[newStatus].label
+
+        // Notify pelapor tentang perubahan status
+        if (keluhan.pelapor_id && keluhan.pelapor_id !== user.id) {
+          await createNotifikasi({
+            user_id: keluhan.pelapor_id,
+            judul: `Keluhan ${statusLabel}`,
+            pesan: `Keluhan ${keluhan.nomor_laporan} telah diubah ke status: ${statusLabel}${catatan ? '. ' + catatan : ''}`,
+            tipe: 'keluhan',
+            link: `/keluhan/${id}`,
+          })
+        }
+
+        // Notify koordinator yang ditugaskan
+        if (newStatus === 'dikerjakan' && selectedKoordinator && selectedKoordinator !== user.id) {
+          const koord = koordinatorList.find(k => k.id === selectedKoordinator)
+          await createNotifikasi({
+            user_id: selectedKoordinator,
+            judul: 'Penugasan Tindak Lanjut Keluhan',
+            pesan: `Anda ditugaskan untuk menindaklanjuti keluhan ${keluhan.nomor_laporan} - ${KATEGORI_LABELS[keluhan.kategori]}`,
+            tipe: 'keluhan',
+            link: `/keluhan/${id}`,
+          })
+        }
+      } catch (notifErr) {
+        console.error('Error sending keluhan status notification:', notifErr)
+      }
+
       setStatusNote('')
       setRejectReason('')
       setSelectedKoordinator('')
@@ -170,7 +203,6 @@ export default function KeluhanDetailPage() {
   }
 
   const handleDelete = async () => {
-    if (!confirm('Hapus laporan ini? Semua foto akan dihapus permanen.')) return
     setDeleting(true)
     try {
       if (keluhan) {
@@ -184,11 +216,18 @@ export default function KeluhanDetailPage() {
           if (match) filesToDelete.push(match[1])
         }
         if (filesToDelete.length > 0) await supabase.storage.from('keluhan').remove(filesToDelete)
+
+        // Hapus timeline terkait
+        await supabase.from('keluhan_timeline').delete().eq('keluhan_id', id)
       }
       const { error } = await supabase.from('keluhan').delete().eq('id', id)
       if (error) throw error
       router.push('/keluhan')
-    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Gagal menghapus'); setDeleting(false) }
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Gagal menghapus')
+      setDeleting(false)
+      setShowDeleteModal(false)
+    }
   }
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -212,8 +251,10 @@ export default function KeluhanDetailPage() {
             <Link href={`/keluhan/${id}/edit`} className="btn btn-outline-primary btn-sm">
               <FiEdit2 className="me-1" /> Edit
             </Link>
-            {isCreator && keluhan.status === 'dikirim' && (
-              <button className="btn btn-outline-danger btn-sm" onClick={handleDelete} disabled={deleting}><FiTrash2 className="me-1" /> Hapus</button>
+            {(isKetuaRW || (isCreator && keluhan.status === 'dikirim')) && (
+              <button className="btn btn-outline-danger btn-sm" onClick={() => setShowDeleteModal(true)} disabled={deleting}>
+                <FiTrash2 className="me-1" /> Hapus
+              </button>
             )}
           </div>
         )}
@@ -426,6 +467,61 @@ export default function KeluhanDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-danger text-white">
+                <h5 className="modal-title">
+                  <FiTrash2 className="me-2" />
+                  Hapus Laporan Keluhan
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleting}
+                />
+              </div>
+              <div className="modal-body">
+                <p className="mb-3">Apakah Anda yakin ingin menghapus laporan keluhan ini?</p>
+                <div className="alert alert-secondary">
+                  <strong>{keluhan.nomor_laporan}</strong><br />
+                  {keluhan.nama_pelapor} - {KATEGORI_LABELS[keluhan.kategori]}<br />
+                  <small className="text-muted">{formatDate(keluhan.tanggal_kejadian)}</small>
+                </div>
+                <div className="alert alert-warning small mb-0">
+                  <strong>Perhatian:</strong> Semua data termasuk foto bukti dan foto penyelesaian akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleting}
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                >
+                  {deleting ? (
+                    <><span className="spinner-border spinner-border-sm me-2" />Menghapus...</>
+                  ) : (
+                    <><FiTrash2 className="me-1" /> Ya, Hapus Laporan</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Photo Zoom Modal */}
       {showPhotoModal && (

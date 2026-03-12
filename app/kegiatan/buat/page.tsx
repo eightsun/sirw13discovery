@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
 import { KategoriKegiatan } from '@/types'
-import { 
+import { createNotifikasiBulk, getPengurusRWUserIds, getPengurusRTUserIds, getWargaUserIds, dedupe } from '@/lib/notifikasi'
+import {
   FiArrowLeft, FiSave, FiImage, FiCalendar, FiMapPin,
   FiDollarSign, FiShield, FiUsers, FiPhone, FiLoader, FiLink
 } from 'react-icons/fi'
@@ -187,6 +188,48 @@ export default function BuatKegiatanPage() {
         .single()
 
       if (insertError) throw insertError
+
+      // Kirim notifikasi
+      try {
+        const targetRtIds = targetRtMode === 'tertentu' ? selectedRtIds : null
+
+        // Notify pengurus RW (selalu)
+        const rwIds = await getPengurusRWUserIds()
+
+        // Notify pengurus RT (sesuai target atau semua)
+        let rtUserIds: string[] = []
+        if (targetRtIds && targetRtIds.length > 0) {
+          const promises = targetRtIds.map(rtId => getPengurusRTUserIds(rtId))
+          const results = await Promise.all(promises)
+          rtUserIds = results.flat()
+        } else {
+          // Semua RT - fetch all RT pengurus
+          const { data: allRts } = await supabase.from('rt').select('id')
+          if (allRts) {
+            const promises = allRts.map((rt: { id: string }) => getPengurusRTUserIds(rt.id))
+            const results = await Promise.all(promises)
+            rtUserIds = results.flat()
+          }
+        }
+
+        // Notify warga sesuai target RT
+        const wargaIds = await getWargaUserIds(targetRtIds)
+
+        // Gabungkan dan dedupe, kecuali user yang buat
+        const allIds = dedupe(rwIds, rtUserIds, wargaIds)
+          .filter(id => id !== user.id)
+
+        if (allIds.length > 0) {
+          await createNotifikasiBulk(allIds, {
+            judul: 'Kegiatan Baru',
+            pesan: `Kegiatan "${form.nama_kegiatan.trim()}" telah dibuat. Tanggal: ${form.tanggal_mulai}, Lokasi: ${form.lokasi.trim()}`,
+            tipe: 'kegiatan',
+            link: `/kegiatan/${data.id}`,
+          })
+        }
+      } catch (notifErr) {
+        console.error('Error sending kegiatan notifications:', notifErr)
+      }
 
       router.push(`/kegiatan/${data.id}`)
     } catch (err: unknown) {

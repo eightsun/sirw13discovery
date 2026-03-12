@@ -192,19 +192,83 @@ export default function WargaListPage() {
   }
 
   const handleDelete = async (id: string, nama: string) => {
-    if (!confirm(`Yakin ingin menghapus data warga "${nama}"?`)) return
+    if (!confirm(`Yakin ingin menghapus data warga "${nama}" secara permanen?\n\nSemua data terkait (kendaraan, usaha, foto) juga akan dihapus. Tindakan ini tidak dapat dibatalkan.`)) return
 
     try {
-      const { error } = await supabase
+      // 1. Hapus foto warga dari storage jika ada
+      const { data: wargaData } = await supabase
         .from('warga')
-        .update({ is_active: false })
+        .select('foto_url')
+        .eq('id', id)
+        .single()
+
+      if (wargaData?.foto_url) {
+        const match = wargaData.foto_url.match(/\/(?:warga|pengajuan)\/(.+?)(?:\?|$)/)
+        if (match) {
+          const bucket = wargaData.foto_url.includes('/warga/') ? 'warga' : 'pengajuan'
+          await supabase.storage.from(bucket).remove([match[1]])
+        }
+      }
+
+      // 2. Hapus data terkait (cascade seharusnya handle, tapi eksplisit untuk jaga-jaga)
+      const { error: kendaraanErr } = await supabase.from('kendaraan').delete().eq('warga_id', id)
+      if (kendaraanErr) console.warn('Kendaraan delete warning:', kendaraanErr.message)
+
+      const { error: usahaErr } = await supabase.from('usaha').delete().eq('warga_id', id)
+      if (usahaErr) console.warn('Usaha delete warning:', usahaErr.message)
+
+      // 3. Hapus notifikasi dan record users yang terkait dengan warga ini
+      const { data: linkedUsers } = await supabase
+        .from('users')
+        .select('id')
+        .eq('warga_id', id)
+
+      if (linkedUsers && linkedUsers.length > 0) {
+        const userIds = linkedUsers.map((u: { id: string }) => u.id)
+        // Hapus notifikasi user terkait
+        const { error: notifErr } = await supabase.from('notifikasi').delete().in('user_id', userIds)
+        if (notifErr) console.warn('Notifikasi delete warning:', notifErr.message)
+        // Hapus record users
+        const { error: usersDelErr } = await supabase.from('users').delete().in('id', userIds)
+        if (usersDelErr) console.warn('Users delete warning:', usersDelErr.message)
+      }
+
+      const { error: rumahErr } = await supabase.from('rumah').update({ kepala_keluarga_id: null }).eq('kepala_keluarga_id', id)
+      if (rumahErr) console.warn('Rumah unlink warning:', rumahErr.message)
+
+      // 4. Putuskan self-reference kepala_keluarga di tabel warga
+      const { error: selfRefErr } = await supabase.from('warga').update({ kepala_keluarga_id: null }).eq('kepala_keluarga_id', id)
+      if (selfRefErr) console.warn('Warga self-ref warning:', selfRefErr.message)
+
+      // 5. Hapus data warga
+      const { error, status } = await supabase
+        .from('warga')
+        .delete()
         .eq('id', id)
 
-      if (error) throw error
+      if (error) {
+        console.error('Delete warga error:', error)
+        alert(`Gagal menghapus data warga: ${error.message}\n\nKode: ${error.code}\nHint: ${error.hint || 'Kemungkinan RLS policy tidak mengizinkan DELETE. Jalankan SQL di bawah di Supabase SQL Editor.'}`)
+        return
+      }
+
+      // 6. Verifikasi data benar-benar terhapus
+      const { data: checkData } = await supabase
+        .from('warga')
+        .select('id')
+        .eq('id', id)
+        .maybeSingle()
+
+      if (checkData) {
+        alert('Data warga masih ada setelah DELETE. Kemungkinan RLS policy memblokir operasi DELETE.\n\nJalankan SQL berikut di Supabase SQL Editor:\n\nCREATE POLICY "Allow pengurus delete warga" ON warga FOR DELETE TO authenticated USING (true);')
+        return
+      }
+
       fetchWarga()
-    } catch (err) {
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
       console.error('Error deleting warga:', err)
-      alert('Gagal menghapus data warga')
+      alert(`Gagal menghapus data warga: ${errorMsg}`)
     }
   }
 

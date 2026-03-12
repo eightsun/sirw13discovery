@@ -6,6 +6,7 @@ import { useForm, useFieldArray } from 'react-hook-form'
 import { createClient } from '@/lib/supabase/client'
 import { WargaFormInput, KendaraanFormInput, UsahaFormInput, RT, Jalan, Warga, Kendaraan, Usaha } from '@/types'
 import { validateNIK, validateNoKK, validatePhone, MINAT_OLAHRAGA_OPTIONS } from '@/utils/helpers'
+import { createNotifikasiBulk, getPengurusRWUserIds, getPengurusRTUserIds, getWargaUserIds, dedupe } from '@/lib/notifikasi'
 import { 
   FiSave, FiX, FiUser, FiMapPin, FiPhone, FiHome, FiFileText, 
   FiUsers, FiAlertCircle, FiPlus, FiTrash2, FiTruck, FiBriefcase,
@@ -380,9 +381,9 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
           // Warga ada tapi belum punya user → UPDATE data warga & LINK
           if (isOnboarding) {
             // Update data warga yang sudah ada dengan data baru dari form
-            const uuidFieldsUpdate = ['rt_id', 'jalan_id', 'kepala_keluarga_id', 'rumah_id']
+            const nullableFieldsUpdate = ['rt_id', 'jalan_id', 'kepala_keluarga_id', 'rumah_id', 'tanggal_lahir', 'tanggal_mulai_tinggal']
             const sanitizedUpdateFields = { ...data }
-            for (const field of uuidFieldsUpdate) {
+            for (const field of nullableFieldsUpdate) {
               if ((sanitizedUpdateFields as Record<string, unknown>)[field] === '') {
                 (sanitizedUpdateFields as Record<string, unknown>)[field] = null
               }
@@ -416,10 +417,10 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
 
       // Jika belum link ke existing, lakukan INSERT baru
       if (!isLinkedToExisting) {
-        // Prepare warga data - sanitize empty UUID fields to null
-        const uuidFields = ['rt_id', 'jalan_id', 'kepala_keluarga_id', 'rumah_id']
+        // Prepare warga data - sanitize empty fields to null
+        const nullableFields = ['rt_id', 'jalan_id', 'kepala_keluarga_id', 'rumah_id', 'tanggal_lahir', 'tanggal_mulai_tinggal']
         const sanitizedData = { ...data }
-        for (const field of uuidFields) {
+        for (const field of nullableFields) {
           if ((sanitizedData as Record<string, unknown>)[field] === '') {
             (sanitizedData as Record<string, unknown>)[field] = null
           }
@@ -487,7 +488,8 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
           await supabase.from('usaha').delete().eq('warga_id', savedWargaId)
         }
         // Insert new usaha
-        if (usahaList.length > 0) {
+        const hasNewUsaha = usahaList.length > 0
+        if (hasNewUsaha) {
           const usahaToInsert = usahaList.map(u => ({
             warga_id: savedWargaId,
             nama_usaha: u.nama_usaha,
@@ -500,6 +502,32 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
             link_twitter: u.link_twitter,
           }))
           await supabase.from('usaha').insert(usahaToInsert)
+
+          // Kirim notifikasi usaha baru ke semua warga + pengurus
+          try {
+            const namaUsaha = usahaList.map(u => u.nama_usaha).join(', ')
+            const rwIds = await getPengurusRWUserIds()
+            const wargaIds = await getWargaUserIds()
+            // Juga notify pengurus RT dari warga ini
+            const wargaRtId = data.rt_id || null
+            const rtIds = wargaRtId ? await getPengurusRTUserIds(wargaRtId) : []
+
+            // Gabung dan dedupe, kecuali user sendiri
+            const { data: { user: currentUser } } = await supabase.auth.getUser()
+            const allIds = dedupe(rwIds, rtIds, wargaIds)
+              .filter(id => id !== currentUser?.id)
+
+            if (allIds.length > 0) {
+              await createNotifikasiBulk(allIds, {
+                judul: 'Usaha Baru di Direktori',
+                pesan: `${data.nama_lengkap} mendaftarkan usaha: ${namaUsaha}`,
+                tipe: 'umum',
+                link: '/usaha',
+              })
+            }
+          } catch (notifErr) {
+            console.error('Error sending usaha notifications:', notifErr)
+          }
         }
 
         // Jika kepala keluarga, buat/update rumah DAN update rumah_id di warga
@@ -573,6 +601,43 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
 
       // Clear draft setelah berhasil simpan
       clearDraft()
+
+      // Kirim notifikasi ke Ketua RW dan Ketua RT untuk verifikasi
+      if (isOnboarding && savedWargaId) {
+        try {
+          // Cari RT yang dipilih warga
+          const wargaRtId = data.rt_id || null
+
+          // Cari Ketua RW dan Ketua RT yang relevan
+          let ketuaQuery = supabase
+            .from('users')
+            .select('id, role, rt_id')
+            .eq('is_active', true)
+            .in('role', ['ketua_rw', 'ketua_rt'])
+
+          const { data: ketuaList } = await ketuaQuery
+
+          if (ketuaList && ketuaList.length > 0) {
+            // Ketua RW selalu dapat notifikasi, Ketua RT hanya jika RT nya cocok
+            const targetIds = ketuaList
+              .filter((k: { id: string; role: string; rt_id?: string }) =>
+                k.role === 'ketua_rw' || (k.role === 'ketua_rt' && k.rt_id === wargaRtId)
+              )
+              .map((k: { id: string }) => k.id)
+
+            if (targetIds.length > 0) {
+              await createNotifikasiBulk(targetIds, {
+                judul: 'Warga Baru Perlu Verifikasi',
+                pesan: `${data.nama_lengkap} telah mendaftar dan perlu diverifikasi.`,
+                tipe: 'info',
+                link: '/admin/verifikasi-warga',
+              })
+            }
+          }
+        } catch (notifErr) {
+          console.error('Error sending verification notification:', notifErr)
+        }
+      }
 
       // Redirect berdasarkan mode
       if (isOnboarding) {
@@ -848,12 +913,13 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
             </div>
 
             <div className="col-md-6 mb-3">
-              <label className="form-label">Tanggal Mulai Menempati</label>
+              <label className="form-label">Tanggal Mulai Menempati <span className="text-danger">*</span></label>
               <input
                 type="date"
-                className="form-control"
-                {...register('tanggal_mulai_tinggal')}
+                className={`form-control ${errors.tanggal_mulai_tinggal ? 'is-invalid' : ''}`}
+                {...register('tanggal_mulai_tinggal', { required: 'Tanggal mulai menempati wajib diisi' })}
               />
+              {errors.tanggal_mulai_tinggal && <div className="invalid-feedback">{errors.tanggal_mulai_tinggal.message}</div>}
               <small className="text-muted">Tanggal sejak mulai tinggal di alamat ini</small>
             </div>
 

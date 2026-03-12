@@ -59,6 +59,7 @@ export default function RegisterPage() {
           nama_lengkap: data.nama_lengkap,
           role: 'warga',
           is_active: true,
+          is_verified: false,
           warga_id: null,
         }
 

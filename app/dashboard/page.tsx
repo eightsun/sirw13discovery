@@ -24,7 +24,7 @@ interface Stats {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { userData, role, loading: userLoading, isPengurus } = useUser()
+  const { userData, role, loading: userLoading, isPengurus, isVerified } = useUser()
   const [stats, setStats] = useState<Stats>({
     totalWarga: 0,
     totalKK: 0,
@@ -121,6 +121,17 @@ export default function DashboardPage() {
           {role && <span className="badge bg-primary ms-2">{getRoleLabel(role)}</span>}
         </p>
       </div>
+
+      {/* Verification Pending Banner */}
+      {!isPengurus && !isVerified && userData?.warga_id && (
+        <div className="alert alert-warning d-flex align-items-center mb-4" role="alert">
+          <FiAlertTriangle className="me-2 flex-shrink-0" size={20} />
+          <div>
+            <strong>Akun belum diverifikasi.</strong> Pengurus RT/RW akan memverifikasi akun Anda.
+            Beberapa fitur seperti data keuangan belum dapat diakses hingga akun diverifikasi.
+          </div>
+        </div>
+      )}
 
       {/* Welcome Card */}
       <div className="card border-start border-primary border-4 mb-4">

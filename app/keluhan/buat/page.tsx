@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
 import { KategoriKeluhan } from '@/types'
+import { notifyPengurusForRT } from '@/lib/notifikasi'
 import { FiArrowLeft, FiSave, FiCamera, FiX, FiLoader, FiAlertTriangle } from 'react-icons/fi'
 
 const KATEGORI_OPTIONS: { value: KategoriKeluhan; label: string }[] = [
@@ -138,6 +139,15 @@ export default function BuatKeluhanPage() {
         catatan: 'Laporan dikirim oleh pelapor',
         user_id: user.id,
         nama_user: pelapor.nama,
+      })
+
+      // Kirim notifikasi ke pengurus RW + pengurus RT pelapor
+      const kategoriLabel = KATEGORI_OPTIONS.find(o => o.value === form.kategori)?.label || form.kategori
+      await notifyPengurusForRT(pelapor.rt_id || null, {
+        judul: 'Laporan Keluhan Baru',
+        pesan: `${pelapor.nama} melaporkan keluhan kategori ${kategoriLabel}. ${form.detail_keluhan.trim().substring(0, 80)}...`,
+        tipe: 'keluhan',
+        link: `/keluhan/${data.id}`,
       })
 
       router.push(`/keluhan/${data.id}`)
