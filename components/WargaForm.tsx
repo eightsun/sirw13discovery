@@ -6,7 +6,7 @@ import { useForm, useFieldArray } from 'react-hook-form'
 import { createClient } from '@/lib/supabase/client'
 import { WargaFormInput, KendaraanFormInput, UsahaFormInput, RT, Jalan, Warga, Kendaraan, Usaha } from '@/types'
 import { validateNIK, validateNoKK, validatePhone, MINAT_OLAHRAGA_OPTIONS } from '@/utils/helpers'
-import { createNotifikasiBulk, getPengurusRWUserIds, getPengurusRTUserIds, getWargaUserIds, dedupe } from '@/lib/notifikasi'
+import { createNotifikasiBulk, notifyPengurusForRT, getPengurusRWUserIds, getPengurusRTUserIds, getWargaUserIds, dedupe } from '@/lib/notifikasi'
 import { 
   FiSave, FiX, FiUser, FiMapPin, FiPhone, FiHome, FiFileText, 
   FiUsers, FiAlertCircle, FiPlus, FiTrash2, FiTruck, FiBriefcase,
@@ -67,7 +67,10 @@ const clearDraft = () => {
 export default function WargaForm({ mode, wargaId, initialData, isOnboarding = false, defaultEmail }: WargaFormProps) {
   const router = useRouter()
   const supabase = createClient()
-  
+
+  // Simpan RT awal untuk deteksi perubahan (tidak terpengaruh auto-set)
+  const [originalRtId] = useState<string | undefined>(initialData?.rt_id)
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rtList, setRtList] = useState<RT[]>([])
@@ -276,8 +279,11 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
   const filteredJalan = jalanList
 
   // Auto-set RT berdasarkan jalan yang dipilih
+  // Skip auto-set saat pertama kali load di mode edit (agar tidak menimpa RT dari initialData)
   const selectedJalanId = watch('jalan_id')
+  const [jalanUserChanged, setJalanUserChanged] = useState(mode === 'create')
   useEffect(() => {
+    if (!jalanUserChanged) return
     if (selectedJalanId) {
       const jalan = jalanList.find(j => j.id === selectedJalanId)
       if (jalan?.rt_id) {
@@ -288,7 +294,7 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
     } else {
       setValue('rt_id', '')
     }
-  }, [selectedJalanId, jalanList, setValue])
+  }, [selectedJalanId, jalanList, setValue, jalanUserChanged])
 
   // Handle minat olahraga checkbox
   const handleMinatChange = (value: string) => {
@@ -457,12 +463,59 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
           if (insertError) throw insertError
           savedWargaId = insertedWarga.id
         } else if (mode === 'edit' && wargaId) {
+          // Deteksi perubahan RT (bandingkan dengan RT awal, bukan initialData yang bisa tertimpa)
+          const rtChanged = originalRtId && data.rt_id && originalRtId !== data.rt_id
+
           const { error: updateError } = await supabase
             .from('warga')
             .update(wargaData)
             .eq('id', wargaId)
 
           if (updateError) throw updateError
+
+          // Jika RT berubah, set is_verified = false dan kirim notifikasi
+          if (rtChanged) {
+            // Reset verifikasi pada user yang terkait
+            const { error: verifyError } = await supabase
+              .from('users')
+              .update({ is_verified: false, verified_by: null, verified_at: null })
+              .eq('warga_id', wargaId)
+
+            if (verifyError) {
+              console.error('Error resetting verification:', verifyError)
+            }
+
+            // Notifikasi ke pengurus RT baru dan pengurus RW
+            try {
+              const namaWarga = data.nama_lengkap || 'Warga'
+
+              // Notifikasi ke Ketua RW dan Ketua RT baru
+              const { data: ketuaList } = await supabase
+                .from('users')
+                .select('id, role, rt_id')
+                .eq('is_active', true)
+                .in('role', ['ketua_rw', 'ketua_rt'])
+
+              if (ketuaList && ketuaList.length > 0) {
+                const targetIds = ketuaList
+                  .filter((k: { id: string; role: string; rt_id?: string }) =>
+                    k.role === 'ketua_rw' || (k.role === 'ketua_rt' && k.rt_id === data.rt_id)
+                  )
+                  .map((k: { id: string }) => k.id)
+
+                if (targetIds.length > 0) {
+                  await createNotifikasiBulk(targetIds, {
+                    judul: 'Perpindahan RT - Perlu Verifikasi Ulang',
+                    pesan: `${namaWarga} telah pindah RT dan memerlukan verifikasi ulang.`,
+                    tipe: 'verifikasi',
+                    link: '/admin/verifikasi-warga',
+                  })
+                }
+              }
+            } catch (err) {
+              console.error('Error sending RT change notification:', err)
+            }
+          }
         }
       }
 
@@ -644,7 +697,7 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
               await createNotifikasiBulk(targetIds, {
                 judul: 'Warga Baru Perlu Verifikasi',
                 pesan: `${data.nama_lengkap} telah mendaftar dan perlu diverifikasi.`,
-                tipe: 'info',
+                tipe: 'verifikasi',
                 link: '/admin/verifikasi-warga',
               })
             }
@@ -980,7 +1033,9 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
               <label className="form-label">Blok Rumah (Jalan) *</label>
               <select
                 className={`form-select ${errors.jalan_id ? 'is-invalid' : ''}`}
-                {...register('jalan_id')}
+                {...register('jalan_id', {
+                  onChange: () => setJalanUserChanged(true),
+                })}
               >
                 <option value="">- Pilih Jalan -</option>
                 {filteredJalan.map(jalan => (

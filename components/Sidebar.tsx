@@ -62,7 +62,6 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           href: '/rumah',
           label: 'Daftar Rumah',
           icon: <FiHome />,
-          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'koordinator_rw', 'ketua_rt', 'sekretaris_rt', 'bendahara_rt']
         },
         {
           href: '/warga/tambah',

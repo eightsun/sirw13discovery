@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Sidebar from '@/components/Sidebar'
 import Navbar from '@/components/Navbar'
+import VerificationGate from '@/components/VerificationGate'
 
 export default function AdminLayout({
   children,
@@ -17,7 +18,7 @@ export default function AdminLayout({
       <div className={`content-wrapper flex-grow-1`}>
         <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
         <main className="main-content">
-          {children}
+          <VerificationGate>{children}</VerificationGate>
         </main>
       </div>
     </div>

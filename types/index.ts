@@ -840,7 +840,7 @@ export interface KeluhanTimeline {
 }
 
 // ==================== NOTIFIKASI ====================
-export type TipeNotifikasi = 'info' | 'pengajuan' | 'pembayaran' | 'keluhan' | 'kegiatan' | 'umum'
+export type TipeNotifikasi = 'info' | 'pengajuan' | 'pembayaran' | 'keluhan' | 'kegiatan' | 'verifikasi' | 'umum'
 
 export interface Notifikasi {
   id: string;

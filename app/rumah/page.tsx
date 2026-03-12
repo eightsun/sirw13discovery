@@ -23,7 +23,8 @@ interface RumahData {
 }
 
 export default function RumahListPage() {
-  const { userData, isRW, isRT, isPengurus, loading: userLoading } = useUser()
+  const { userData, role, isRW, isRT, isPengurus, loading: userLoading } = useUser()
+  const isWarga = role === 'warga'
   const [wargaList, setWargaList] = useState<Warga[]>([])
   const [rtList, setRtList] = useState<RT[]>([])
   const [jalanList, setJalanList] = useState<Jalan[]>([])
@@ -48,25 +49,55 @@ export default function RumahListPage() {
       setLoading(true)
       setError(null)
 
-      let query = supabase
-        .from('warga')
-        .select(`
-          *,
-          rt:rt_id (id, nomor_rt),
-          jalan:jalan_id (id, nama_jalan)
-        `)
-        .eq('is_active', true)
-        .order('nomor_rumah')
+      // Jika warga, ambil data warga sendiri dulu untuk tahu alamat rumahnya
+      if (isWarga && userData?.warga_id) {
+        const { data: myWarga } = await supabase
+          .from('warga')
+          .select('jalan_id, nomor_rumah')
+          .eq('id', userData.warga_id)
+          .single()
 
-      // Filter berdasarkan role
-      if (isRT && userData?.rt_id) {
-        query = query.eq('rt_id', userData.rt_id)
+        if (!myWarga?.jalan_id || !myWarga?.nomor_rumah) {
+          setWargaList([])
+          setLoading(false)
+          return
+        }
+
+        const { data, error: fetchError } = await supabase
+          .from('warga')
+          .select(`
+            *,
+            rt:rt_id (id, nomor_rt),
+            jalan:jalan_id (id, nama_jalan)
+          `)
+          .eq('is_active', true)
+          .eq('jalan_id', myWarga.jalan_id)
+          .eq('nomor_rumah', myWarga.nomor_rumah)
+          .order('nomor_rumah')
+
+        if (fetchError) throw fetchError
+        setWargaList(data || [])
+      } else {
+        let query = supabase
+          .from('warga')
+          .select(`
+            *,
+            rt:rt_id (id, nomor_rt),
+            jalan:jalan_id (id, nama_jalan)
+          `)
+          .eq('is_active', true)
+          .order('nomor_rumah')
+
+        // Filter berdasarkan role
+        if (isRT && userData?.rt_id) {
+          query = query.eq('rt_id', userData.rt_id)
+        }
+
+        const { data, error: fetchError } = await query
+
+        if (fetchError) throw fetchError
+        setWargaList(data || [])
       }
-
-      const { data, error: fetchError } = await query
-
-      if (fetchError) throw fetchError
-      setWargaList(data || [])
 
       // Fetch RT & Jalan untuk filter
       const { data: rtData } = await supabase
@@ -90,10 +121,10 @@ export default function RumahListPage() {
   }
 
   useEffect(() => {
-    if (!userLoading && isPengurus) {
+    if (!userLoading && (isPengurus || isWarga)) {
       fetchData()
     }
-  }, [userLoading, userData, isPengurus])
+  }, [userLoading, userData, isPengurus, isWarga])
 
   // Group warga by rumah (jalan_id + nomor_rumah)
   const rumahList = useMemo(() => {
@@ -213,7 +244,7 @@ export default function RumahListPage() {
     )
   }
 
-  if (!isPengurus) {
+  if (!isPengurus && !isWarga) {
     return (
       <div className="text-center py-5">
         <div className="alert alert-warning" role="alert">

@@ -198,7 +198,7 @@ export default function VerifikasiWargaPage() {
         pesan: rejectReason
           ? `Registrasi Anda ditolak. Alasan: ${rejectReason}`
           : 'Registrasi Anda ditolak oleh pengurus. Silakan hubungi pengurus RT/RW untuk informasi lebih lanjut.',
-        tipe: 'info',
+        tipe: 'verifikasi',
       })
 
       setShowRejectModal(false)

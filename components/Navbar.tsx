@@ -76,6 +76,7 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
       pembayaran: 'bg-success',
       keluhan: 'bg-danger',
       kegiatan: 'bg-info',
+      verifikasi: 'bg-warning',
       info: 'bg-primary',
       umum: 'bg-secondary',
     }
