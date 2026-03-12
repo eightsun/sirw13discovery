@@ -124,11 +124,30 @@ export default function DashboardPage() {
 
       {/* Verification Pending Banner */}
       {!isPengurus && !isVerified && userData?.warga_id && (
-        <div className="alert alert-warning d-flex align-items-center mb-4" role="alert">
-          <FiAlertTriangle className="me-2 flex-shrink-0" size={20} />
-          <div>
-            <strong>Akun belum diverifikasi.</strong> Pengurus RT/RW akan memverifikasi akun Anda.
-            Beberapa fitur seperti data keuangan belum dapat diakses hingga akun diverifikasi.
+        <div className={`alert ${userData.rejection_reason ? 'alert-danger' : 'alert-warning'} mb-4`} role="alert">
+          <div className="d-flex align-items-start">
+            <FiAlertTriangle className="me-2 flex-shrink-0 mt-1" size={20} />
+            <div className="flex-grow-1">
+              {userData.rejection_reason ? (
+                <>
+                  <strong>Verifikasi ditolak.</strong> Silakan koreksi data Anda dan tunggu verifikasi ulang.
+                  <div className="mt-2 p-2 bg-white rounded border">
+                    <small className="text-muted">Alasan penolakan:</small>
+                    <div className="fw-bold">{userData.rejection_reason}</div>
+                  </div>
+                  <div className="mt-2">
+                    <a href={`/warga/edit/${userData.warga_id}`} className="btn btn-sm btn-outline-danger">
+                      Koreksi Data Sekarang
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <strong>Akun belum diverifikasi.</strong> Pengurus RT/RW akan memverifikasi akun Anda.
+                  Beberapa fitur seperti data keuangan belum dapat diakses hingga akun diverifikasi.
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

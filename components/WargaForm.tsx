@@ -473,6 +473,52 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
 
           if (updateError) throw updateError
 
+          // Cek apakah user punya rejection_reason (status "Koreksi Data")
+          const { data: linkedUser } = await supabase
+            .from('users')
+            .select('id, rejection_reason')
+            .eq('warga_id', wargaId)
+            .single()
+
+          if (linkedUser?.rejection_reason) {
+            // Hapus alasan penolakan → status kembali ke "Menunggu"
+            await supabase
+              .from('users')
+              .update({ rejection_reason: null })
+              .eq('id', linkedUser.id)
+
+            // Kirim notifikasi ke pengurus bahwa warga sudah koreksi data
+            try {
+              const namaWarga = data.nama_lengkap || 'Warga'
+              const wargaRtId = data.rt_id || null
+
+              const { data: ketuaList } = await supabase
+                .from('users')
+                .select('id, role, rt_id')
+                .eq('is_active', true)
+                .in('role', ['ketua_rw', 'ketua_rt'])
+
+              if (ketuaList && ketuaList.length > 0) {
+                const targetIds = ketuaList
+                  .filter((k: { id: string; role: string; rt_id?: string }) =>
+                    k.role === 'ketua_rw' || (k.role === 'ketua_rt' && k.rt_id === wargaRtId)
+                  )
+                  .map((k: { id: string }) => k.id)
+
+                if (targetIds.length > 0) {
+                  await createNotifikasiBulk(targetIds, {
+                    judul: 'Warga Sudah Koreksi Data',
+                    pesan: `${namaWarga} telah memperbarui datanya dan menunggu verifikasi ulang.`,
+                    tipe: 'verifikasi',
+                    link: '/admin/verifikasi-warga',
+                  })
+                }
+              }
+            } catch (err) {
+              console.error('Error sending correction notification:', err)
+            }
+          }
+
           // Jika RT berubah, set is_verified = false dan kirim notifikasi
           if (rtChanged) {
             // Reset verifikasi pada user yang terkait

@@ -23,6 +23,7 @@ interface PendingUser {
   is_active: boolean
   created_at: string
   warga_id: string
+  rejection_reason?: string | null
   warga?: {
     id: string
     nama_lengkap: string
@@ -61,7 +62,7 @@ export default function VerifikasiWargaPage() {
       let query = supabase
         .from('users')
         .select(`
-          id, email, nama_lengkap, is_verified, is_active, created_at, warga_id,
+          id, email, nama_lengkap, is_verified, is_active, created_at, warga_id, rejection_reason,
           warga:warga_id (id, nama_lengkap, nik, no_hp, rt_id, rt:rt_id (nomor_rt))
         `)
         .eq('role', 'warga')
@@ -148,6 +149,7 @@ export default function VerifikasiWargaPage() {
           is_verified: true,
           verified_by: userData?.id,
           verified_at: new Date().toISOString(),
+          rejection_reason: null,
         })
         .eq('id', user.id)
 
@@ -158,7 +160,7 @@ export default function VerifikasiWargaPage() {
         user_id: user.id,
         judul: 'Akun Terverifikasi',
         pesan: 'Selamat! Akun Anda telah diverifikasi oleh pengurus. Anda sekarang dapat mengakses seluruh fitur termasuk data keuangan.',
-        tipe: 'info',
+        tipe: 'verifikasi',
         link: '/dashboard',
       })
 
@@ -184,30 +186,42 @@ export default function VerifikasiWargaPage() {
     try {
       setProcessing(rejectTarget.id)
 
+      // Tetap is_active = true, is_verified = false, simpan alasan penolakan
+      // Warga masih bisa login dan koreksi data, lalu menunggu verifikasi ulang
       const { error } = await supabase
         .from('users')
-        .update({ is_active: false })
+        .update({
+          is_verified: false,
+          verified_by: null,
+          verified_at: null,
+          rejection_reason: rejectReason.trim(),
+        })
         .eq('id', rejectTarget.id)
 
       if (error) throw error
 
-      // Kirim notifikasi ke warga
+      // Kirim notifikasi ke warga dengan alasan penolakan dan link edit profil
+      const editLink = rejectTarget.warga_id
+        ? `/warga/edit/${rejectTarget.warga_id}`
+        : null
+
       await createNotifikasi({
         user_id: rejectTarget.id,
-        judul: 'Registrasi Ditolak',
+        judul: 'Verifikasi Ditolak - Silakan Koreksi Data',
         pesan: rejectReason
-          ? `Registrasi Anda ditolak. Alasan: ${rejectReason}`
-          : 'Registrasi Anda ditolak oleh pengurus. Silakan hubungi pengurus RT/RW untuk informasi lebih lanjut.',
+          ? `Verifikasi akun Anda ditolak. Alasan: ${rejectReason}. Silakan perbaiki data Anda dan tunggu verifikasi ulang.`
+          : 'Verifikasi akun Anda ditolak oleh pengurus. Silakan perbaiki data Anda dan tunggu verifikasi ulang.',
         tipe: 'verifikasi',
+        link: editLink,
       })
 
       setShowRejectModal(false)
       setRejectTarget(null)
       await fetchUsers()
-      alert('Registrasi warga ditolak')
+      alert('Verifikasi warga ditolak. Warga akan menerima notifikasi untuk koreksi data.')
     } catch (error) {
       console.error('Error rejecting user:', error)
-      alert('Gagal menolak registrasi')
+      alert('Gagal menolak verifikasi')
     } finally {
       setProcessing(null)
     }
@@ -349,6 +363,7 @@ export default function VerifikasiWargaPage() {
                     <th>No. HP</th>
                     <th>Tanggal Daftar</th>
                     <th>Status</th>
+                    <th>Alasan Penolakan</th>
                     {filter !== 'verified' && <th className="text-center">Aksi</th>}
                   </tr>
                 </thead>
@@ -375,11 +390,14 @@ export default function VerifikasiWargaPage() {
                       <td>
                         {user.is_verified ? (
                           <span className="badge bg-success">Terverifikasi</span>
-                        ) : !user.is_active ? (
-                          <span className="badge bg-danger">Ditolak</span>
+                        ) : user.rejection_reason ? (
+                          <span className="badge bg-danger">Koreksi Data</span>
                         ) : (
                           <span className="badge bg-warning text-dark">Menunggu</span>
                         )}
+                      </td>
+                      <td className="small text-muted" style={{ maxWidth: '200px' }}>
+                        {user.rejection_reason || '-'}
                       </td>
                       {filter !== 'verified' && (
                         <td className="text-center">
@@ -428,8 +446,8 @@ export default function VerifikasiWargaPage() {
                     </div>
                     {user.is_verified ? (
                       <span className="badge bg-success">Terverifikasi</span>
-                    ) : !user.is_active ? (
-                      <span className="badge bg-danger">Ditolak</span>
+                    ) : user.rejection_reason ? (
+                      <span className="badge bg-danger">Koreksi Data</span>
                     ) : (
                       <span className="badge bg-warning text-dark">Menunggu</span>
                     )}
@@ -439,6 +457,9 @@ export default function VerifikasiWargaPage() {
                     <div>RT: {user.warga?.rt?.nomor_rt ? `RT ${user.warga.rt.nomor_rt}` : '-'}</div>
                     <div>HP: {user.warga?.no_hp || '-'}</div>
                     <div>Daftar: {new Date(user.created_at).toLocaleDateString('id-ID')}</div>
+                    {user.rejection_reason && (
+                      <div className="text-danger mt-1">Alasan: {user.rejection_reason}</div>
+                    )}
                   </div>
                   {!user.is_verified && user.is_active && (
                     <div className="d-flex gap-2">
@@ -470,34 +491,34 @@ export default function VerifikasiWargaPage() {
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
-              <div className="modal-header bg-danger text-white">
+              <div className="modal-header bg-warning text-dark">
                 <h5 className="modal-title">
                   <FiXCircle className="me-2" />
-                  Tolak Registrasi
+                  Tolak Verifikasi
                 </h5>
                 <button
                   type="button"
-                  className="btn-close btn-close-white"
+                  className="btn-close"
                   onClick={() => setShowRejectModal(false)}
                   disabled={processing === rejectTarget.id}
                 />
               </div>
               <div className="modal-body">
                 <p>
-                  Tolak registrasi <strong>{rejectTarget.nama_lengkap}</strong>?
+                  Tolak verifikasi <strong>{rejectTarget.nama_lengkap}</strong>?
                 </p>
                 <div className="mb-3">
-                  <label className="form-label">Alasan Penolakan (opsional)</label>
+                  <label className="form-label">Alasan Penolakan <span className="text-danger">*</span></label>
                   <textarea
                     className="form-control"
                     rows={3}
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
-                    placeholder="Jelaskan alasan penolakan..."
+                    placeholder="Jelaskan alasan penolakan agar warga bisa koreksi data..."
                   />
                 </div>
-                <div className="alert alert-warning small mb-0">
-                  Akun warga akan dinonaktifkan dan tidak bisa login.
+                <div className="alert alert-info small mb-0">
+                  Warga akan menerima notifikasi penolakan beserta alasannya dan dapat melakukan koreksi data untuk diverifikasi ulang.
                 </div>
               </div>
               <div className="modal-footer">
@@ -509,14 +530,14 @@ export default function VerifikasiWargaPage() {
                   Batal
                 </button>
                 <button
-                  className="btn btn-danger"
+                  className="btn btn-warning"
                   onClick={handleRejectConfirm}
-                  disabled={processing === rejectTarget.id}
+                  disabled={processing === rejectTarget.id || !rejectReason.trim()}
                 >
                   {processing === rejectTarget.id ? (
                     <><span className="spinner-border spinner-border-sm me-2" />Memproses...</>
                   ) : (
-                    <><FiXCircle className="me-1" /> Tolak Registrasi</>
+                    <><FiXCircle className="me-1" /> Tolak Verifikasi</>
                   )}
                 </button>
               </div>

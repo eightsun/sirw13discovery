@@ -260,6 +260,7 @@ export interface User {
   is_verified: boolean;
   verified_by?: string | null;
   verified_at?: string | null;
+  rejection_reason?: string | null;
   created_at: string;
   updated_at: string;
 }
