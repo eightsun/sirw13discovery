@@ -725,12 +725,13 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
             </div>
 
             <div className="col-md-6 mb-3">
-              <label className="form-label">Nomor Kartu Keluarga</label>
+              <label className="form-label">Nomor Kartu Keluarga *</label>
               <input
                 type="text"
                 className={`form-control ${errors.no_kk ? 'is-invalid' : ''}`}
                 maxLength={16}
                 {...register('no_kk', {
+                  required: 'Nomor KK wajib diisi',
                   validate: (value) => !value || validateNoKK(value) || 'No KK harus 16 digit',
                 })}
               />
