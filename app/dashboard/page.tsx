@@ -287,6 +287,8 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ) : stats.wargaPerRT.length > 0 ? (
+                <>
+                {/* Desktop Table */}
                 <div className="table-responsive desktop-table">
                   <table className="table table-hover">
                     <thead>
@@ -303,14 +305,14 @@ export default function DashboardPage() {
                           <td>{item.jumlah}</td>
                           <td>
                             <div className="progress" style={{ height: '20px' }}>
-                              <div 
-                                className="progress-bar bg-primary" 
-                                role="progressbar" 
-                                style={{ 
-                                  width: `${stats.totalWarga > 0 ? (item.jumlah / stats.totalWarga) * 100 : 0}%` 
+                              <div
+                                className="progress-bar bg-primary"
+                                role="progressbar"
+                                style={{
+                                  width: `${stats.totalWarga > 0 ? (item.jumlah / stats.totalWarga) * 100 : 0}%`
                                 }}
                               >
-                                {stats.totalWarga > 0 
+                                {stats.totalWarga > 0
                                   ? `${((item.jumlah / stats.totalWarga) * 100).toFixed(1)}%`
                                   : '0%'
                                 }
@@ -322,6 +324,33 @@ export default function DashboardPage() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Mobile Cards */}
+                <div className="mobile-card-list">
+                  {stats.wargaPerRT.map((item, index) => {
+                    const persen = stats.totalWarga > 0 ? ((item.jumlah / stats.totalWarga) * 100).toFixed(1) : '0'
+                    return (
+                      <div key={index} className="card mb-2">
+                        <div className="card-body py-2 px-3">
+                          <div className="d-flex justify-content-between align-items-center mb-1">
+                            <span className="fw-bold">{item.rt}</span>
+                            <span className="badge bg-primary">{item.jumlah} warga</span>
+                          </div>
+                          <div className="progress" style={{ height: '16px' }}>
+                            <div
+                              className="progress-bar bg-primary"
+                              role="progressbar"
+                              style={{ width: `${persen}%` }}
+                            >
+                              {persen}%
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                </>
               ) : (
                 <div className="text-center py-4 text-muted">
                   <FiUsers size={48} className="mb-3" />

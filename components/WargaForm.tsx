@@ -275,6 +275,21 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
   // Tampilkan semua jalan (tidak difilter berdasarkan RT)
   const filteredJalan = jalanList
 
+  // Auto-set RT berdasarkan jalan yang dipilih
+  const selectedJalanId = watch('jalan_id')
+  useEffect(() => {
+    if (selectedJalanId) {
+      const jalan = jalanList.find(j => j.id === selectedJalanId)
+      if (jalan?.rt_id) {
+        setValue('rt_id', jalan.rt_id)
+      } else {
+        setValue('rt_id', '')
+      }
+    } else {
+      setValue('rt_id', '')
+    }
+  }, [selectedJalanId, jalanList, setValue])
+
   // Handle minat olahraga checkbox
   const handleMinatChange = (value: string) => {
     const current = minatOlahraga || []

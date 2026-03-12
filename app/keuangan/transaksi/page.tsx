@@ -19,7 +19,11 @@ import {
   FiFile,
   FiEye,
   FiEdit2,
-  FiTrash2
+  FiTrash2,
+  FiChevronLeft,
+  FiChevronRight,
+  FiChevronsLeft,
+  FiChevronsRight
 } from 'react-icons/fi'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
@@ -49,6 +53,10 @@ export default function TransaksiKasPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<KasTransaksi | null>(null)
   const [deleting, setDeleting] = useState(false)
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 15
 
   const isKetuaRW = userData?.role === 'ketua_rw'
 
@@ -152,11 +160,38 @@ export default function TransaksiKasPage() {
     }
   }
 
+  // Reset page saat filter berubah
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterJenisKas, filterWilayah, filterTipe, filterBulan])
+
+  // Pagination calculations
+  const totalPages = Math.ceil(transaksi.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedTransaksi = transaksi.slice(startIndex, startIndex + itemsPerPage)
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = []
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      pages.push(1)
+      if (currentPage > 3) pages.push('...')
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pages.push(i)
+      }
+      if (currentPage < totalPages - 2) pages.push('...')
+      pages.push(totalPages)
+    }
+    return pages
+  }
+
   const resetFilters = () => {
     setFilterJenisKas('')
     setFilterWilayah('')
     setFilterTipe('')
     setFilterBulan('')
+    setCurrentPage(1)
   }
 
   const getSumberLabel = (sumber: string) => {
@@ -638,7 +673,7 @@ export default function TransaksiKasPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {transaksi.map((t) => (
+                  {paginatedTransaksi.map((t) => (
                     <tr key={t.id}>
                       <td>{new Date(t.tanggal).toLocaleDateString('id-ID')}</td>
                       <td>
@@ -710,7 +745,7 @@ export default function TransaksiKasPage() {
 
             {/* Mobile Card View */}
             <div className="mobile-card-list">
-              {transaksi.map((t) => (
+              {paginatedTransaksi.map((t) => (
                 <div key={t.id} className="mobile-card-item">
                   <div className="d-flex justify-content-between align-items-start">
                     <div style={{flex:1, minWidth:0}}>
@@ -748,13 +783,56 @@ export default function TransaksiKasPage() {
         </div>
       </div>
 
-      {/* Info */}
-      <div className="mt-3 text-muted small">
-        <p className="mb-0">
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center mt-3 gap-2">
+          <small className="text-muted">
+            Menampilkan {startIndex + 1}-{Math.min(startIndex + itemsPerPage, transaksi.length)} dari {transaksi.length} transaksi
+            {filterBulan && ` untuk bulan ${new Date(filterBulan + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`}
+          </small>
+          <nav>
+            <ul className="pagination pagination-sm mb-0">
+              <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                <button className="page-link" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+                  <FiChevronsLeft />
+                </button>
+              </li>
+              <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                <button className="page-link" onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1}>
+                  <FiChevronLeft />
+                </button>
+              </li>
+              {getPageNumbers().map((page, idx) => (
+                <li key={idx} className={`page-item ${page === currentPage ? 'active' : ''} ${page === '...' ? 'disabled' : ''}`}>
+                  <button
+                    className="page-link"
+                    onClick={() => typeof page === 'number' && setCurrentPage(page)}
+                    disabled={page === '...'}
+                  >
+                    {page}
+                  </button>
+                </li>
+              ))}
+              <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                <button className="page-link" onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages}>
+                  <FiChevronRight />
+                </button>
+              </li>
+              <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                <button className="page-link" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>
+                  <FiChevronsRight />
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      )}
+      {totalPages <= 1 && transaksi.length > 0 && (
+        <div className="mt-3 text-muted small">
           Menampilkan {transaksi.length} transaksi
           {filterBulan && ` untuk bulan ${new Date(filterBulan + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`}
-        </p>
-      </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && deleteTarget && (

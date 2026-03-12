@@ -344,24 +344,32 @@ export default function DetailRumahPage() {
       {/* Daftar KK */}
       {kkGroups.map((kk, kkIndex) => (
         <div className="card mb-4" key={kk.kepala.id}>
-          <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h6 className="m-0 fw-bold">
-              <FiUsers className="me-2" />
-              Kartu Keluarga {kkIndex + 1}
-              {kk.no_kk !== '-' && <small className="ms-2 fw-normal">- No. {kk.no_kk}</small>}
-            </h6>
-            <div>
-              <span className="badge bg-light text-dark me-2">
-                {1 + kk.anggota.length} Anggota
-              </span>
-              {(isPengurus || kk.kepala.id === userData?.warga_id) && (
-                <Link 
-                  href={`/warga/tambah?kepala_keluarga_id=${kk.kepala.id}&jalan_id=${jalanId}&nomor_rumah=${nomorRumah}&rt_id=${rt?.id || ''}`}
-                  className="btn btn-sm btn-outline-light"
-                >
-                  <FiUserPlus className="me-1" /> Tambah
-                </Link>
-              )}
+          <div className="card-header bg-primary text-white">
+            <div className="d-flex flex-wrap justify-content-between align-items-start gap-2">
+              <div>
+                <h6 className="m-0 fw-bold">
+                  <FiUsers className="me-2" />
+                  Kartu Keluarga {kkIndex + 1}
+                </h6>
+                {kk.no_kk !== '-' && (
+                  <small className="d-block mt-1 text-white-50" style={{ fontSize: '0.75rem' }}>
+                    No. KK: {kk.no_kk}
+                  </small>
+                )}
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <span className="badge bg-light text-dark">
+                  {1 + kk.anggota.length} Anggota
+                </span>
+                {(isPengurus || kk.kepala.id === userData?.warga_id) && (
+                  <Link
+                    href={`/warga/tambah?kepala_keluarga_id=${kk.kepala.id}&jalan_id=${jalanId}&nomor_rumah=${nomorRumah}&rt_id=${rt?.id || ''}`}
+                    className="btn btn-sm btn-outline-light"
+                  >
+                    <FiUserPlus className="me-1" /> Tambah
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
           <div className="card-body">
