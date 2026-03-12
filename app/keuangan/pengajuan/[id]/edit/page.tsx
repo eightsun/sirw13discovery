@@ -121,7 +121,9 @@ export default function EditPengajuanPage() {
         }
 
         // Check if user can edit
-        if (pengajuanData.pemohon_id !== userData?.id || !['diajukan', 'direvisi'].includes(pengajuanData.status)) {
+        const isKetuaRW = userData?.role === 'ketua_rw' || userData?.role === 'wakil_ketua_rw'
+        const isPemohonEdit = pengajuanData.pemohon_id === userData?.id && ['diajukan', 'direvisi'].includes(pengajuanData.status)
+        if (!isPemohonEdit && !isKetuaRW) {
           alert('Anda tidak dapat mengedit pengajuan ini')
           router.push('/keuangan/pengajuan')
           return

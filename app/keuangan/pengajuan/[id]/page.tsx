@@ -51,6 +51,12 @@ export default function DetailPengajuanPage() {
   const [paymentNote, setPaymentNote] = useState('')
   const [paymentDate, setPaymentDate] = useState('')
 
+  // State untuk upload dokumen oleh Ketua RW
+  const [showUploadDocModal, setShowUploadDocModal] = useState(false)
+  const [uploadDocType, setUploadDocType] = useState<'bukti_transfer' | 'invoice_pelunasan' | null>(null)
+  const [uploadDocFile, setUploadDocFile] = useState<File | null>(null)
+  const [uploadingDoc, setUploadingDoc] = useState(false)
+
   const isKetuaRW = userData?.role === 'ketua_rw' || userData?.role === 'wakil_ketua_rw'
   const isBendaharaRW = userData?.role === 'bendahara_rw'
   const isPemohon = pengajuan?.pemohon_id === userData?.id
@@ -390,6 +396,64 @@ export default function DetailPengajuanPage() {
     }
   }
 
+  // Handle upload dokumen oleh Ketua RW
+  const handleUploadDocClick = (type: 'bukti_transfer' | 'invoice_pelunasan') => {
+    setUploadDocType(type)
+    setUploadDocFile(null)
+    setShowUploadDocModal(true)
+  }
+
+  const handleUploadDocSubmit = async () => {
+    if (!pengajuan || !uploadDocFile || !uploadDocType) return
+
+    try {
+      setUploadingDoc(true)
+
+      const folder = uploadDocType === 'bukti_transfer' ? 'transfer' : 'invoice'
+      const filePath = await uploadFile(uploadDocFile, folder)
+
+      if (!filePath) {
+        alert('Gagal mengupload file')
+        return
+      }
+
+      // Hapus file lama jika ada
+      const oldUrl = uploadDocType === 'bukti_transfer'
+        ? pengajuan.bukti_transfer_url
+        : pengajuan.bukti_persetujuan_url
+
+      if (oldUrl) {
+        const oldPath = oldUrl.startsWith('http')
+          ? oldUrl.match(/\/pengajuan\/([^?]+)/)?.[1]
+          : oldUrl.split('?')[0]
+        if (oldPath) {
+          await supabase.storage.from('pengajuan').remove([oldPath])
+        }
+      }
+
+      const updateField = uploadDocType === 'bukti_transfer'
+        ? 'bukti_transfer_url'
+        : 'bukti_persetujuan_url'
+
+      const { error } = await supabase
+        .from('pengajuan_pembelian')
+        .update({ [updateField]: filePath, updated_at: new Date().toISOString() })
+        .eq('id', pengajuan.id)
+
+      if (error) throw error
+
+      setShowUploadDocModal(false)
+      setUploadDocFile(null)
+      fetchPengajuan()
+      alert('Dokumen berhasil diupload')
+    } catch (error) {
+      console.error('Error uploading document:', error)
+      alert('Gagal mengupload dokumen')
+    } finally {
+      setUploadingDoc(false)
+    }
+  }
+
   const getSignedUrl = async (path: string) => {
     const { data } = await supabase.storage
       .from('pengajuan')
@@ -432,7 +496,8 @@ export default function DetailPengajuanPage() {
   const showBendaharaProses = isBendaharaRW && pengajuan.status === 'disetujui'
   const showBendaharaSelesai = isBendaharaRW && pengajuan.status === 'diproses'
   const showPemohonEdit = isPemohon && ['diajukan', 'direvisi'].includes(pengajuan.status)
-  const hasActions = showKetuaActions || showBendaharaProses || showBendaharaSelesai || showPemohonEdit
+  const showKetuaUploadDoc = isKetuaRW && pengajuan.status === 'selesai'
+  const hasActions = showKetuaActions || showBendaharaProses || showBendaharaSelesai || showPemohonEdit || showKetuaUploadDoc
 
   return (
     <div className="fade-in p-4">
@@ -482,6 +547,13 @@ export default function DetailPengajuanPage() {
 
             {/* Pemohon Edit */}
             {showPemohonEdit && (
+              <Link href={`/keuangan/pengajuan/${pengajuan.id}/edit`} className="btn btn-outline-primary d-flex align-items-center">
+                <FiEdit2 className="me-1" /> Edit Pengajuan
+              </Link>
+            )}
+
+            {/* Ketua RW: Upload/Edit Dokumen setelah selesai */}
+            {showKetuaUploadDoc && (
               <Link href={`/keuangan/pengajuan/${pengajuan.id}/edit`} className="btn btn-outline-primary d-flex align-items-center">
                 <FiEdit2 className="me-1" /> Edit Pengajuan
               </Link>
@@ -640,13 +712,20 @@ export default function DetailPengajuanPage() {
                           <FiCheckCircle className="me-1 text-success" />
                           Bukti Transfer Bank (dari Bendahara)
                         </label>
-                        {pengajuan.bukti_transfer_url ? (
-                          <button className="btn btn-sm btn-outline-success" onClick={() => openFile(pengajuan.bukti_transfer_url)}>
-                            <FiDownload className="me-1" /> Lihat File
-                          </button>
-                        ) : (
-                          <span className="text-muted">Tidak ada</span>
-                        )}
+                        <div className="d-flex gap-2 align-items-center">
+                          {pengajuan.bukti_transfer_url ? (
+                            <button className="btn btn-sm btn-outline-success" onClick={() => openFile(pengajuan.bukti_transfer_url)}>
+                              <FiDownload className="me-1" /> Lihat File
+                            </button>
+                          ) : (
+                            <span className="text-muted">Tidak ada</span>
+                          )}
+                          {isKetuaRW && (
+                            <button className="btn btn-sm btn-outline-warning" onClick={() => handleUploadDocClick('bukti_transfer')}>
+                              <FiUpload className="me-1" /> {pengajuan.bukti_transfer_url ? 'Ganti' : 'Upload'}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="col-md-6">
@@ -655,13 +734,20 @@ export default function DetailPengajuanPage() {
                           <FiCheckCircle className="me-1 text-success" />
                           Invoice/Kwitansi Pelunasan (dari Bendahara)
                         </label>
-                        {pengajuan.bukti_persetujuan_url ? (
-                          <button className="btn btn-sm btn-outline-success" onClick={() => openFile(pengajuan.bukti_persetujuan_url)}>
-                            <FiDownload className="me-1" /> Lihat File
-                          </button>
-                        ) : (
-                          <span className="text-muted">Tidak ada</span>
-                        )}
+                        <div className="d-flex gap-2 align-items-center">
+                          {pengajuan.bukti_persetujuan_url ? (
+                            <button className="btn btn-sm btn-outline-success" onClick={() => openFile(pengajuan.bukti_persetujuan_url)}>
+                              <FiDownload className="me-1" /> Lihat File
+                            </button>
+                          ) : (
+                            <span className="text-muted">Tidak ada</span>
+                          )}
+                          {isKetuaRW && (
+                            <button className="btn btn-sm btn-outline-warning" onClick={() => handleUploadDocClick('invoice_pelunasan')}>
+                              <FiUpload className="me-1" /> {pengajuan.bukti_persetujuan_url ? 'Ganti' : 'Upload'}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </>
@@ -818,6 +904,67 @@ export default function DetailPengajuanPage() {
                       {approvalAction === 'revisi' && 'Kirim ke Revisi'}
                       {approvalAction === 'proses' && 'Proses Pembayaran'}
                     </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Document Modal (untuk Ketua RW) */}
+      {showUploadDocModal && uploadDocType && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-warning text-dark">
+                <h5 className="modal-title">
+                  <FiUpload className="me-2" />
+                  {uploadDocType === 'bukti_transfer' ? 'Upload Bukti Transfer Bank' : 'Upload Invoice/Kwitansi Pelunasan'}
+                </h5>
+                <button type="button" className="btn-close" onClick={() => setShowUploadDocModal(false)} disabled={uploadingDoc} />
+              </div>
+              <div className="modal-body">
+                <p className="mb-3">
+                  <strong>{pengajuan?.nomor_pengajuan}</strong><br />
+                  {pengajuan?.deskripsi_pembelian}
+                </p>
+                <div className="mb-3">
+                  <label className="form-label fw-bold">
+                    Pilih File <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="file"
+                    className="form-control"
+                    accept="image/*,.pdf"
+                    onChange={(e) => setUploadDocFile(e.target.files?.[0] || null)}
+                  />
+                  <small className="text-muted">Format: JPG, PNG, atau PDF (maks. 5MB)</small>
+                  {uploadDocFile && (
+                    <div className="mt-2 p-2 bg-light rounded small d-flex align-items-center">
+                      <FiFileText className="me-1" />
+                      <span className="flex-grow-1">{uploadDocFile.name}</span>
+                      <button type="button" className="btn btn-sm btn-link text-danger p-0" onClick={() => setUploadDocFile(null)}>
+                        <FiX />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowUploadDocModal(false)} disabled={uploadingDoc}>
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleUploadDocSubmit}
+                  disabled={uploadingDoc || !uploadDocFile}
+                >
+                  {uploadingDoc ? (
+                    <><span className="spinner-border spinner-border-sm me-2" />Mengupload...</>
+                  ) : (
+                    <><FiUpload className="me-2" />Upload</>
                   )}
                 </button>
               </div>
