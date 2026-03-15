@@ -6,7 +6,7 @@ import { useForm, useFieldArray } from 'react-hook-form'
 import { createClient } from '@/lib/supabase/client'
 import { WargaFormInput, KendaraanFormInput, UsahaFormInput, RT, Jalan, Warga, Kendaraan, Usaha } from '@/types'
 import { validateNIK, validateNoKK, validatePhone, MINAT_OLAHRAGA_OPTIONS } from '@/utils/helpers'
-import { createNotifikasiBulk, notifyPengurusForRT, getPengurusRWUserIds, getPengurusRTUserIds, getWargaUserIds, dedupe } from '@/lib/notifikasi'
+import { createNotifikasiBulk, notifyPengurusForRT, notifyKetuaViaAPI, notifyWargaEditViaAPI, getPengurusRWUserIds, getPengurusRTUserIds, getWargaUserIds, dedupe } from '@/lib/notifikasi'
 import { 
   FiSave, FiX, FiUser, FiMapPin, FiPhone, FiHome, FiFileText, 
   FiUsers, FiAlertCircle, FiPlus, FiTrash2, FiTruck, FiBriefcase,
@@ -473,94 +473,23 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
 
           if (updateError) throw updateError
 
-          // Cek apakah user punya rejection_reason (status "Koreksi Data")
-          const { data: linkedUser } = await supabase
-            .from('users')
-            .select('id, rejection_reason')
-            .eq('warga_id', wargaId)
-            .single()
-
-          if (linkedUser?.rejection_reason) {
-            // Hapus alasan penolakan → status kembali ke "Menunggu"
-            await supabase
-              .from('users')
-              .update({ rejection_reason: null })
-              .eq('id', linkedUser.id)
-
-            // Kirim notifikasi ke pengurus bahwa warga sudah koreksi data
-            try {
-              const namaWarga = data.nama_lengkap || 'Warga'
-              const wargaRtId = data.rt_id || null
-
-              const { data: ketuaList } = await supabase
-                .from('users')
-                .select('id, role, rt_id')
-                .eq('is_active', true)
-                .in('role', ['ketua_rw', 'ketua_rt'])
-
-              if (ketuaList && ketuaList.length > 0) {
-                const targetIds = ketuaList
-                  .filter((k: { id: string; role: string; rt_id?: string }) =>
-                    k.role === 'ketua_rw' || (k.role === 'ketua_rt' && k.rt_id === wargaRtId)
-                  )
-                  .map((k: { id: string }) => k.id)
-
-                if (targetIds.length > 0) {
-                  await createNotifikasiBulk(targetIds, {
-                    judul: 'Warga Sudah Koreksi Data',
-                    pesan: `${namaWarga} telah memperbarui datanya dan menunggu verifikasi ulang.`,
-                    tipe: 'verifikasi',
-                    link: '/admin/verifikasi-warga',
-                  })
-                }
-              }
-            } catch (err) {
-              console.error('Error sending correction notification:', err)
+          // Semua logika verifikasi + notifikasi dihandle server-side (bypass RLS)
+          // Server akan: cek is_verified, hapus rejection_reason, reset verifikasi jika RT berubah,
+          // dan kirim notifikasi ke Ketua RW/RT
+          try {
+            console.log('Calling notifyWargaEditViaAPI...')
+            const result = await notifyWargaEditViaAPI({
+              warga_id: wargaId,
+              nama_warga: data.nama_lengkap || 'Warga',
+              rt_id: data.rt_id || null,
+              rt_changed: !!rtChanged,
+            })
+            console.log('wargaEdit notification result:', result)
+            if (!result) {
+              console.error('notifyWargaEditViaAPI returned false — notification may not have been sent')
             }
-          }
-
-          // Jika RT berubah, set is_verified = false dan kirim notifikasi
-          if (rtChanged) {
-            // Reset verifikasi pada user yang terkait
-            const { error: verifyError } = await supabase
-              .from('users')
-              .update({ is_verified: false, verified_by: null, verified_at: null })
-              .eq('warga_id', wargaId)
-
-            if (verifyError) {
-              console.error('Error resetting verification:', verifyError)
-            }
-
-            // Notifikasi ke pengurus RT baru dan pengurus RW
-            try {
-              const namaWarga = data.nama_lengkap || 'Warga'
-
-              // Notifikasi ke Ketua RW dan Ketua RT baru
-              const { data: ketuaList } = await supabase
-                .from('users')
-                .select('id, role, rt_id')
-                .eq('is_active', true)
-                .in('role', ['ketua_rw', 'ketua_rt'])
-
-              if (ketuaList && ketuaList.length > 0) {
-                const targetIds = ketuaList
-                  .filter((k: { id: string; role: string; rt_id?: string }) =>
-                    k.role === 'ketua_rw' || (k.role === 'ketua_rt' && k.rt_id === data.rt_id)
-                  )
-                  .map((k: { id: string }) => k.id)
-
-                if (targetIds.length > 0) {
-                  await createNotifikasiBulk(targetIds, {
-                    judul: 'Perpindahan RT - Perlu Verifikasi Ulang',
-                    pesan: `${namaWarga} telah pindah RT dan memerlukan verifikasi ulang.`,
-                    tipe: 'verifikasi',
-                    link: '/admin/verifikasi-warga',
-                  })
-                }
-              }
-            } catch (err) {
-              console.error('Error sending RT change notification:', err)
-            }
+          } catch (err) {
+            console.error('Error in wargaEdit notification:', err)
           }
         }
       }
@@ -716,38 +645,18 @@ export default function WargaForm({ mode, wargaId, initialData, isOnboarding = f
       // Clear draft setelah berhasil simpan
       clearDraft()
 
-      // Kirim notifikasi ke Ketua RW dan Ketua RT untuk verifikasi
+      // Kirim notifikasi ke Ketua RW dan Ketua RT untuk verifikasi (via server, bypass RLS)
       if (isOnboarding && savedWargaId) {
         try {
-          // Cari RT yang dipilih warga
           const wargaRtId = data.rt_id || null
-
-          // Cari Ketua RW dan Ketua RT yang relevan
-          let ketuaQuery = supabase
-            .from('users')
-            .select('id, role, rt_id')
-            .eq('is_active', true)
-            .in('role', ['ketua_rw', 'ketua_rt'])
-
-          const { data: ketuaList } = await ketuaQuery
-
-          if (ketuaList && ketuaList.length > 0) {
-            // Ketua RW selalu dapat notifikasi, Ketua RT hanya jika RT nya cocok
-            const targetIds = ketuaList
-              .filter((k: { id: string; role: string; rt_id?: string }) =>
-                k.role === 'ketua_rw' || (k.role === 'ketua_rt' && k.rt_id === wargaRtId)
-              )
-              .map((k: { id: string }) => k.id)
-
-            if (targetIds.length > 0) {
-              await createNotifikasiBulk(targetIds, {
-                judul: 'Warga Baru Perlu Verifikasi',
-                pesan: `${data.nama_lengkap} telah mendaftar dan perlu diverifikasi.`,
-                tipe: 'verifikasi',
-                link: '/admin/verifikasi-warga',
-              })
-            }
-          }
+          const result = await notifyKetuaViaAPI({
+            judul: 'Warga Baru Perlu Verifikasi',
+            pesan: `${data.nama_lengkap} telah mendaftar dan perlu diverifikasi.`,
+            tipe: 'verifikasi',
+            link: '/admin/verifikasi-warga',
+            rt_id: wargaRtId,
+          })
+          console.log('Onboarding notification result:', result)
         } catch (notifErr) {
           console.error('Error sending verification notification:', notifErr)
         }

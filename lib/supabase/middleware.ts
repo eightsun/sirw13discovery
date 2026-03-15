@@ -27,7 +27,10 @@ export async function updateSession(request: NextRequest) {
             request,
           })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, {
+              ...options,
+              maxAge: 28800, // 8 jam session timeout
+            })
           )
         },
       },
@@ -39,14 +42,14 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Define protected routes
-  const protectedPaths = ['/dashboard', '/warga']
-  const isProtectedPath = protectedPaths.some(path => 
-    request.nextUrl.pathname.startsWith(path)
+  // Define PUBLIC routes (everything else requires auth)
+  const publicPaths = ['/', '/login', '/register']
+  const isPublicPath = publicPaths.some(path =>
+    request.nextUrl.pathname === path
   )
 
   // Redirect to login if accessing protected route without auth
-  if (isProtectedPath && !user) {
+  if (!isPublicPath && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('redirectTo', request.nextUrl.pathname)

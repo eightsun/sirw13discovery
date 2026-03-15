@@ -114,6 +114,11 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           icon: <FiCalendar />,
         },
         {
+          href: '/surat',
+          label: 'Arsip Surat',
+          icon: <FiFileText />,
+        },
+        {
           href: '/usaha',
           label: 'Direktori Usaha',
           icon: <FiBriefcase />,

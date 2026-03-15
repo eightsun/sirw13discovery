@@ -162,6 +162,20 @@ body {
   font-weight: 700;
 }
 
+/* Fix: Nav tabs di content area harus pakai warna gelap, bukan putih sidebar */
+.nav-tabs .nav-link {
+  color: #495057;
+}
+.nav-tabs .nav-link:hover {
+  color: #212529;
+  background: transparent;
+}
+.nav-tabs .nav-link.active {
+  color: #212529;
+  background: #fff;
+  font-weight: 700;
+}
+
 .nav-link .nav-icon {
   margin-right: 0.5rem;
   font-size: 1rem;

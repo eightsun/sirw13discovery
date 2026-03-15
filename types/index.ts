@@ -841,7 +841,7 @@ export interface KeluhanTimeline {
 }
 
 // ==================== NOTIFIKASI ====================
-export type TipeNotifikasi = 'info' | 'pengajuan' | 'pembayaran' | 'keluhan' | 'kegiatan' | 'verifikasi' | 'umum'
+export type TipeNotifikasi = 'info' | 'pengajuan' | 'pembayaran' | 'keluhan' | 'kegiatan' | 'verifikasi' | 'umum' | 'surat'
 
 export interface Notifikasi {
   id: string;
@@ -852,4 +852,51 @@ export interface Notifikasi {
   link: string | null;
   is_read: boolean;
   created_at: string;
+}
+
+// ==================== SURAT ====================
+export type TipeSurat = 'keluar' | 'masuk';
+
+export type KategoriSurat = 'INF' | 'UND' | 'EDR' | 'INT' | 'KEP' | 'LAP' | 'NOT' | 'PER' | 'IZN' | 'PKS' | 'PAN' | 'KEU';
+
+export const KATEGORI_SURAT_LABELS: Record<KategoriSurat, string> = {
+  INF: 'Informasi',
+  UND: 'Undangan',
+  EDR: 'Edaran',
+  INT: 'Instruksi',
+  KEP: 'Keputusan',
+  LAP: 'Laporan',
+  NOT: 'Notulen',
+  PER: 'Permohonan',
+  IZN: 'Perizinan / Rekomendasi',
+  PKS: 'Kerjasama',
+  PAN: 'Kepanitiaan',
+  KEU: 'Keuangan',
+};
+
+export const BULAN_ROMAWI = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+
+export interface Surat {
+  id: string;
+  tipe: TipeSurat;
+  nomor_surat: string;
+  perihal: string;
+  isi_surat: string | null;
+  tanggal_rilis: string;
+  lampiran_url: string | null;
+  lampiran_filename: string | null;
+  kategori_surat: KategoriSurat | null;
+  pengirim: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  pembuat?: { nama_lengkap: string; email: string };
+}
+
+export interface SuratBaca {
+  id: string;
+  surat_id: string;
+  user_id: string;
+  read_at: string;
+  user?: { nama_lengkap: string; email: string };
 }
