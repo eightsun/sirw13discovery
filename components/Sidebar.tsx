@@ -91,6 +91,18 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           icon: <FiCreditCard />,
         },
         {
+          href: '/ipl/dashboard',
+          label: 'Dashboard IPL',
+          icon: <FiBarChart2 />,
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'ketua_rt', 'sekretaris_rt', 'bendahara_rt']
+        },
+        {
+          href: '/ipl/monitoring',
+          label: 'Monitoring IPL',
+          icon: <FiBarChart2 />,
+          roles: ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw', 'ketua_rt', 'sekretaris_rt', 'bendahara_rt']
+        },
+        {
           href: '/ipl/verifikasi',
           label: 'Verifikasi',
           icon: <FiFileText />,

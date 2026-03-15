@@ -4,264 +4,153 @@ import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
-import { TagihanIPL, Rumah } from '@/types'
-import { FiAlertTriangle, FiCheck, FiClock, FiFilter, FiLoader, FiMapPin } from 'react-icons/fi'
+import {
+  FiHome, FiCalendar, FiAlertTriangle, FiCheck,
+  FiCreditCard, FiBarChart2, FiSettings
+} from 'react-icons/fi'
 
-interface TagihanWithRumah extends TagihanIPL {
-  rumah: Rumah & {
-    jalan: { nama_jalan: string }
-    rt: { id: string; nomor_rt: string }
-    kepala_keluarga: { nama_lengkap: string }
-  }
+const BULAN_LABELS = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES']
+const BULAN_FULL = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+
+interface RumahInfo {
+  id: string
+  nomor_rumah: string
+  blok: string
+  tarif_default: number
+  jalan: { nama_jalan: string } | null
+  rt: { nomor_rt: string } | null
 }
 
-interface PembayaranPending {
-  id: string
-  rumah_id: string
-  bulan_dibayar: string[]
-  jumlah_dibayar: number
+interface TagihanData {
+  bulan: string
+  jumlah_tagihan: number
+  jumlah_terbayar: number
   status: string
+  is_occupied: boolean
 }
 
-interface RTData {
-  id: string
-  nomor_rt: string
+interface YearSummary {
+  tahun: number
+  bulanLunas: number
+  bulanBelum: number
+  totalBayar: number
+  totalTagihan: number
 }
 
-// Role yang bisa akses semua RT (level RW)
-const RW_LEVEL_ROLES = ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw']
-// Role yang hanya bisa akses RT-nya sendiri
-const RT_LEVEL_ROLES = ['ketua_rt', 'sekretaris_rt', 'bendahara_rt']
-
-export default function IPLPage() {
-  const { userData, isPengurus, loading: userLoading } = useUser()
-  const [tagihan, setTagihan] = useState<TagihanWithRumah[]>([])
-  const [pembayaranPending, setPembayaranPending] = useState<PembayaranPending[]>([])
-  const [myRumah, setMyRumah] = useState<Rumah | null>(null)
-  const [rtList, setRtList] = useState<RTData[]>([])
-  const [userRtId, setUserRtId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  
-  // Filters
-  const [filterStatus, setFilterStatus] = useState<string>('')
-  const [filterTahun, setFilterTahun] = useState<string>(new Date().getFullYear().toString())
-  const [filterRT, setFilterRT] = useState<string>('')
-  
+export default function TagihanIPLPage() {
+  const { user, userData, loading: userLoading } = useUser()
   const supabase = createClient()
 
-  // Check if user is RW level (can see all RT)
-  const isRWLevel = useMemo(() => {
-    return RW_LEVEL_ROLES.includes(userData?.role || '')
-  }, [userData?.role])
+  const [rumah, setRumah] = useState<RumahInfo | null>(null)
+  const [tagihan, setTagihan] = useState<TagihanData[]>([])
+  const [yearSummaries, setYearSummaries] = useState<YearSummary[]>([])
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [loading, setLoading] = useState(true)
+  const [noRumah, setNoRumah] = useState(false)
 
-  // Check if user is RT level (can only see their RT)
-  const isRTLevel = useMemo(() => {
-    return RT_LEVEL_ROLES.includes(userData?.role || '')
-  }, [userData?.role])
+  const isRW = userData?.role && ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw'].includes(userData.role)
+  const isRT = userData?.role && ['ketua_rt', 'sekretaris_rt', 'bendahara_rt'].includes(userData.role)
+  const isPengurus = isRW || isRT
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        
-        let userRumahId: string | null = null
-        let userRtIdLocal: string | null = null
-        
-        // Get user's warga data to find their rumah and RT
-        if (userData?.warga_id) {
-          const { data: wargaData } = await supabase
-            .from('warga')
-            .select('rumah_id')
-            .eq('id', userData.warga_id)
-            .single()
-          
-          userRumahId = wargaData?.rumah_id || null
-          
-          if (userRumahId) {
-            // Get rumah details including RT
-            const { data: rumahData } = await supabase
-              .from('rumah')
-              .select(`
-                *,
-                jalan:jalan_id (nama_jalan),
-                rt:rt_id (id, nomor_rt),
-                kepala_keluarga:kepala_keluarga_id (nama_lengkap)
-              `)
-              .eq('id', userRumahId)
-              .single()
-            
-            setMyRumah(rumahData)
-            userRtIdLocal = rumahData?.rt?.id || null
-            setUserRtId(userRtIdLocal)
-          }
-        }
+    if (user && userData) fetchData()
+  }, [user, userData])
 
-        // Fetch RT list for filter (only for pengurus)
-        if (isPengurus) {
-          const { data: rtData } = await supabase
-            .from('rt')
-            .select('id, nomor_rt')
-            .order('nomor_rt')
-          
-          setRtList(rtData || [])
-          
-          // If RT level, set filter to their RT
-          if (isRTLevel && userRtIdLocal) {
-            setFilterRT(userRtIdLocal)
-          }
-        }
-
-        // Fetch tagihan based on role
-        let query = supabase
-          .from('tagihan_ipl')
-          .select(`
-            *,
-            rumah:rumah_id (
-              id,
-              nomor_rumah,
-              blok,
-              jalan:jalan_id (nama_jalan),
-              rt:rt_id (id, nomor_rt),
-              kepala_keluarga:kepala_keluarga_id (nama_lengkap)
-            )
-          `)
-          .order('bulan', { ascending: false })
-
-        // Apply access control based on role
-        if (!isPengurus) {
-          // Warga biasa: hanya lihat tagihan rumahnya
-          if (userRumahId) {
-            query = query.eq('rumah_id', userRumahId)
-          } else {
-            // Tidak ada rumah_id, tampilkan empty (filter dengan ID yang tidak ada)
-            query = query.eq('rumah_id', '00000000-0000-0000-0000-000000000000')
-          }
-        } else if (isRTLevel && userRtIdLocal) {
-          // Pengurus RT: hanya lihat tagihan di RT-nya
-          // Need to filter by rumah's rt_id
-          const { data: rumahInRT } = await supabase
-            .from('rumah')
-            .select('id')
-            .eq('rt_id', userRtIdLocal)
-          
-          const rumahIds = rumahInRT?.map((r: { id: string }) => r.id) || []
-          if (rumahIds.length > 0) {
-            query = query.in('rumah_id', rumahIds)
-          }
-        }
-        // RW level: lihat semua (no filter)
-
-        const { data, error: fetchError } = await query
-
-        if (fetchError) throw fetchError
-        setTagihan(data || [])
-
-        // Fetch pembayaran pending
-        if (!isPengurus) {
-          if (userRumahId) {
-            const { data: pendingData } = await supabase
-              .from('pembayaran_ipl')
-              .select('id, rumah_id, bulan_dibayar, jumlah_dibayar, status')
-              .eq('rumah_id', userRumahId)
-              .eq('status', 'pending')
-            
-            setPembayaranPending(pendingData || [])
-          } else {
-            setPembayaranPending([])
-          }
-        } else if (isPengurus) {
-          // Pengurus bisa lihat semua pending (sesuai akses RT-nya)
-          let pendingQuery = supabase
-            .from('pembayaran_ipl')
-            .select('id, rumah_id, bulan_dibayar, jumlah_dibayar, status')
-            .eq('status', 'pending')
-          
-          const { data: pendingData } = await pendingQuery
-          setPembayaranPending(pendingData || [])
-        }
-
-      } catch (err) {
-        console.error('Error fetching tagihan:', err)
-        setError('Gagal memuat data tagihan')
-      } finally {
+  const fetchData = async () => {
+    setLoading(true)
+    try {
+      if (!userData?.warga_id) {
+        setNoRumah(true)
         setLoading(false)
+        return
       }
-    }
 
-    if (!userLoading && userData) {
-      fetchData()
-    }
-  }, [userLoading, userData, isPengurus, isRTLevel])
+      // Get warga's rumah_id
+      const { data: wargaData } = await supabase
+        .from('warga')
+        .select('rumah_id')
+        .eq('id', userData.warga_id)
+        .single()
 
-  // Filter tagihan
-  const filteredTagihan = useMemo(() => {
-    return tagihan.filter(t => {
-      // Filter by status
-      if (filterStatus && filterStatus !== 'menunggu_verifikasi') {
-        if (t.status !== filterStatus) return false
+      if (!wargaData?.rumah_id) {
+        setNoRumah(true)
+        setLoading(false)
+        return
       }
-      
-      // Filter by year
-      if (filterTahun && !t.bulan.startsWith(filterTahun)) return false
-      
-      // Filter by RT (only for pengurus)
-      if (filterRT && t.rumah?.rt?.id !== filterRT) return false
-      
-      return true
+
+      // Get rumah details
+      const { data: rumahData } = await supabase
+        .from('rumah')
+        .select('id, nomor_rumah, blok, tarif_default, jalan:jalan_id(nama_jalan), rt:rt_id(nomor_rt)')
+        .eq('id', wargaData.rumah_id)
+        .single()
+
+      if (!rumahData) {
+        setNoRumah(true)
+        setLoading(false)
+        return
+      }
+
+      setRumah(rumahData as unknown as RumahInfo)
+
+      // Get all tagihan for this rumah
+      const { data: tagihanData } = await supabase
+        .from('tagihan_ipl')
+        .select('bulan, jumlah_tagihan, jumlah_terbayar, status, is_occupied')
+        .eq('rumah_id', wargaData.rumah_id)
+        .order('bulan', { ascending: true })
+
+      setTagihan(tagihanData || [])
+
+      // Calculate year summaries
+      const years = new Set<number>()
+      ;(tagihanData || []).forEach((t: TagihanData) => {
+        years.add(parseInt(t.bulan.substring(0, 4)))
+      })
+      // Add current year
+      years.add(new Date().getFullYear())
+
+      const summaries: YearSummary[] = Array.from(years).sort().map(year => {
+        const yearTagihan = (tagihanData || []).filter(
+          (t: TagihanData) => parseInt(t.bulan.substring(0, 4)) === year
+        )
+        const bulanLunas = yearTagihan.filter((t: TagihanData) => t.jumlah_terbayar > 0).length
+        const bulanBelum = 12 - bulanLunas
+        const totalBayar = yearTagihan.reduce((s: number, t: TagihanData) => s + (t.jumlah_terbayar || 0), 0)
+        const totalTagihan = yearTagihan.reduce((s: number, t: TagihanData) => s + (t.jumlah_tagihan || 0), 0)
+
+        return { tahun: year, bulanLunas, bulanBelum, totalBayar, totalTagihan }
+      })
+
+      setYearSummaries(summaries)
+    } catch (err) {
+      console.error('Error fetching IPL data:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Filter tagihan for selected year
+  const yearTagihan = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => {
+      const bulanDate = `${selectedYear}-${String(i + 1).padStart(2, '0')}-01`
+      const found = tagihan.find(t => t.bulan === bulanDate)
+      return {
+        bulan: i + 1,
+        bulanLabel: BULAN_FULL[i],
+        jumlah_tagihan: found?.jumlah_tagihan || 0,
+        jumlah_terbayar: found?.jumlah_terbayar || 0,
+        status: found?.status || 'belum_lunas',
+        is_occupied: found?.is_occupied ?? true,
+        hasPaid: (found?.jumlah_terbayar || 0) > 0,
+      }
     })
-  }, [tagihan, filterStatus, filterTahun, filterRT])
+  }, [tagihan, selectedYear])
 
-  // Helper: Check if bulan has pending payment
-  const getPendingForBulan = (bulan: string, rumahId: string) => {
-    return pembayaranPending.find(p => 
-      p.rumah_id === rumahId && 
-      p.bulan_dibayar?.includes(bulan)
-    )
-  }
+  const currentYearSummary = yearSummaries.find(s => s.tahun === selectedYear)
 
-  // Calculate summary
-  const summary = useMemo(() => {
-    const totalTagihan = filteredTagihan.reduce((sum, t) => sum + t.jumlah_tagihan, 0)
-    const totalTerbayar = filteredTagihan.reduce((sum, t) => sum + t.jumlah_terbayar, 0)
-    const totalTunggakan = totalTagihan - totalTerbayar
-    const lunas = filteredTagihan.filter(t => t.status === 'lunas').length
-    
-    // Hitung pending (menunggu verifikasi)
-    const totalPending = pembayaranPending.reduce((sum, p) => sum + p.jumlah_dibayar, 0)
-    const bulanPending = new Set<string>()
-    pembayaranPending.forEach(p => {
-      p.bulan_dibayar?.forEach(b => bulanPending.add(b))
-    })
-    const menungguVerifikasi = filteredTagihan.filter(t => 
-      t.status !== 'lunas' && bulanPending.has(t.bulan)
-    ).length
-    
-    const belumLunas = filteredTagihan.filter(t => 
-      t.status !== 'lunas' && !bulanPending.has(t.bulan)
-    ).length
-    
-    return { totalTagihan, totalTerbayar, totalTunggakan, totalPending, lunas, belumLunas, menungguVerifikasi }
-  }, [filteredTagihan, pembayaranPending])
-
-  // Get unique years for filter
-  const years = useMemo(() => {
-    const yearSet = new Set(tagihan.map(t => t.bulan.substring(0, 4)))
-    return Array.from(yearSet).sort().reverse()
-  }, [tagihan])
-
-  const formatBulan = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(amount)
-  }
+  const formatRupiah = (n: number) =>
+    new Intl.NumberFormat('id-ID').format(n)
 
   if (userLoading || loading) {
     return (
@@ -269,7 +158,6 @@ export default function IPLPage() {
         <div className="spinner-border text-primary" role="status">
           <span className="visually-hidden">Loading...</span>
         </div>
-        <p className="mt-2 text-muted">Memuat data tagihan...</p>
       </div>
     )
   }
@@ -277,332 +165,194 @@ export default function IPLPage() {
   return (
     <div className="fade-in">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
         <div>
-          <h1 className="page-title mb-0">Tagihan IPL</h1>
-          <p className="text-muted mb-0">Iuran Pengelolaan Lingkungan RW 013</p>
+          <h4 className="fw-bold mb-1">Tagihan IPL</h4>
+          <p className="text-muted mb-0 small">Iuran Pemeliharaan Lingkungan RW 013</p>
         </div>
-        <Link href="/ipl/bayar" className="btn btn-primary">
-          <span className="me-2 fw-bold">Rp</span>
-          Bayar IPL
-        </Link>
+        <div className="d-flex gap-2">
+          {!noRumah && (
+            <Link href="/ipl/bayar" className="btn btn-primary btn-sm">
+              <FiCreditCard className="me-1" /> Bayar IPL
+            </Link>
+          )}
+          {isPengurus && (
+            <>
+              <Link href="/ipl/dashboard" className="btn btn-outline-info btn-sm">
+                <FiBarChart2 className="me-1" /> <span className="d-none d-sm-inline">Dashboard</span>
+              </Link>
+              <Link href="/ipl/monitoring" className="btn btn-outline-secondary btn-sm">
+                <FiSettings className="me-1" /> <span className="d-none d-sm-inline">Monitoring</span>
+              </Link>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Info for pending payments */}
-      {summary.totalPending > 0 && !isPengurus && (
-        <div className="alert alert-info d-flex align-items-center mb-4">
-          <FiLoader className="me-2" size={20} />
-          <div>
-            <strong>Dalam Proses!</strong> Pembayaran sebesar {formatCurrency(summary.totalPending)} sedang menunggu verifikasi pengurus.
-          </div>
-        </div>
-      )}
-
-      {/* Warning for tunggakan - hanya tampil jika ada tunggakan SETELAH dikurangi pending */}
-      {(summary.totalTunggakan - summary.totalPending) > 0 && !isPengurus && (
-        <div className="alert alert-warning d-flex align-items-center mb-4">
-          <FiAlertTriangle className="me-2" size={20} />
-          <div>
-            <strong>Perhatian!</strong> Anda memiliki tunggakan IPL sebesar {formatCurrency(summary.totalTunggakan - summary.totalPending)}.
-            Silakan segera melakukan pembayaran.
-          </div>
-        </div>
-      )}
-
-      {/* My Rumah Info (for non-pengurus) */}
-      {!isPengurus && myRumah && (
-        <div className="card mb-4">
-          <div className="card-body">
-            <div className="row">
-              <div className="col-md-6">
-                <small className="text-muted">Alamat Rumah</small>
-                <p className="mb-0 fw-bold">
-                  {myRumah.jalan?.nama_jalan} No. {myRumah.nomor_rumah}
-                </p>
+      {/* No Rumah State */}
+      {noRumah ? (
+        <div className="card">
+          <div className="card-body text-center py-5">
+            <FiHome size={48} className="text-muted mb-3" />
+            <h5 className="text-muted">Data rumah belum terhubung</h5>
+            <p className="text-muted small">
+              Akun Anda belum terhubung ke data rumah. Hubungi pengurus RW untuk menghubungkan akun Anda.
+            </p>
+            {isPengurus && (
+              <div className="mt-3">
+                <Link href="/ipl/monitoring" className="btn btn-primary">
+                  Buka Monitoring IPL
+                </Link>
               </div>
-              <div className="col-md-3">
-                <small className="text-muted">RT</small>
-                <p className="mb-0 fw-bold">{myRumah.rt?.nomor_rt}</p>
-              </div>
-              <div className="col-md-3">
-                <small className="text-muted">Blok</small>
-                <p className="mb-0 fw-bold">{myRumah.blok}</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
-      )}
-
-      {/* Summary Cards */}
-      <div className="row mb-4">
-        <div className="col-lg col-6 mb-3">
-          <div className="card text-center h-100 border-primary">
-            <div className="card-body py-3">
-              <h4 className="text-primary mb-0">{formatCurrency(summary.totalTagihan)}</h4>
-              <small className="text-muted">Total Tagihan</small>
-            </div>
-          </div>
-        </div>
-        <div className="col-lg col-6 mb-3">
-          <div className="card text-center h-100 border-success">
-            <div className="card-body py-3">
-              <h4 className="text-success mb-0">{formatCurrency(summary.totalTerbayar)}</h4>
-              <small className="text-muted">Sudah Dibayar</small>
-            </div>
-          </div>
-        </div>
-        {summary.totalPending > 0 && (
-          <div className="col-lg col-6 mb-3">
-            <div className="card text-center h-100 border-info">
+      ) : (
+        <>
+          {/* Rumah Info */}
+          {rumah && (
+            <div className="card mb-4 border-primary">
               <div className="card-body py-3">
-                <h4 className="text-info mb-0">{formatCurrency(summary.totalPending)}</h4>
-                <small className="text-muted">Proses Verifikasi</small>
+                <div className="d-flex align-items-center">
+                  <FiHome className="text-primary me-3 flex-shrink-0" size={24} />
+                  <div>
+                    <div className="fw-bold">{(rumah.jalan as { nama_jalan: string } | null)?.nama_jalan} No. {rumah.nomor_rumah}</div>
+                    <div className="text-muted small">RT {(rumah.rt as { nomor_rt: string } | null)?.nomor_rt} | Blok {rumah.blok} | Tarif: Rp{formatRupiah(rumah.tarif_default || 100000)}/bulan</div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-        <div className="col-lg col-6 mb-3">
-          <div className="card text-center h-100 border-danger">
-            <div className="card-body py-3">
-              <h4 className="text-danger mb-0">{formatCurrency(summary.totalTunggakan - summary.totalPending)}</h4>
-              <small className="text-muted">Tunggakan</small>
-            </div>
-          </div>
-        </div>
-        <div className="col-lg col-6 mb-3">
-          <div className="card text-center h-100">
-            <div className="card-body py-3">
-              <h4 className="mb-0">
-                <span className="text-success">{summary.lunas}</span>
-                {summary.menungguVerifikasi > 0 && (
-                  <>
-                    <span className="text-muted mx-1">/</span>
-                    <span className="text-info">{summary.menungguVerifikasi}</span>
-                  </>
-                )}
-                <span className="text-muted mx-1">/</span>
-                <span className="text-danger">{summary.belumLunas}</span>
-              </h4>
-              <small className="text-muted">
-                Lunas{summary.menungguVerifikasi > 0 && ' / Proses'} / Belum
-              </small>
-            </div>
-          </div>
-        </div>
-      </div>
+          )}
 
-      {/* Filters */}
-      <div className="card mb-4">
-        <div className="card-body">
-          <div className="row align-items-end">
-            <div className="col-md-2 mb-2">
-              <label className="form-label small">
-                <FiFilter className="me-1" />
-                Filter Tahun
-              </label>
+          {/* Year Summary Cards (grafik bar sederhana) */}
+          <div className="card mb-4">
+            <div className="card-header">
+              <h6 className="mb-0 fw-bold"><FiCalendar className="me-2" />Ringkasan Per Tahun</h6>
+            </div>
+            <div className="card-body">
+              {yearSummaries.length === 0 ? (
+                <p className="text-muted text-center mb-0">Belum ada data tagihan</p>
+              ) : (
+                <div className="row g-3">
+                  {yearSummaries.map(ys => {
+                    const totalBulan = ys.bulanLunas + ys.bulanBelum
+                    const pctLunas = totalBulan > 0 ? Math.round((ys.bulanLunas / totalBulan) * 100) : 0
+
+                    return (
+                      <div key={ys.tahun} className="col-12 col-md-6">
+                        <div
+                          className={`card h-100 ${selectedYear === ys.tahun ? 'border-primary' : ''}`}
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => setSelectedYear(ys.tahun)}
+                        >
+                          <div className="card-body py-3">
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+                              <span className="fw-bold">Tahun {ys.tahun}</span>
+                              <span className={`badge ${pctLunas >= 80 ? 'bg-success' : pctLunas >= 50 ? 'bg-warning text-dark' : 'bg-danger'}`}>
+                                {pctLunas}% Lunas
+                              </span>
+                            </div>
+                            {/* Progress bar */}
+                            <div className="progress mb-2" style={{ height: '20px' }}>
+                              <div
+                                className="progress-bar bg-success"
+                                style={{ width: `${pctLunas}%` }}
+                              >
+                                {ys.bulanLunas} bln
+                              </div>
+                              {ys.bulanBelum > 0 && (
+                                <div
+                                  className="progress-bar bg-danger"
+                                  style={{ width: `${100 - pctLunas}%` }}
+                                >
+                                  {ys.bulanBelum} bln
+                                </div>
+                              )}
+                            </div>
+                            <div className="d-flex justify-content-between small">
+                              <span className="text-success"><FiCheck size={12} className="me-1" />Terbayar: Rp{formatRupiah(ys.totalBayar)}</span>
+                              {ys.bulanBelum > 0 && (
+                                <span className="text-danger"><FiAlertTriangle size={12} className="me-1" />Tunggakan: {ys.bulanBelum} bulan</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Detail Tagihan per Bulan */}
+          <div className="card">
+            <div className="card-header d-flex justify-content-between align-items-center">
+              <h6 className="mb-0 fw-bold">Detail Tagihan {selectedYear}</h6>
               <select
-                className="form-select"
-                value={filterTahun}
-                onChange={(e) => setFilterTahun(e.target.value)}
+                className="form-select form-select-sm"
+                style={{ width: 'auto' }}
+                value={selectedYear}
+                onChange={e => setSelectedYear(parseInt(e.target.value))}
               >
-                <option value="">Semua Tahun</option>
-                {years.map(year => (
-                  <option key={year} value={year}>{year}</option>
+                {yearSummaries.map(ys => (
+                  <option key={ys.tahun} value={ys.tahun}>{ys.tahun}</option>
                 ))}
               </select>
             </div>
-            
-            {/* Filter RT - only show for RW level pengurus */}
-            {isPengurus && isRWLevel && rtList.length > 0 && (
-              <div className="col-md-2 mb-2">
-                <label className="form-label small">
-                  <FiMapPin className="me-1" />
-                  Filter RT
-                </label>
-                <select
-                  className="form-select"
-                  value={filterRT}
-                  onChange={(e) => setFilterRT(e.target.value)}
-                >
-                  <option value="">Semua RT</option>
-                  {rtList.map(rt => (
-                    <option key={rt.id} value={rt.id}>RT {rt.nomor_rt}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            
-            {/* Show RT info for RT level pengurus */}
-            {isPengurus && isRTLevel && userRtId && (
-              <div className="col-md-2 mb-2">
-                <label className="form-label small">
-                  <FiMapPin className="me-1" />
-                  Wilayah
-                </label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={`RT ${rtList.find(r => r.id === userRtId)?.nomor_rt || '-'}`}
-                  disabled
-                />
-              </div>
-            )}
-            
-            <div className="col-md-2 mb-2">
-              <label className="form-label small">Filter Status</label>
-              <select
-                className="form-select"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
-                <option value="">Semua Status</option>
-                <option value="lunas">Lunas</option>
-                <option value="belum_lunas">Belum Lunas</option>
-                <option value="sebagian">Sebagian</option>
-              </select>
-            </div>
-            <div className="col-md-2 mb-2">
-              <button 
-                className="btn btn-outline-secondary"
-                onClick={() => { 
-                  setFilterStatus(''); 
-                  setFilterTahun(new Date().getFullYear().toString()); 
-                  // Only reset RT filter if RW level
-                  if (isRWLevel) setFilterRT('');
-                }}
-              >
-                Reset Filter
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tagihan Table */}
-      <div className="card">
-        <div className="card-header bg-primary text-white">
-          <h6 className="m-0 fw-bold">
-            Daftar Tagihan ({filteredTagihan.length})
-          </h6>
-        </div>
-        <div className="card-body">
-          {error ? (
-            <div className="alert alert-danger">{error}</div>
-          ) : filteredTagihan.length === 0 ? (
-            <div className="text-center py-4 text-muted">
-              <div className="display-1 mb-3">Rp</div>
-              <p>Tidak ada data tagihan</p>
-            </div>
-          ) : (
-            <div className="table-responsive desktop-table">
-              <table className="table table-hover">
-                <thead>
-                  <tr>
-                    <th>Bulan</th>
-                    {isPengurus && <th>Alamat</th>}
-                    {isPengurus && <th>Kepala Keluarga</th>}
-                    <th className="text-end">Tagihan</th>
-                    <th className="text-end">Terbayar</th>
-                    <th className="text-center">Status</th>
-                    <th>Tgl Lunas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredTagihan.map((t) => (
-                    <tr key={t.id}>
-                      <td>
-                        <strong>{formatBulan(t.bulan)}</strong>
-                      </td>
-                      {isPengurus && (
-                        <td>
-                          <small>
-                            {t.rumah?.jalan?.nama_jalan} No. {t.rumah?.nomor_rumah}
-                            <br />
-                            <span className="text-muted">RT {t.rumah?.rt?.nomor_rt}</span>
-                          </small>
+            <div className="card-body p-0">
+              <div className="table-responsive">
+                <table className="table table-sm table-hover mb-0">
+                  <thead className="table-light">
+                    <tr>
+                      <th>Bulan</th>
+                      <th className="text-end">Tagihan</th>
+                      <th className="text-end">Terbayar</th>
+                      <th className="text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {yearTagihan.map(t => (
+                      <tr key={t.bulan}>
+                        <td className="fw-bold">{t.bulanLabel}</td>
+                        <td className="text-end">
+                          {t.jumlah_tagihan > 0 ? `Rp${formatRupiah(t.jumlah_tagihan)}` : !t.is_occupied ? <span className="text-muted small">Kosong</span> : <span className="text-muted">-</span>}
                         </td>
-                      )}
-                      {isPengurus && (
-                        <td>
-                          <small>{t.rumah?.kepala_keluarga?.nama_lengkap || '-'}</small>
+                        <td className="text-end">
+                          {t.hasPaid ? (
+                            <span className="text-success fw-bold">Rp{formatRupiah(t.jumlah_terbayar)}</span>
+                          ) : (
+                            <span className="text-muted">-</span>
+                          )}
                         </td>
-                      )}
-                      <td className="text-end">
-                        {formatCurrency(t.jumlah_tagihan)}
-                      </td>
-                      <td className="text-end">
-                        {formatCurrency(t.jumlah_terbayar)}
-                      </td>
+                        <td className="text-center">
+                          {!t.is_occupied ? (
+                            <span className="badge bg-secondary">Kosong</span>
+                          ) : t.hasPaid ? (
+                            <span className="badge bg-success"><FiCheck size={10} className="me-1" />Lunas</span>
+                          ) : (
+                            <span className="badge bg-danger"><FiAlertTriangle size={10} className="me-1" />Belum</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="table-light">
+                    <tr className="fw-bold">
+                      <td>Total</td>
+                      <td className="text-end">Rp{formatRupiah(currentYearSummary?.totalTagihan || 0)}</td>
+                      <td className="text-end text-success">Rp{formatRupiah(currentYearSummary?.totalBayar || 0)}</td>
                       <td className="text-center">
-                        {t.status === 'lunas' ? (
-                          <span className="badge bg-success">
-                            <FiCheck className="me-1" />
-                            Lunas
-                          </span>
-                        ) : t.status === 'sebagian' ? (
-                          <span className="badge bg-warning text-dark">
-                            <FiClock className="me-1" />
-                            Sebagian
-                          </span>
-                        ) : getPendingForBulan(t.bulan, t.rumah_id) ? (
-                          <span className="badge bg-info">
-                            <FiLoader className="me-1" />
-                            Proses Verifikasi
-                          </span>
-                        ) : (
-                          <span className="badge bg-danger">
-                            <FiClock className="me-1" />
-                            Belum Lunas
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        {t.tanggal_lunas ? (
-                          <small>{new Date(t.tanggal_lunas).toLocaleDateString('id-ID')}</small>
-                        ) : (
-                          <small className="text-muted">-</small>
-                        )}
+                        <span className="badge bg-info">{currentYearSummary?.bulanLunas || 0}/12</span>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </tfoot>
+                </table>
+              </div>
             </div>
-
-
-          )}
-
-            {/* Mobile Card View */}
-            <div className="mobile-card-list">
-              {filteredTagihan.map((t) => (
-                <div key={t.id} className="mobile-card-item">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div className="mc-title">{formatBulan(t.bulan)}</div>
-                    {t.status === 'lunas' ? (
-                      <span className="badge bg-success">Lunas</span>
-                    ) : t.status === 'sebagian' ? (
-                      <span className="badge bg-warning text-dark">Sebagian</span>
-                    ) : (
-                      <span className="badge bg-danger">Belum Lunas</span>
-                    )}
-                  </div>
-                  <div className="mc-row">
-                    <span className="mc-label">Tagihan</span>
-                    <span>{formatCurrency(t.jumlah_tagihan)}</span>
-                  </div>
-                  <div className="mc-row">
-                    <span className="mc-label">Terbayar</span>
-                    <span className="text-success">{formatCurrency(t.jumlah_terbayar)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-        </div>
-
-
-      </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
-
-   
