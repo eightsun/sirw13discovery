@@ -5,9 +5,10 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
 import { getRoleLabel } from '@/utils/helpers'
-import { 
+import {
   FiUsers, FiHome, FiUserCheck, FiTruck, FiBriefcase, FiAlertCircle,
-  FiCalendar, FiMapPin, FiChevronRight, FiAlertTriangle
+  FiCalendar, FiMapPin, FiChevronRight, FiAlertTriangle,
+  FiDollarSign, FiFileText, FiArrowRight
 } from 'react-icons/fi'
 
 interface Stats {
@@ -26,14 +27,8 @@ export default function DashboardPage() {
   const router = useRouter()
   const { userData, role, loading: userLoading, isPengurus, isVerified } = useUser()
   const [stats, setStats] = useState<Stats>({
-    totalWarga: 0,
-    totalKK: 0,
-    pendudukTetap: 0,
-    pendudukKontrak: 0,
-    rumahMilik: 0,
-    rumahSewa: 0,
-    totalKendaraan: 0,
-    totalUsaha: 0,
+    totalWarga: 0, totalKK: 0, pendudukTetap: 0, pendudukKontrak: 0,
+    rumahMilik: 0, rumahSewa: 0, totalKendaraan: 0, totalUsaha: 0,
     wargaPerRT: []
   })
   const [loading, setLoading] = useState(true)
@@ -41,10 +36,10 @@ export default function DashboardPage() {
   const [kegiatanPage, setKegiatanPage] = useState(1)
   const KEGIATAN_PER_PAGE = 5
   const [keluhanStats, setKeluhanStats] = useState<{ bulan: string; label: string; total: number; selesai: number }[]>([])
-  
+
   const supabase = createClient()
 
-  // Redirect SEMUA user yang belum punya data warga (termasuk pengurus)
+  // Redirect user yang belum punya data warga
   useEffect(() => {
     if (!userLoading && userData && !userData.warga_id) {
       router.push('/profil/lengkapi')
@@ -54,9 +49,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Use SECURITY DEFINER function to get stats for all users
         const { data, error } = await supabase.rpc('get_dashboard_stats')
-        
         if (error) throw error
         if (data) {
           setStats({
@@ -97,7 +90,6 @@ export default function DashboardPage() {
     fetchStats()
     fetchUpcomingKegiatan()
 
-    // Fetch keluhan monthly stats
     supabase.rpc('get_keluhan_monthly_stats', { months_back: 6 }).then(({ data }: { data: { bulan: string; label: string; total: number; selesai: number }[] | null }) => {
       if (data) setKeluhanStats(data)
     })
@@ -111,40 +103,57 @@ export default function DashboardPage() {
     return 'Selamat Malam'
   }
 
+  const statCards = [
+    { label: 'Total Warga', value: stats.totalWarga, icon: FiUsers, color: '#4e73df' },
+    { label: 'Kepala Keluarga', value: stats.totalKK, icon: FiUserCheck, color: '#1cc88a' },
+    { label: 'Penduduk Tetap', value: stats.pendudukTetap, icon: FiHome, color: '#36b9cc' },
+    { label: 'Penduduk Kontrak', value: stats.pendudukKontrak, icon: FiAlertCircle, color: '#f6c23e' },
+    { label: 'Rumah Milik', value: stats.rumahMilik, icon: FiHome, color: '#4e73df' },
+    { label: 'Rumah Sewa', value: stats.rumahSewa, icon: FiHome, color: '#36b9cc' },
+    { label: 'Kendaraan', value: stats.totalKendaraan, icon: FiTruck, color: '#1cc88a' },
+    { label: 'Usaha', value: stats.totalUsaha, icon: FiBriefcase, color: '#f6c23e' },
+  ]
+
+  const quickActions = [
+    { href: '/kegiatan', label: 'Kegiatan', icon: FiCalendar, color: '#4e73df' },
+    { href: '/warga', label: 'Daftar Warga', icon: FiUsers, color: '#1cc88a' },
+    { href: '/ipl', label: 'Tagihan IPL', icon: FiDollarSign, color: '#f6c23e' },
+    { href: '/keuangan/laporan', label: 'Laporan', icon: FiFileText, color: '#36b9cc' },
+  ]
+
   return (
     <div className="fade-in">
-      {/* Page Header */}
-      <div className="page-header mb-4">
-        <h1 className="page-title">Dashboard</h1>
-        <p className="text-muted">
-          {greeting()}, {userData?.nama_lengkap || 'Pengguna'}! 
-          {role && <span className="badge bg-primary ms-2">{getRoleLabel(role)}</span>}
-        </p>
+      {/* Greeting */}
+      <div className="d-flex flex-wrap justify-content-between align-items-start mb-4 gap-2">
+        <div>
+          <h1 className="page-title mb-1">{greeting()}, {userData?.nama_lengkap?.split(' ')[0] || 'Pengguna'}</h1>
+          <p className="mb-0" style={{ color: 'var(--text-body)', fontSize: '0.875rem' }}>
+            Selamat datang di Sistem Informasi RW 013 Permata Discovery
+            {role && <span className="badge ms-2" style={{ background: 'rgba(78,115,223,0.1)', color: '#4e73df', fontWeight: 700, fontSize: '0.7rem' }}>{getRoleLabel(role)}</span>}
+          </p>
+        </div>
       </div>
 
-      {/* Verification Pending Banner */}
+      {/* Verification Banner */}
       {!isPengurus && !isVerified && userData?.warga_id && (
-        <div className={`alert ${userData.rejection_reason ? 'alert-danger' : 'alert-warning'} mb-4`} role="alert">
+        <div className={`alert ${userData.rejection_reason ? 'alert-danger' : 'alert-warning'} mb-4`} style={{ borderRadius: '0.75rem', border: 'none' }}>
           <div className="d-flex align-items-start">
-            <FiAlertTriangle className="me-2 flex-shrink-0 mt-1" size={20} />
+            <FiAlertTriangle className="me-2 flex-shrink-0 mt-1" size={18} />
             <div className="flex-grow-1">
               {userData.rejection_reason ? (
                 <>
-                  <strong>Verifikasi ditolak.</strong> Silakan koreksi data Anda dan tunggu verifikasi ulang.
-                  <div className="mt-2 p-2 bg-white rounded border">
-                    <small className="text-muted">Alasan penolakan:</small>
-                    <div className="fw-bold">{userData.rejection_reason}</div>
+                  <strong>Verifikasi ditolak.</strong> Silakan koreksi data Anda.
+                  <div className="mt-2 p-2 bg-white rounded" style={{ border: '1px solid var(--card-border)' }}>
+                    <small className="text-muted">Alasan:</small>
+                    <div className="fw-bold" style={{ fontSize: '0.875rem' }}>{userData.rejection_reason}</div>
                   </div>
-                  <div className="mt-2">
-                    <a href={`/warga/edit/${userData.warga_id}`} className="btn btn-sm btn-outline-danger">
-                      Koreksi Data Sekarang
-                    </a>
-                  </div>
+                  <a href={`/warga/edit/${userData.warga_id}`} className="btn btn-sm btn-outline-danger mt-2">
+                    Koreksi Data
+                  </a>
                 </>
               ) : (
                 <>
-                  <strong>Akun belum diverifikasi.</strong> Pengurus RT/RW akan memverifikasi akun Anda.
-                  Beberapa fitur seperti data keuangan belum dapat diakses hingga akun diverifikasi.
+                  <strong>Akun belum diverifikasi.</strong> Beberapa fitur belum dapat diakses hingga pengurus RT/RW memverifikasi akun Anda.
                 </>
               )}
             </div>
@@ -152,228 +161,64 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Welcome Card */}
-      <div className="card border-start border-primary border-4 mb-4">
-        <div className="card-body">
-          <div className="d-flex align-items-center">
-            <div className="me-3">
-              <span style={{ fontSize: '2rem' }}>🏘️</span>
-            </div>
-            <div>
-              <h6 className="fw-bold text-primary mb-1">
-                Selamat Datang di SIRW13
-              </h6>
-              <p className="mb-0 text-muted">
-                Sistem Informasi RW 013 Permata Discovery - Desa Banjarsari, Kec. Manyar, Kab. Gresik.
-                Kelola data warga, kendaraan, usaha, dan administrasi dengan mudah.
-              </p>
+      {/* Stats Grid */}
+      <div className="row g-3 mb-4">
+        {statCards.map((s, i) => (
+          <div key={i} className="col-6 col-lg-3">
+            <div className="card stats-card h-100" style={{ borderLeftColor: s.color }}>
+              <div className="card-body py-3">
+                <div className="stats-label" style={{ color: s.color }}>{s.label}</div>
+                <div className="stats-value">{loading ? '—' : s.value}</div>
+                <div className="stats-icon"><s.icon /></div>
+              </div>
             </div>
           </div>
-        </div>
+        ))}
       </div>
 
-      {/* Stats Cards Row 1 */}
-      <div className="row mb-4">
-        <div className="col-xl-3 col-md-6 mb-4">
-          <div className="card stats-card primary h-100">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="stats-label text-primary">Total Warga</div>
-                  <div className="stats-value">{loading ? '...' : stats.totalWarga}</div>
-                </div>
-                <div className="stats-icon"><FiUsers /></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-xl-3 col-md-6 mb-4">
-          <div className="card stats-card success h-100">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="stats-label text-success">Kepala Keluarga</div>
-                  <div className="stats-value">{loading ? '...' : stats.totalKK}</div>
-                </div>
-                <div className="stats-icon"><FiUserCheck /></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-xl-3 col-md-6 mb-4">
-          <div className="card stats-card info h-100">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="stats-label text-info">Penduduk Tetap</div>
-                  <div className="stats-value">{loading ? '...' : stats.pendudukTetap}</div>
-                </div>
-                <div className="stats-icon"><FiHome /></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-xl-3 col-md-6 mb-4">
-          <div className="card stats-card warning h-100">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="stats-label text-warning">Penduduk Kontrak</div>
-                  <div className="stats-value">{loading ? '...' : stats.pendudukKontrak}</div>
-                </div>
-                <div className="stats-icon"><FiAlertCircle /></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Cards Row 2 */}
-      <div className="row mb-4">
-        <div className="col-xl-3 col-md-6 mb-4">
-          <div className="card h-100 border-start border-primary border-4">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="small text-muted text-uppercase fw-bold">Rumah Milik Sendiri</div>
-                  <div className="h4 mb-0">{loading ? '...' : stats.rumahMilik}</div>
-                </div>
-                <FiHome className="text-primary" size={24} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-xl-3 col-md-6 mb-4">
-          <div className="card h-100 border-start border-info border-4">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="small text-muted text-uppercase fw-bold">Rumah Sewa/Kontrak</div>
-                  <div className="h4 mb-0">{loading ? '...' : stats.rumahSewa}</div>
-                </div>
-                <FiHome className="text-info" size={24} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-xl-3 col-md-6 mb-4">
-          <div className="card h-100 border-start border-success border-4">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="small text-muted text-uppercase fw-bold">Total Kendaraan</div>
-                  <div className="h4 mb-0">{loading ? '...' : stats.totalKendaraan}</div>
-                </div>
-                <FiTruck className="text-success" size={24} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-xl-3 col-md-6 mb-4">
-          <div className="card h-100 border-start border-warning border-4">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="small text-muted text-uppercase fw-bold">Total Usaha</div>
-                  <div className="h4 mb-0">{loading ? '...' : stats.totalUsaha}</div>
-                </div>
-                <FiBriefcase className="text-warning" size={24} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Charts & Tables Row */}
-      <div className="row">
+      {/* Main Content Row */}
+      <div className="row g-3">
         {/* Warga per RT */}
-        <div className="col-lg-6 mb-4">
+        <div className="col-lg-7 mb-3">
           <div className="card h-100">
             <div className="card-header d-flex justify-content-between align-items-center">
-              <h6 className="m-0 fw-bold text-primary">Warga per RT</h6>
+              <h6 className="m-0 fw-bold">Distribusi Warga per RT</h6>
             </div>
             <div className="card-body">
               {loading ? (
                 <div className="text-center py-4">
-                  <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                  </div>
+                  <div className="spinner-border spinner-border-sm text-primary" role="status" />
                 </div>
               ) : stats.wargaPerRT.length > 0 ? (
-                <>
-                {/* Desktop Table */}
-                <div className="table-responsive desktop-table">
-                  <table className="table table-hover">
-                    <thead>
-                      <tr>
-                        <th>RT</th>
-                        <th>Jumlah Warga</th>
-                        <th>Persentase</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stats.wargaPerRT.map((item, index) => (
-                        <tr key={index}>
-                          <td>{item.rt}</td>
-                          <td>{item.jumlah}</td>
-                          <td>
-                            <div className="progress" style={{ height: '20px' }}>
-                              <div
-                                className="progress-bar bg-primary"
-                                role="progressbar"
-                                style={{
-                                  width: `${stats.totalWarga > 0 ? (item.jumlah / stats.totalWarga) * 100 : 0}%`
-                                }}
-                              >
-                                {stats.totalWarga > 0
-                                  ? `${((item.jumlah / stats.totalWarga) * 100).toFixed(1)}%`
-                                  : '0%'
-                                }
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Mobile Cards */}
-                <div className="mobile-card-list">
+                <div className="d-flex flex-column gap-3">
                   {stats.wargaPerRT.map((item, index) => {
-                    const persen = stats.totalWarga > 0 ? ((item.jumlah / stats.totalWarga) * 100).toFixed(1) : '0'
+                    const persen = stats.totalWarga > 0 ? ((item.jumlah / stats.totalWarga) * 100) : 0
                     return (
-                      <div key={index} className="card mb-2">
-                        <div className="card-body py-2 px-3">
-                          <div className="d-flex justify-content-between align-items-center mb-1">
-                            <span className="fw-bold">{item.rt}</span>
-                            <span className="badge bg-primary">{item.jumlah} warga</span>
-                          </div>
-                          <div className="progress" style={{ height: '16px' }}>
-                            <div
-                              className="progress-bar bg-primary"
-                              role="progressbar"
-                              style={{ width: `${persen}%` }}
-                            >
-                              {persen}%
-                            </div>
-                          </div>
+                      <div key={index}>
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                          <span className="fw-bold" style={{ fontSize: '0.8125rem', color: 'var(--text-heading)' }}>{item.rt}</span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-body)' }}>{item.jumlah} warga · {persen.toFixed(1)}%</span>
+                        </div>
+                        <div className="progress" style={{ height: '6px', borderRadius: '3px', background: '#edf0f7' }}>
+                          <div
+                            className="progress-bar"
+                            role="progressbar"
+                            style={{
+                              width: `${persen}%`,
+                              background: 'linear-gradient(90deg, #4e73df, #6d9aff)',
+                              borderRadius: '3px',
+                              transition: 'width 0.6s ease'
+                            }}
+                          />
                         </div>
                       </div>
                     )
                   })}
                 </div>
-                </>
               ) : (
-                <div className="text-center py-4 text-muted">
-                  <FiUsers size={48} className="mb-3" />
-                  <p>Belum ada data warga</p>
+                <div className="text-center py-4" style={{ color: 'var(--text-body)' }}>
+                  <FiUsers size={32} className="mb-2 opacity-25" />
+                  <p className="small mb-0">Belum ada data warga</p>
                 </div>
               )}
             </div>
@@ -381,93 +226,92 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="col-lg-6 mb-4">
+        <div className="col-lg-5 mb-3">
           <div className="card h-100">
             <div className="card-header">
-              <h6 className="m-0 fw-bold text-primary">Aksi Cepat</h6>
+              <h6 className="m-0 fw-bold">Aksi Cepat</h6>
             </div>
             <div className="card-body">
-              <div className="row g-3">
-                <div className="col-6">
-                  <Link href="/kegiatan" className="btn btn-primary w-100 py-3">
-                    <FiCalendar className="me-2" />
-                    Kegiatan
-                  </Link>
-                </div>
-                <div className="col-6">
-                  <Link href="/warga" className="btn btn-outline-primary w-100 py-3">
-                    <FiUsers className="me-2" />
-                    Daftar Warga
-                  </Link>
-                </div>
-                <div className="col-6">
-                  <Link href="/ipl" className="btn btn-outline-success w-100 py-3">
-                    💰 Tagihan IPL
-                  </Link>
-                </div>
-                <div className="col-6">
-                  <Link href="/keuangan/laporan" className="btn btn-outline-info w-100 py-3">
-                    📊 Laporan Keuangan
-                  </Link>
-                </div>
+              <div className="row g-2">
+                {quickActions.map((a, i) => (
+                  <div key={i} className="col-6">
+                    <Link
+                      href={a.href}
+                      className="d-flex flex-column align-items-center justify-content-center text-decoration-none p-3 rounded-3"
+                      style={{
+                        border: '1px solid var(--card-border)',
+                        transition: 'all 0.2s ease',
+                        color: 'var(--text-heading)',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = a.color; e.currentTarget.style.boxShadow = `0 2px 8px ${a.color}15` }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--card-border)'; e.currentTarget.style.boxShadow = 'none' }}
+                    >
+                      <div className="mb-2 d-flex align-items-center justify-content-center rounded-3" style={{ width: '40px', height: '40px', background: `${a.color}10`, color: a.color }}>
+                        <a.icon size={18} />
+                      </div>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{a.label}</span>
+                    </Link>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
       </div>
-      {/* Keluhan Stats Chart */}
+
+      {/* Keluhan Stats */}
       {keluhanStats.length > 0 && (() => {
         const maxVal = Math.max(...keluhanStats.map((s: { total: number }) => s.total), 1)
         const thisMonth = keluhanStats[keluhanStats.length - 1]
         return (
-          <div className="row mb-4">
-            <div className="col-lg-8 mb-4">
+          <div className="row g-3 mb-3">
+            <div className="col-lg-8 mb-3">
               <div className="card h-100">
                 <div className="card-header d-flex justify-content-between align-items-center">
-                  <h6 className="m-0 fw-bold text-primary"><FiAlertTriangle className="me-2" />Laporan Keluhan (6 Bulan)</h6>
-                  <Link href="/keluhan" className="btn btn-sm btn-outline-danger">Lihat Semua</Link>
+                  <h6 className="m-0 fw-bold"><FiAlertTriangle className="me-2" size={14} />Laporan Keluhan (6 Bulan)</h6>
+                  <Link href="/keluhan" className="btn btn-sm btn-outline-danger" style={{ fontSize: '0.75rem', borderRadius: '6px' }}>Lihat Semua</Link>
                 </div>
                 <div className="card-body">
-                  <div className="d-flex align-items-end gap-1" style={{ height: '160px' }}>
+                  <div className="d-flex align-items-end gap-2" style={{ height: '140px' }}>
                     {keluhanStats.map((s: { bulan: string; label: string; total: number; selesai: number }) => (
                       <div key={s.bulan} className="flex-fill text-center">
-                        <div className="d-flex flex-column align-items-center" style={{ height: '130px', justifyContent: 'flex-end' }}>
+                        <div className="d-flex flex-column align-items-center" style={{ height: '110px', justifyContent: 'flex-end' }}>
                           <div className="d-flex gap-1 align-items-end" style={{ height: '100%' }}>
-                            <div style={{ width: 14, height: `${Math.max((s.total / maxVal) * 100, 4)}%`, backgroundColor: '#dc3545', borderRadius: '3px 3px 0 0', opacity: 0.7 }} title={`Total: ${s.total}`} />
-                            <div style={{ width: 14, height: `${Math.max((s.selesai / maxVal) * 100, 4)}%`, backgroundColor: '#28a745', borderRadius: '3px 3px 0 0', opacity: 0.7 }} title={`Selesai: ${s.selesai}`} />
+                            <div style={{ width: 16, height: `${Math.max((s.total / maxVal) * 100, 6)}%`, background: 'linear-gradient(180deg, #e74a3b, #fc8181)', borderRadius: '4px 4px 0 0' }} title={`Total: ${s.total}`} />
+                            <div style={{ width: 16, height: `${Math.max((s.selesai / maxVal) * 100, 6)}%`, background: 'linear-gradient(180deg, #1cc88a, #6ee7b7)', borderRadius: '4px 4px 0 0' }} title={`Selesai: ${s.selesai}`} />
                           </div>
                         </div>
-                        <div className="small text-muted mt-1" style={{ fontSize: '0.65rem' }}>{s.label}</div>
+                        <div className="mt-1" style={{ fontSize: '0.625rem', color: '#94a3b8' }}>{s.label}</div>
                       </div>
                     ))}
                   </div>
-                  <div className="d-flex gap-3 mt-3 small">
-                    <span><span style={{ display: 'inline-block', width: 12, height: 12, backgroundColor: '#dc3545', borderRadius: 2, opacity: 0.7 }} /> Total Laporan</span>
-                    <span><span style={{ display: 'inline-block', width: 12, height: 12, backgroundColor: '#28a745', borderRadius: 2, opacity: 0.7 }} /> Diselesaikan</span>
+                  <div className="d-flex gap-3 mt-3" style={{ fontSize: '0.75rem' }}>
+                    <span className="d-flex align-items-center gap-1"><span style={{ display: 'inline-block', width: 10, height: 10, background: '#e74a3b', borderRadius: 3 }} /> Total</span>
+                    <span className="d-flex align-items-center gap-1"><span style={{ display: 'inline-block', width: 10, height: 10, background: '#1cc88a', borderRadius: 3 }} /> Selesai</span>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="col-lg-4 mb-4">
+            <div className="col-lg-4 mb-3">
               <div className="card h-100">
-                <div className="card-header"><h6 className="m-0 fw-bold text-primary">Bulan Ini</h6></div>
-                <div className="card-body d-flex flex-column justify-content-center">
+                <div className="card-header"><h6 className="m-0 fw-bold">Bulan Ini</h6></div>
+                <div className="card-body d-flex flex-column justify-content-center align-items-center">
                   {thisMonth && (
                     <>
                       <div className="text-center mb-3">
-                        <div className="display-4 fw-bold text-danger">{thisMonth.total}</div>
-                        <div className="text-muted small">Laporan Masuk</div>
+                        <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#e74a3b', lineHeight: 1 }}>{thisMonth.total}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Laporan Masuk</div>
                       </div>
                       <div className="text-center">
-                        <div className="h3 fw-bold text-success">{thisMonth.selesai}</div>
-                        <div className="text-muted small">Diselesaikan</div>
+                        <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1cc88a', lineHeight: 1 }}>{thisMonth.selesai}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Diselesaikan</div>
                       </div>
                       {thisMonth.total > 0 && (
-                        <div className="mt-3">
-                          <div className="progress" style={{ height: '8px' }}>
-                            <div className="progress-bar bg-success" style={{ width: `${(thisMonth.selesai / thisMonth.total) * 100}%` }} />
+                        <div className="w-100 mt-3">
+                          <div className="progress" style={{ height: '6px', borderRadius: '3px', background: '#edf0f7' }}>
+                            <div className="progress-bar" style={{ width: `${(thisMonth.selesai / thisMonth.total) * 100}%`, background: 'linear-gradient(90deg, #1cc88a, #6ee7b7)', borderRadius: '3px' }} />
                           </div>
-                          <div className="text-center small text-muted mt-1">{((thisMonth.selesai / thisMonth.total) * 100).toFixed(0)}% selesai</div>
+                          <div className="text-center mt-1" style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{((thisMonth.selesai / thisMonth.total) * 100).toFixed(0)}% selesai</div>
                         </div>
                       )}
                     </>
@@ -481,93 +325,90 @@ export default function DashboardPage() {
 
       {/* Kegiatan Akan Datang */}
       {upcomingKegiatan.length > 0 && (
-        <div className="row mt-2">
-          <div className="col-12">
-            <div className="card">
-              <div className="card-header d-flex justify-content-between align-items-center">
-                <h6 className="m-0 fw-bold text-primary">
-                  <FiCalendar className="me-2" />
-                  Kegiatan Akan Datang
-                </h6>
-                <Link href="/kegiatan" className="btn btn-sm btn-outline-primary">
-                  Lihat Semua <FiChevronRight className="ms-1" />
-                </Link>
-              </div>
-              <div className="card-body p-0">
-                <div className="table-responsive desktop-table">
-                  <table className="table table-hover mb-0">
-                    <thead>
-                      <tr>
-                        <th style={{width:'40px'}}>No</th>
-                        <th>Kegiatan</th>
-                        <th>Tanggal</th>
-                        <th style={{width:'80px'}}></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {upcomingKegiatan
-                        .slice((kegiatanPage - 1) * KEGIATAN_PER_PAGE, kegiatanPage * KEGIATAN_PER_PAGE)
-                        .map((k, i) => (
-                        <tr key={k.id}>
-                          <td className="text-muted">{(kegiatanPage - 1) * KEGIATAN_PER_PAGE + i + 1}</td>
-                          <td>
-                            <div className="fw-bold">{k.nama_kegiatan}</div>
-                            <small className="text-muted"><FiMapPin size={11} className="me-1" />{k.lokasi}</small>
-                          </td>
-                          <td>
-                            <div className="small">{new Date(k.tanggal_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-                            <small className="text-muted">{new Date(k.tanggal_mulai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</small>
-                          </td>
-                          <td>
-                            <Link href={`/kegiatan/${k.id}`} className="btn btn-sm btn-outline-primary">Lihat</Link>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Mobile Card View */}
-                <div className="mobile-card-list">
+        <div className="card">
+          <div className="card-header d-flex justify-content-between align-items-center">
+            <h6 className="m-0 fw-bold">
+              <FiCalendar className="me-2" size={14} />
+              Kegiatan Akan Datang
+            </h6>
+            <Link href="/kegiatan" className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.75rem', borderRadius: '6px' }}>
+              Lihat Semua <FiArrowRight className="ms-1" size={12} />
+            </Link>
+          </div>
+          <div className="card-body p-0">
+            {/* Desktop */}
+            <div className="table-responsive desktop-table">
+              <table className="table table-hover mb-0">
+                <thead>
+                  <tr>
+                    <th style={{ width: '40px' }}>No</th>
+                    <th>Kegiatan</th>
+                    <th>Tanggal</th>
+                    <th style={{ width: '80px' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
                   {upcomingKegiatan
                     .slice((kegiatanPage - 1) * KEGIATAN_PER_PAGE, kegiatanPage * KEGIATAN_PER_PAGE)
                     .map((k, i) => (
-                    <Link key={k.id} href={`/kegiatan/${k.id}`} className="text-decoration-none">
-                      <div className="mobile-card-item">
-                        <div className="d-flex justify-content-between align-items-start">
-                          <div style={{flex:1, minWidth:0}}>
-                            <div className="mc-title">{k.nama_kegiatan}</div>
-                            <small className="text-muted">
-                              <FiCalendar size={11} className="me-1" />
-                              {new Date(k.tanggal_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                              {' · '}
-                              <FiMapPin size={11} className="me-1" />
-                              {k.lokasi}
-                            </small>
-                          </div>
-                          <FiChevronRight className="text-muted ms-2 flex-shrink-0" />
-                        </div>
-                      </div>
-                    </Link>
+                    <tr key={k.id}>
+                      <td className="text-muted">{(kegiatanPage - 1) * KEGIATAN_PER_PAGE + i + 1}</td>
+                      <td>
+                        <div className="fw-bold" style={{ fontSize: '0.85rem', color: 'var(--text-heading)' }}>{k.nama_kegiatan}</div>
+                        <small style={{ color: '#94a3b8' }}><FiMapPin size={11} className="me-1" />{k.lokasi}</small>
+                      </td>
+                      <td>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-heading)' }}>{new Date(k.tanggal_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                        <small style={{ color: '#94a3b8' }}>{new Date(k.tanggal_mulai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</small>
+                      </td>
+                      <td>
+                        <Link href={`/kegiatan/${k.id}`} className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.75rem', borderRadius: '6px' }}>Lihat</Link>
+                      </td>
+                    </tr>
                   ))}
-                </div>
-
-                {/* Pagination */}
-                {upcomingKegiatan.length > KEGIATAN_PER_PAGE && (
-                  <div className="d-flex justify-content-center py-2 border-top">
-                    <nav>
-                      <ul className="pagination pagination-sm mb-0">
-                        {Array.from({ length: Math.ceil(upcomingKegiatan.length / KEGIATAN_PER_PAGE) }, (_, i) => (
-                          <li key={i} className={`page-item ${kegiatanPage === i + 1 ? 'active' : ''}`}>
-                            <button className="page-link" onClick={() => setKegiatanPage(i + 1)}>{i + 1}</button>
-                          </li>
-                        ))}
-                      </ul>
-                    </nav>
-                  </div>
-                )}
-              </div>
+                </tbody>
+              </table>
             </div>
+
+            {/* Mobile */}
+            <div className="mobile-card-list">
+              {upcomingKegiatan
+                .slice((kegiatanPage - 1) * KEGIATAN_PER_PAGE, kegiatanPage * KEGIATAN_PER_PAGE)
+                .map((k) => (
+                <Link key={k.id} href={`/kegiatan/${k.id}`} className="text-decoration-none">
+                  <div className="mobile-card-item">
+                    <div className="d-flex justify-content-between align-items-start">
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="mc-title">{k.nama_kegiatan}</div>
+                        <small className="text-muted">
+                          <FiCalendar size={11} className="me-1" />
+                          {new Date(k.tanggal_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                          {' · '}
+                          <FiMapPin size={11} className="me-1" />
+                          {k.lokasi}
+                        </small>
+                      </div>
+                      <FiChevronRight className="text-muted ms-2 flex-shrink-0" />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {upcomingKegiatan.length > KEGIATAN_PER_PAGE && (
+              <div className="d-flex justify-content-center py-2 border-top">
+                <nav>
+                  <ul className="pagination pagination-sm mb-0">
+                    {Array.from({ length: Math.ceil(upcomingKegiatan.length / KEGIATAN_PER_PAGE) }, (_, i) => (
+                      <li key={i} className={`page-item ${kegiatanPage === i + 1 ? 'active' : ''}`}>
+                        <button className="page-link" onClick={() => setKegiatanPage(i + 1)}>{i + 1}</button>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              </div>
+            )}
           </div>
         </div>
       )}
