@@ -68,23 +68,21 @@ export function useUser(): UseUserReturn {
       // ============================================
       // AUTO-LINK: Jika user belum punya warga_id,
       // cek apakah ada data warga dengan email sama
+      // Uses exact match (eq) instead of ilike for security
       // ============================================
-      if (!profile.warga_id && authUser.email) {
-        console.log('Checking for matching warga with email:', authUser.email)
-        
-        // Cari warga dengan email yang sama (tanpa filter is_active dulu)
+      if (!profile.warga_id && authUser.email && authUser.email_confirmed_at) {
+        // Only auto-link if email is verified
+        const normalizedEmail = authUser.email.toLowerCase().trim()
+
         const { data: matchingWarga, error: wargaError } = await supabase
           .from('warga')
           .select('id, nama_lengkap, email')
-          .ilike('email', authUser.email)
+          .eq('email', normalizedEmail)
           .limit(1)
-
-        console.log('Warga query result:', matchingWarga, 'Error:', wargaError)
 
         if (matchingWarga && matchingWarga.length > 0 && !wargaError) {
           const warga = matchingWarga[0]
-          console.log('Found matching warga:', warga.id, warga.nama_lengkap)
-          
+
           // Update users.warga_id
           const { error: updateError } = await supabase
             .from('users')
@@ -98,16 +96,11 @@ export function useUser(): UseUserReturn {
               .select('*')
               .eq('id', authUser.id)
               .single()
-            
+
             if (updatedProfile) {
               profile = updatedProfile
-              console.log('Auto-linked user with warga_id:', updatedProfile.warga_id)
             }
-          } else {
-            console.error('Error updating warga_id:', updateError)
           }
-        } else {
-          console.log('No matching warga found for email:', authUser.email)
         }
       }
 

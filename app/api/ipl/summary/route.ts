@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireAuth, isAuthError } from '@/lib/auth/apiAuth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// GET: Summary IPL per RT per tahun
+// GET: Summary IPL per RT per tahun (authenticated users only)
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAuth()
+    if (isAuthError(auth)) return auth
+
     const { searchParams } = new URL(request.url)
     const tahun = searchParams.get('tahun') // optional, if not provided return all years
 
@@ -132,7 +136,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: summaryData, grand: grandTotal })
   } catch (error: unknown) {
-    console.error('IPL summary error:', error)
-    return NextResponse.json({ error: 'Gagal mengambil data' }, { status: 500 })
+    const msg = error instanceof Error ? error.message : 'Gagal mengambil data'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

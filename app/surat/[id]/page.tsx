@@ -125,11 +125,51 @@ export default function SuratDetailPage() {
 
   const renderIsiSurat = (text: string) => {
     return text.split('\n').map((line: string, i: number) => {
-      let html = line
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      html = html.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary">$1</a>')
-      return <div key={i} dangerouslySetInnerHTML={{ __html: html || '&nbsp;' }} />
+      if (!line.trim()) return <div key={i}>&nbsp;</div>
+
+      // Parse line into segments: bold text and links become React elements
+      const segments: React.ReactNode[] = []
+      // Split by bold markers and URLs
+      const pattern = /(\*\*.+?\*\*|https?:\/\/[^\s]+)/g
+      let lastIndex = 0
+      let match: RegExpExecArray | null
+
+      while ((match = pattern.exec(line)) !== null) {
+        // Add text before match
+        if (match.index > lastIndex) {
+          segments.push(line.slice(lastIndex, match.index))
+        }
+
+        const token = match[0]
+        if (token.startsWith('**') && token.endsWith('**')) {
+          // Bold text
+          segments.push(<strong key={`${i}-${match.index}`}>{token.slice(2, -2)}</strong>)
+        } else if (token.startsWith('http')) {
+          // Validate URL before rendering as link
+          try {
+            const url = new URL(token)
+            if (url.protocol === 'http:' || url.protocol === 'https:') {
+              segments.push(
+                <a key={`${i}-${match.index}`} href={url.href} target="_blank" rel="noopener noreferrer" className="text-primary">
+                  {token}
+                </a>
+              )
+            } else {
+              segments.push(token)
+            }
+          } catch {
+            segments.push(token)
+          }
+        }
+        lastIndex = match.index + token.length
+      }
+
+      // Add remaining text
+      if (lastIndex < line.length) {
+        segments.push(line.slice(lastIndex))
+      }
+
+      return <div key={i}>{segments}</div>
     })
   }
 

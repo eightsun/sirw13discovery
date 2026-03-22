@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireAuth, requireRole, isAuthError, PENGURUS_RW_ROLES } from '@/lib/auth/apiAuth'
+import { bayarSchema, toggleOccupiedSchema, hapusBayarSchema, generateSchema, safeParseBody } from '@/lib/validation'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const PENGURUS_RW_ROLES = ['ketua_rw', 'wakil_ketua_rw', 'sekretaris_rw', 'bendahara_rw']
-
-// GET: Ambil data monitoring per tahun
+// GET: Ambil data monitoring per tahun (authenticated users only)
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAuth()
+    if (isAuthError(auth)) return auth
+
     const { searchParams } = new URL(request.url)
     const tahun = searchParams.get('tahun') || new Date().getFullYear().toString()
     const rt = searchParams.get('rt') // optional filter
@@ -93,33 +95,29 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error: unknown) {
-    console.error('Get tagihan monitoring error:', error)
-    return NextResponse.json({ error: 'Gagal mengambil data' }, { status: 500 })
+    const msg = error instanceof Error ? error.message : 'Gagal mengambil data'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
 
 // POST: Input pembayaran manual / update tagihan
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await requireRole(PENGURUS_RW_ROLES)
+    if (isAuthError(auth)) return auth
 
     const adminClient = createAdminClient()
-    const { data: userData } = await adminClient.from('users').select('role').eq('id', user.id).single()
-    if (!userData || !PENGURUS_RW_ROLES.includes(userData.role)) {
-      return NextResponse.json({ error: 'Tidak memiliki akses' }, { status: 403 })
-    }
 
     const body = await request.json()
     const { action } = body
 
     if (action === 'bayar') {
-      // Input pembayaran manual
-      const { rumah_id, bulan, jumlah_dibayar, jumlah_tagihan, metode, catatan } = body
+      const parsed = safeParseBody(bayarSchema, body)
+      if (!parsed.success) return NextResponse.json({ error: parsed.error }, { status: 400 })
+
+      const { rumah_id, bulan, jumlah_dibayar: nominal, jumlah_tagihan, metode, catatan } = parsed.data
       const bulanDate = `${bulan}-01`
-      const nominal = parseInt(jumlah_dibayar) || 0
-      const tagihanNominal = parseInt(jumlah_tagihan) || nominal
+      const tagihanNominal = jumlah_tagihan ?? nominal
       const status = nominal >= tagihanNominal ? 'lunas' : nominal > 0 ? 'sebagian' : 'belum_lunas'
 
       // Check if tagihan exists
@@ -131,7 +129,6 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (existing) {
-        // Update existing
         const { error: updateErr } = await adminClient
           .from('tagihan_ipl')
           .update({
@@ -143,12 +140,8 @@ export async function POST(request: NextRequest) {
             keterangan: catatan || null,
           })
           .eq('id', existing.id)
-        if (updateErr) {
-          console.error('Update tagihan error:', updateErr)
-          throw updateErr
-        }
+        if (updateErr) throw updateErr
       } else {
-        // Insert new
         const { error: insertErr } = await adminClient
           .from('tagihan_ipl')
           .insert({
@@ -161,37 +154,34 @@ export async function POST(request: NextRequest) {
             tanggal_lunas: status === 'lunas' ? new Date().toISOString() : null,
             keterangan: catatan || null,
           })
-        if (insertErr) {
-          console.error('Insert tagihan error:', insertErr)
-          throw insertErr
-        }
+        if (insertErr) throw insertErr
       }
 
       // Insert pembayaran record
       if (nominal > 0) {
-        const { error: bayarErr } = await adminClient.from('pembayaran_ipl').insert({
+        await adminClient.from('pembayaran_ipl').insert({
           rumah_id,
           jumlah_dibayar: nominal,
           tanggal_bayar: new Date().toISOString().split('T')[0],
           metode: metode || 'tunai',
           bulan_dibayar: [bulanDate],
           status: 'verified',
-          verified_by: user.id,
+          verified_by: auth.user.id,
           verified_at: new Date().toISOString(),
-          dibayar_oleh: user.id,
+          dibayar_oleh: auth.user.id,
           catatan: catatan || null,
         })
-        if (bayarErr) console.error('Insert pembayaran error:', bayarErr)
       }
 
       return NextResponse.json({ success: true })
 
     } else if (action === 'toggle_occupied') {
-      // Toggle occupied status per bulan
-      const { rumah_id, bulan, is_occupied, jumlah_tagihan } = body
+      const parsed = safeParseBody(toggleOccupiedSchema, body)
+      if (!parsed.success) return NextResponse.json({ error: parsed.error }, { status: 400 })
+
+      const { rumah_id, bulan, is_occupied, jumlah_tagihan } = parsed.data
       const bulanDate = `${bulan}-01`
 
-      // Check if tagihan exists
       const { data: existing } = await adminClient
         .from('tagihan_ipl')
         .select('id')
@@ -222,8 +212,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true })
 
     } else if (action === 'hapus_bayar') {
-      // Hapus pembayaran (reset ke belum lunas)
-      const { rumah_id, bulan } = body
+      const parsed = safeParseBody(hapusBayarSchema, body)
+      if (!parsed.success) return NextResponse.json({ error: parsed.error }, { status: 400 })
+
+      const { rumah_id, bulan } = parsed.data
       const bulanDate = `${bulan}-01`
 
       const { error } = await adminClient
@@ -240,15 +232,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true })
 
     } else if (action === 'generate') {
-      // Generate tagihan untuk semua rumah di bulan tertentu
-      const { bulan, default_tarif } = body
+      const parsed = safeParseBody(generateSchema, body)
+      if (!parsed.success) return NextResponse.json({ error: parsed.error }, { status: 400 })
+
+      const { bulan, default_tarif } = parsed.data
       const bulanDate = `${bulan}-01`
 
-      // Get all rumah
       const { data: rumahList } = await adminClient.from('rumah').select('id')
       if (!rumahList) return NextResponse.json({ error: 'Tidak ada data rumah' }, { status: 400 })
 
-      // Check existing
       const { data: existing } = await adminClient
         .from('tagihan_ipl')
         .select('rumah_id')
@@ -281,7 +273,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Action tidak valid' }, { status: 400 })
 
   } catch (error: unknown) {
-    console.error('Tagihan API error:', JSON.stringify(error, null, 2))
     const msg = error instanceof Error ? error.message : (typeof error === 'object' && error !== null && 'message' in error) ? String((error as Record<string, unknown>).message) : 'Gagal memproses'
     return NextResponse.json({ error: msg }, { status: 500 })
   }
