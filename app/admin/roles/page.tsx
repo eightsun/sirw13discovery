@@ -5,8 +5,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
+import { useToast } from '@/components/ToastProvider'
+import { useConfirm } from '@/components/ConfirmDialog'
+import AppModal from '@/components/AppModal'
+import SectionCard from '@/components/SectionCard'
 import { UserRole } from '@/types'
-import { 
+import {
   FiArrowLeft,
   FiUsers,
   FiUserCheck,
@@ -82,6 +86,8 @@ export default function ManageRolesPage() {
   const router = useRouter()
   const { userData, role: currentUserRole } = useUser()
   const supabase = createClient()
+  const toast = useToast()
+  const confirm = useConfirm()
   
   const [loading, setLoading] = useState(true)
   const [pengurus, setPengurus] = useState<UserWithWarga[]>([])
@@ -243,24 +249,29 @@ export default function ManageRolesPage() {
 
       // Check if update actually happened
       if (!data || data.length === 0) {
-        alert('Gagal update role. Jalankan SQL policy di Supabase untuk mengizinkan Ketua RW update role.')
+        toast.error('Gagal update role. Jalankan SQL policy di Supabase untuk mengizinkan Ketua RW update role.')
         return
       }
 
       setEditingId(null)
       fetchData()
+      toast.success('Jabatan berhasil diubah')
     } catch (error) {
       console.error('Error updating role:', error)
-      alert('Gagal mengubah role')
+      toast.error('Gagal mengubah role')
     } finally {
       setSaving(false)
     }
   }
 
   const handleRemoveRole = async (userId: string) => {
-    if (!confirm('Yakin ingin menghapus jabatan user ini? User akan menjadi warga biasa.')) {
-      return
-    }
+    const confirmed = await confirm({
+      title: 'Hapus Jabatan',
+      message: 'Yakin ingin menghapus jabatan user ini? User akan menjadi warga biasa.',
+      confirmLabel: 'Ya, Hapus',
+      variant: 'danger',
+    })
+    if (!confirmed) return
 
     try {
       setSaving(true)
@@ -275,14 +286,15 @@ export default function ManageRolesPage() {
 
       // Check if update actually happened
       if (!data || data.length === 0) {
-        alert('Gagal menghapus jabatan. Jalankan SQL policy di Supabase.')
+        toast.error('Gagal menghapus jabatan. Jalankan SQL policy di Supabase.')
         return
       }
 
       fetchData()
+      toast.success('Jabatan berhasil dihapus')
     } catch (error) {
       console.error('Error removing role:', error)
-      alert('Gagal menghapus jabatan')
+      toast.error('Gagal menghapus jabatan')
     } finally {
       setSaving(false)
     }
@@ -290,7 +302,7 @@ export default function ManageRolesPage() {
 
   const handleAddPengurus = async () => {
     if (!selectedWargaId || !newRole) {
-      alert('Pilih warga dan role')
+      toast.warning('Pilih warga dan role terlebih dahulu')
       return
     }
 
@@ -301,7 +313,7 @@ export default function ManageRolesPage() {
       const selectedWarga = wargaList.find(w => w.id === selectedWargaId)
       
       if (!selectedWarga?.user_id) {
-        alert('Warga ini belum memiliki akun. Minta warga untuk mendaftar terlebih dahulu.')
+        toast.warning('Warga ini belum memiliki akun. Minta warga untuk mendaftar terlebih dahulu.')
         return
       }
 
@@ -323,7 +335,7 @@ export default function ManageRolesPage() {
 
       // Check if update actually happened (RLS might silently fail)
       if (!data || data.length === 0) {
-        alert('Gagal update role. Pastikan Anda memiliki akses untuk mengubah role user.\n\nJalankan SQL policy di Supabase untuk mengizinkan Ketua RW update role.')
+        toast.error('Gagal update role. Pastikan Anda memiliki akses untuk mengubah role user.')
         return
       }
 
@@ -333,10 +345,10 @@ export default function ManageRolesPage() {
       setSearchWarga('')
       setWargaList([])
       fetchData()
-      alert(`Pengurus berhasil ditambahkan!\n${selectedWarga.nama_lengkap} sekarang menjadi ${getRoleLabel(newRole)}`)
+      toast.success(`${selectedWarga.nama_lengkap} berhasil ditambahkan sebagai ${getRoleLabel(newRole)}`)
     } catch (error) {
       console.error('Error adding pengurus:', error)
-      alert('Gagal menambah pengurus. Cek console untuk detail error.')
+      toast.error('Gagal menambah pengurus')
     } finally {
       setSaving(false)
     }
@@ -461,14 +473,13 @@ export default function ManageRolesPage() {
       ) : (
         <>
           {/* Pengurus RW */}
-          <div className="card mb-4">
-            <div className="card-header bg-primary text-white">
-              <h6 className="mb-0 fw-bold">
-                <FiShield className="me-2" />
-                Pengurus Tingkat RW ({rwLevel.length})
-              </h6>
-            </div>
-            <div className="card-body p-0">
+          <SectionCard
+            title={`Pengurus Tingkat RW (${rwLevel.length})`}
+            icon={<FiShield size={16} />}
+            accent="primary"
+            className="mb-4"
+            noPadding
+          >
               {rwLevel.length === 0 ? (
                 <p className="text-muted text-center py-4">Tidak ada pengurus RW</p>
               ) : (
@@ -589,20 +600,16 @@ export default function ManageRolesPage() {
                     </div>
                   ))}
                 </div>
-            </div>
-
-
-</div>
+          </SectionCard>
 
           {/* Pengurus RT */}
-          <div className="card mb-4">
-            <div className="card-header bg-warning">
-              <h6 className="mb-0 fw-bold text-dark">
-                <FiUsers className="me-2" />
-                Pengurus Tingkat RT ({rtLevel.length})
-              </h6>
-            </div>
-            <div className="card-body p-0">
+          <SectionCard
+            title={`Pengurus Tingkat RT (${rtLevel.length})`}
+            icon={<FiUsers size={16} />}
+            accent="warning"
+            className="mb-4"
+            noPadding
+          >
               {rtLevel.length === 0 ? (
                 <p className="text-muted text-center py-4">Tidak ada pengurus RT</p>
               ) : (
@@ -714,15 +721,10 @@ export default function ManageRolesPage() {
                     </div>
                   ))}
                 </div>
-            </div>
-          </div>
+          </SectionCard>
 
           {/* Role Legend */}
-          <div className="card">
-            <div className="card-header">
-              <h6 className="mb-0 fw-bold">Keterangan Jabatan</h6>
-            </div>
-            <div className="card-body">
+          <SectionCard title="Keterangan Jabatan" icon={<FiInfo size={16} />}>
               <div className="row g-3">
                 {ASSIGNABLE_ROLES.filter(r => r.value !== 'warga').map(role => (
                   <div key={role.value} className="col-md-6 col-lg-4">
@@ -735,29 +737,43 @@ export default function ManageRolesPage() {
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
+          </SectionCard>
         </>
       )}
 
       {/* Add Pengurus Modal */}
-      {showAddModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content">
-              <div className="modal-header bg-primary text-white">
-                <h5 className="modal-title">
-                  <FiUserCheck className="me-2" />
-                  Tambah Pengurus Baru
-                </h5>
-                <button 
-                  type="button" 
-                  className="btn-close btn-close-white" 
-                  onClick={() => setShowAddModal(false)}
-                  disabled={saving}
-                />
-              </div>
-              <div className="modal-body">
+      <AppModal
+        show={showAddModal}
+        onHide={() => setShowAddModal(false)}
+        title="Tambah Pengurus Baru"
+        icon={<FiUserCheck size={18} />}
+        size="lg"
+        disabled={saving}
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn-outline-secondary"
+              onClick={() => setShowAddModal(false)}
+              disabled={saving}
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleAddPengurus}
+              disabled={saving || !selectedWargaId}
+            >
+              {saving ? (
+                <><span className="spinner-border spinner-border-sm me-2" />Menyimpan...</>
+              ) : (
+                <><FiUserCheck className="me-2" />Tambah Pengurus</>
+              )}
+            </button>
+          </>
+        }
+      >
                 <div className="alert alert-warning small">
                   <FiAlertTriangle className="me-2" />
                   <strong>Syarat:</strong> Warga harus sudah memiliki akun di SIRW13 (sudah mendaftar dan login). 
@@ -849,33 +865,7 @@ export default function ManageRolesPage() {
                     {ASSIGNABLE_ROLES.find(r => r.value === newRole)?.description}
                   </small>
                 </div>
-              </div>
-              <div className="modal-footer">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={() => setShowAddModal(false)}
-                  disabled={saving}
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={handleAddPengurus}
-                  disabled={saving || !selectedWargaId}
-                >
-                  {saving ? (
-                    <><span className="spinner-border spinner-border-sm me-2" />Menyimpan...</>
-                  ) : (
-                    <><FiUserCheck className="me-2" />Tambah Pengurus</>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      </AppModal>
     </div>
   )
 }

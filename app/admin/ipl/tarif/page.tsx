@@ -4,15 +4,21 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
+import { useToast } from '@/components/ToastProvider'
+import { useConfirm } from '@/components/ConfirmDialog'
+import AppModal from '@/components/AppModal'
+import SectionCard from '@/components/SectionCard'
 import { TarifIPL } from '@/types'
-import { 
-  FiArrowLeft, FiPlus, FiEdit, FiTrash2, FiPlay, 
-  FiCalendar, FiCheck, FiLoader 
+import {
+  FiArrowLeft, FiPlus, FiEdit, FiTrash2, FiPlay,
+  FiCalendar, FiCheck, FiLoader
 } from 'react-icons/fi'
 
 export default function TarifIPLPage() {
   const { userData, isRW, loading: userLoading } = useUser()
   const supabase = createClient()
+  const toast = useToast()
+  const confirmDialog = useConfirm()
   
   const [tarifList, setTarifList] = useState<TarifIPL[]>([])
   const [loading, setLoading] = useState(true)
@@ -133,8 +139,14 @@ export default function TarifIPLPage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Hapus tarif ini?')) return
-    
+    const confirmed = await confirmDialog({
+      title: 'Hapus Tarif',
+      message: 'Yakin ingin menghapus tarif ini?',
+      confirmLabel: 'Ya, Hapus',
+      variant: 'danger',
+    })
+    if (!confirmed) return
+
     try {
       const { error: deleteError } = await supabase
         .from('tarif_ipl')
@@ -143,14 +155,15 @@ export default function TarifIPLPage() {
 
       if (deleteError) throw deleteError
       await fetchTarif()
+      toast.success('Tarif berhasil dihapus')
     } catch (err: any) {
-      alert(err.message || 'Gagal menghapus tarif')
+      toast.error(err.message || 'Gagal menghapus tarif')
     }
   }
 
   const handleGenerateTagihan = async () => {
     if (!generateBulan) {
-      alert('Pilih bulan terlebih dahulu')
+      toast.warning('Pilih bulan terlebih dahulu')
       return
     }
 
@@ -174,7 +187,7 @@ export default function TarifIPLPage() {
 
     } catch (err: any) {
       console.error('Generate error:', err)
-      alert(err.message || 'Gagal generate tagihan')
+      toast.error(err.message || 'Gagal generate tagihan')
     } finally {
       setGenerating(false)
     }
@@ -267,13 +280,12 @@ export default function TarifIPLPage() {
 
       {/* Form */}
       {showForm && (
-        <div className="card mb-4">
-          <div className="card-header bg-primary text-white">
-            <h6 className="m-0 fw-bold">
-              {editingId ? 'Edit Tarif' : 'Tambah Tarif Baru'}
-            </h6>
-          </div>
-          <div className="card-body">
+        <SectionCard
+          title={editingId ? 'Edit Tarif' : 'Tambah Tarif Baru'}
+          icon={<FiPlus size={16} />}
+          accent="primary"
+          className="mb-4"
+        >
             <form onSubmit={handleSubmit}>
               <div className="row">
                 <div className="col-md-4 mb-3">
@@ -363,19 +375,11 @@ export default function TarifIPLPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </SectionCard>
       )}
 
       {/* Table */}
-      <div className="card">
-        <div className="card-header bg-primary text-white">
-          <h6 className="m-0 fw-bold">
-            <span className="me-2">Rp</span>
-            Daftar Tarif IPL
-          </h6>
-        </div>
-        <div className="card-body">
+      <SectionCard title="Daftar Tarif IPL" accent="primary">
           {tarifList.length === 0 ? (
             <div className="text-center py-4 text-muted">
               <div className="display-1 mb-3">Rp</div>
@@ -489,122 +493,101 @@ export default function TarifIPLPage() {
                 </div>
               ))}
             </div>
-        </div>
-
-
-      </div>
+      </SectionCard>
 
       {/* Generate Modal */}
-      {showGenerateModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  <FiCalendar className="me-2" />
-                  Generate Tagihan Bulanan
-                </h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
-                  onClick={() => {
-                    setShowGenerateModal(false)
-                    setGenerateResult(null)
-                  }}
-                />
-              </div>
-              <div className="modal-body">
-                {generateResult ? (
-                  <div>
-                    <div className="alert alert-success">
-                      <FiCheck className="me-2" />
-                      {generateResult.message}
-                    </div>
-                    <table className="table table-sm">
-                      <tbody>
-                        <tr>
-                          <td>Total Rumah</td>
-                          <td><strong>{generateResult.summary.total_rumah}</strong></td>
-                        </tr>
-                        <tr>
-                          <td>Tagihan Dibuat</td>
-                          <td><strong className="text-success">{generateResult.summary.inserted}</strong></td>
-                        </tr>
-                        <tr>
-                          <td>Dilewati (sudah ada)</td>
-                          <td><strong className="text-muted">{generateResult.summary.skipped}</strong></td>
-                        </tr>
-                        <tr>
-                          <td>Tanpa Tarif</td>
-                          <td><strong className="text-warning">{generateResult.summary.no_tarif}</strong></td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    {generateResult.details.no_tarif_list?.length > 0 && (
-                      <div className="alert alert-warning small">
-                        <strong>Rumah tanpa tarif:</strong>
-                        <ul className="mb-0 mt-1">
-                          {generateResult.details.no_tarif_list.map((r: string, i: number) => (
-                            <li key={i}>{r}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
+      <AppModal
+        show={showGenerateModal}
+        onHide={() => { setShowGenerateModal(false); setGenerateResult(null) }}
+        title="Generate Tagihan Bulanan"
+        icon={<FiCalendar size={18} />}
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn-outline-secondary"
+              onClick={() => { setShowGenerateModal(false); setGenerateResult(null) }}
+            >
+              {generateResult ? 'Tutup' : 'Batal'}
+            </button>
+            {!generateResult && (
+              <button
+                type="button"
+                className="btn btn-success"
+                onClick={handleGenerateTagihan}
+                disabled={generating || !generateBulan}
+              >
+                {generating ? (
+                  <><FiLoader className="spin me-2" />Generating...</>
                 ) : (
-                  <div>
-                    <p>Pilih bulan untuk membuat tagihan IPL untuk semua rumah.</p>
-                    <div className="mb-3">
-                      <label className="form-label">Bulan Tagihan *</label>
-                      <select
-                        className="form-select"
-                        value={generateBulan}
-                        onChange={(e) => setGenerateBulan(e.target.value)}
-                        required
-                      >
-                        <option value="">-- Pilih Bulan --</option>
-                        {getMonthOptions().map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="alert alert-info small">
-                      <strong>Info:</strong> Sistem akan membuat tagihan untuk semua rumah berdasarkan tarif yang berlaku. 
-                      Rumah yang sudah memiliki tagihan untuk bulan ini akan dilewati.
-                    </div>
-                  </div>
+                  <><FiPlay className="me-2" />Generate Tagihan</>
                 )}
+              </button>
+            )}
+          </>
+        }
+      >
+        {generateResult ? (
+          <div>
+            <div className="alert alert-success">
+              <FiCheck className="me-2" />
+              {generateResult.message}
+            </div>
+            <table className="table table-sm">
+              <tbody>
+                <tr>
+                  <td>Total Rumah</td>
+                  <td><strong>{generateResult.summary.total_rumah}</strong></td>
+                </tr>
+                <tr>
+                  <td>Tagihan Dibuat</td>
+                  <td><strong className="text-success">{generateResult.summary.inserted}</strong></td>
+                </tr>
+                <tr>
+                  <td>Dilewati (sudah ada)</td>
+                  <td><strong className="text-muted">{generateResult.summary.skipped}</strong></td>
+                </tr>
+                <tr>
+                  <td>Tanpa Tarif</td>
+                  <td><strong className="text-warning">{generateResult.summary.no_tarif}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+            {generateResult.details.no_tarif_list?.length > 0 && (
+              <div className="alert alert-warning small">
+                <strong>Rumah tanpa tarif:</strong>
+                <ul className="mb-0 mt-1">
+                  {generateResult.details.no_tarif_list.map((r: string, i: number) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
               </div>
-              <div className="modal-footer">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={() => {
-                    setShowGenerateModal(false)
-                    setGenerateResult(null)
-                  }}
-                >
-                  {generateResult ? 'Tutup' : 'Batal'}
-                </button>
-                {!generateResult && (
-                  <button 
-                    type="button" 
-                    className="btn btn-success"
-                    onClick={handleGenerateTagihan}
-                    disabled={generating || !generateBulan}
-                  >
-                    {generating ? (
-                        <><FiLoader className="spin me-2" />Generating...</>
-                    ) : (
-                        <><FiPlay className="me-2" />Generate Tagihan</>
-                    )}
-                  </button>
-                )}
-              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            <p>Pilih bulan untuk membuat tagihan IPL untuk semua rumah.</p>
+            <div className="mb-3">
+              <label className="form-label">Bulan Tagihan *</label>
+              <select
+                className="form-select"
+                value={generateBulan}
+                onChange={(e) => setGenerateBulan(e.target.value)}
+                required
+              >
+                <option value="">-- Pilih Bulan --</option>
+                {getMonthOptions().map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="alert alert-info small">
+              <strong>Info:</strong> Sistem akan membuat tagihan untuk semua rumah berdasarkan tarif yang berlaku.
+              Rumah yang sudah memiliki tagihan untuk bulan ini akan dilewati.
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </AppModal>
 
       <style jsx>{`
         .spin {

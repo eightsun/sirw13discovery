@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
+import { useToast } from '@/components/ToastProvider'
+import AppModal from '@/components/AppModal'
 import { createNotifikasi } from '@/lib/notifikasi'
 import {
   FiUserCheck,
@@ -49,6 +51,7 @@ export default function VerifikasiWargaPage() {
   const [rejectReason, setRejectReason] = useState('')
   const [stats, setStats] = useState({ pending: 0, verified: 0, total: 0 })
 
+  const toast = useToast()
   const isKetuaRW = role === 'ketua_rw'
   const isKetuaRT = role === 'ketua_rt'
   const hasAccess = isKetuaRW || isKetuaRT
@@ -165,10 +168,10 @@ export default function VerifikasiWargaPage() {
       })
 
       await fetchUsers()
-      alert('Warga berhasil diverifikasi')
+      toast.success('Warga berhasil diverifikasi')
     } catch (error) {
       console.error('Error verifying user:', error)
-      alert('Gagal memverifikasi warga')
+      toast.error('Gagal memverifikasi warga')
     } finally {
       setProcessing(null)
     }
@@ -218,10 +221,10 @@ export default function VerifikasiWargaPage() {
       setShowRejectModal(false)
       setRejectTarget(null)
       await fetchUsers()
-      alert('Verifikasi warga ditolak. Warga akan menerima notifikasi untuk koreksi data.')
+      toast.warning('Verifikasi warga ditolak. Warga akan menerima notifikasi untuk koreksi data.')
     } catch (error) {
       console.error('Error rejecting user:', error)
-      alert('Gagal menolak verifikasi')
+      toast.error('Gagal menolak verifikasi')
     } finally {
       setProcessing(null)
     }
@@ -293,28 +296,30 @@ export default function VerifikasiWargaPage() {
       {/* Filter & Search */}
       <div className="card mb-4">
         <div className="card-body py-2">
-          <div className="d-flex flex-wrap align-items-center gap-2">
-            <FiFilter className="text-muted" />
-            <button
-              className={`btn btn-sm ${filter === 'pending' ? 'btn-warning' : 'btn-outline-secondary'}`}
-              onClick={() => setFilter('pending')}
-            >
-              Menunggu ({stats.pending})
-            </button>
-            <button
-              className={`btn btn-sm ${filter === 'verified' ? 'btn-success' : 'btn-outline-secondary'}`}
-              onClick={() => setFilter('verified')}
-            >
-              Terverifikasi
-            </button>
-            <button
-              className={`btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-outline-secondary'}`}
-              onClick={() => setFilter('all')}
-            >
-              Semua
-            </button>
-            <div className="ms-auto">
-              <div className="input-group input-group-sm" style={{ maxWidth: '250px' }}>
+          <div className="row g-2 align-items-center">
+            <div className="col-12 col-md-auto d-flex align-items-center gap-2 flex-wrap">
+              <FiFilter className="text-muted d-none d-md-block" />
+              <button
+                className={`btn btn-sm ${filter === 'pending' ? 'btn-warning' : 'btn-outline-secondary'}`}
+                onClick={() => setFilter('pending')}
+              >
+                Menunggu ({stats.pending})
+              </button>
+              <button
+                className={`btn btn-sm ${filter === 'verified' ? 'btn-success' : 'btn-outline-secondary'}`}
+                onClick={() => setFilter('verified')}
+              >
+                Terverifikasi
+              </button>
+              <button
+                className={`btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-outline-secondary'}`}
+                onClick={() => setFilter('all')}
+              >
+                Semua
+              </button>
+            </div>
+            <div className="col-12 col-md">
+              <div className="input-group input-group-sm">
                 <span className="input-group-text"><FiSearch /></span>
                 <input
                   type="text"
@@ -349,86 +354,91 @@ export default function VerifikasiWargaPage() {
         </div>
       ) : (
         <>
-          {/* Desktop Table */}
+          {/* Desktop Table - Optimized 6 columns */}
           <div className="card d-none d-md-block">
             <div className="table-responsive">
               <table className="table table-hover align-middle mb-0">
                 <thead className="table-light">
                   <tr>
                     <th>#</th>
-                    <th>Nama Lengkap</th>
-                    <th>Email</th>
+                    <th>Warga</th>
                     <th>NIK</th>
                     <th>RT</th>
-                    <th>No. HP</th>
-                    <th>Tanggal Daftar</th>
+                    <th>Terdaftar</th>
                     <th>Status</th>
-                    <th>Alasan Penolakan</th>
                     {filter !== 'verified' && <th className="text-center">Aksi</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user, index) => (
-                    <tr key={user.id}>
-                      <td>{index + 1}</td>
-                      <td className="fw-bold">{user.nama_lengkap || user.warga?.nama_lengkap || '-'}</td>
-                      <td className="small">{user.email}</td>
-                      <td className="small">{user.warga?.nik || '-'}</td>
-                      <td>
-                        {user.warga?.rt?.nomor_rt ? (
-                          <span className="badge bg-info">RT {user.warga.rt.nomor_rt}</span>
-                        ) : '-'}
-                      </td>
-                      <td className="small">{user.warga?.no_hp || '-'}</td>
-                      <td className="small">
-                        {new Date(user.created_at).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                      </td>
-                      <td>
-                        {user.is_verified ? (
-                          <span className="badge bg-success">Terverifikasi</span>
-                        ) : user.rejection_reason ? (
-                          <span className="badge bg-danger">Koreksi Data</span>
-                        ) : (
-                          <span className="badge bg-warning text-dark">Menunggu</span>
-                        )}
-                      </td>
-                      <td className="small text-muted" style={{ maxWidth: '200px' }}>
-                        {user.rejection_reason || '-'}
-                      </td>
-                      {filter !== 'verified' && (
-                        <td className="text-center">
-                          {!user.is_verified && user.is_active && (
-                            <div className="d-flex gap-1 justify-content-center">
-                              <button
-                                className="btn btn-sm btn-success"
-                                onClick={() => handleVerify(user)}
-                                disabled={processing === user.id}
-                                title="Verifikasi"
-                              >
-                                {processing === user.id ? (
-                                  <span className="spinner-border spinner-border-sm" />
-                                ) : (
-                                  <><FiCheckCircle className="me-1" /> Verifikasi</>
-                                )}
-                              </button>
-                              <button
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={() => handleRejectClick(user)}
-                                disabled={processing === user.id}
-                                title="Tolak"
-                              >
-                                <FiXCircle />
-                              </button>
+                  {users.map((user, index) => {
+                    const daysSince = Math.floor((Date.now() - new Date(user.created_at).getTime()) / 86400000)
+                    return (
+                      <tr key={user.id}>
+                        <td>{index + 1}</td>
+                        <td>
+                          <div className="fw-bold" style={{ fontSize: '0.85rem' }}>{user.nama_lengkap || user.warga?.nama_lengkap || '-'}</div>
+                          <small className="text-muted">{user.email}</small>
+                          {user.warga?.no_hp && <small className="text-muted d-block">{user.warga.no_hp}</small>}
+                        </td>
+                        <td className="small">{user.warga?.nik || '-'}</td>
+                        <td>
+                          {user.warga?.rt?.nomor_rt ? (
+                            <span className="badge bg-info">RT {user.warga.rt.nomor_rt}</span>
+                          ) : '-'}
+                        </td>
+                        <td>
+                          <div className="small">{new Date(user.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                          {!user.is_verified && daysSince > 0 && (
+                            <small style={{ color: daysSince > 3 ? '#e74a3b' : '#f6c23e', fontWeight: 600, fontSize: '0.7rem' }}>
+                              {daysSince} hari lalu
+                            </small>
+                          )}
+                        </td>
+                        <td>
+                          {user.is_verified ? (
+                            <span className="badge" style={{ background: 'rgba(28,200,138,0.15)', color: '#0d7a5f' }}>Terverifikasi</span>
+                          ) : user.rejection_reason ? (
+                            <span className="badge" style={{ background: 'rgba(231,74,59,0.15)', color: '#c53030' }} title={user.rejection_reason}>Koreksi Data</span>
+                          ) : (
+                            <span className="badge" style={{ background: 'rgba(246,194,62,0.15)', color: '#b7791f' }}>Menunggu</span>
+                          )}
+                          {user.rejection_reason && (
+                            <div className="small text-danger mt-1" style={{ fontSize: '0.7rem', maxWidth: '160px' }} title={user.rejection_reason}>
+                              {user.rejection_reason.length > 40 ? user.rejection_reason.slice(0, 40) + '...' : user.rejection_reason}
                             </div>
                           )}
                         </td>
-                      )}
-                    </tr>
-                  ))}
+                        {filter !== 'verified' && (
+                          <td className="text-center">
+                            {!user.is_verified && user.is_active && (
+                              <div className="d-flex gap-1 justify-content-center">
+                                <button
+                                  className="btn btn-sm btn-success"
+                                  onClick={() => handleVerify(user)}
+                                  disabled={processing === user.id}
+                                  title="Verifikasi"
+                                >
+                                  {processing === user.id ? (
+                                    <span className="spinner-border spinner-border-sm" />
+                                  ) : (
+                                    <><FiCheckCircle className="me-1" /> Verifikasi</>
+                                  )}
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => handleRejectClick(user)}
+                                  disabled={processing === user.id}
+                                  title="Tolak"
+                                >
+                                  <FiXCircle />
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -487,64 +497,56 @@ export default function VerifikasiWargaPage() {
       )}
 
       {/* Reject Modal */}
-      {showRejectModal && rejectTarget && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header bg-warning text-dark">
-                <h5 className="modal-title">
-                  <FiXCircle className="me-2" />
-                  Tolak Verifikasi
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowRejectModal(false)}
-                  disabled={processing === rejectTarget.id}
-                />
-              </div>
-              <div className="modal-body">
-                <p>
-                  Tolak verifikasi <strong>{rejectTarget.nama_lengkap}</strong>?
-                </p>
-                <div className="mb-3">
-                  <label className="form-label">Alasan Penolakan <span className="text-danger">*</span></label>
-                  <textarea
-                    className="form-control"
-                    rows={3}
-                    value={rejectReason}
-                    onChange={(e) => setRejectReason(e.target.value)}
-                    placeholder="Jelaskan alasan penolakan agar warga bisa koreksi data..."
-                  />
-                </div>
-                <div className="alert alert-info small mb-0">
-                  Warga akan menerima notifikasi penolakan beserta alasannya dan dapat melakukan koreksi data untuk diverifikasi ulang.
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => setShowRejectModal(false)}
-                  disabled={processing === rejectTarget.id}
-                >
-                  Batal
-                </button>
-                <button
-                  className="btn btn-warning"
-                  onClick={handleRejectConfirm}
-                  disabled={processing === rejectTarget.id || !rejectReason.trim()}
-                >
-                  {processing === rejectTarget.id ? (
-                    <><span className="spinner-border spinner-border-sm me-2" />Memproses...</>
-                  ) : (
-                    <><FiXCircle className="me-1" /> Tolak Verifikasi</>
-                  )}
-                </button>
-              </div>
+      <AppModal
+        show={showRejectModal && !!rejectTarget}
+        onHide={() => setShowRejectModal(false)}
+        title="Tolak Verifikasi"
+        icon={<FiXCircle size={18} />}
+        disabled={!!rejectTarget && processing === rejectTarget.id}
+        footer={
+          <>
+            <button
+              className="btn btn-outline-secondary"
+              onClick={() => setShowRejectModal(false)}
+              disabled={!!rejectTarget && processing === rejectTarget.id}
+            >
+              Batal
+            </button>
+            <button
+              className="btn btn-warning"
+              onClick={handleRejectConfirm}
+              disabled={!!rejectTarget && (processing === rejectTarget.id || !rejectReason.trim())}
+            >
+              {rejectTarget && processing === rejectTarget.id ? (
+                <><span className="spinner-border spinner-border-sm me-2" />Memproses...</>
+              ) : (
+                <><FiXCircle className="me-1" /> Tolak Verifikasi</>
+              )}
+            </button>
+          </>
+        }
+      >
+        {rejectTarget && (
+          <>
+            <p>
+              Tolak verifikasi <strong>{rejectTarget.nama_lengkap}</strong>?
+            </p>
+            <div className="mb-3">
+              <label className="form-label">Alasan Penolakan <span className="text-danger">*</span></label>
+              <textarea
+                className="form-control"
+                rows={3}
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Jelaskan alasan penolakan agar warga bisa koreksi data..."
+              />
             </div>
-          </div>
-        </div>
-      )}
+            <div className="alert alert-info small mb-0">
+              Warga akan menerima notifikasi penolakan beserta alasannya dan dapat melakukan koreksi data untuk diverifikasi ulang.
+            </div>
+          </>
+        )}
+      </AppModal>
     </div>
   )
 }

@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
+import { useToast } from '@/components/ToastProvider'
+import { useConfirm } from '@/components/ConfirmDialog'
 import { Surat, TipeSurat, KATEGORI_SURAT_LABELS, KategoriSurat } from '@/types'
 import {
   FiFileText, FiPlus, FiEye, FiEdit2, FiTrash2,
@@ -16,6 +18,8 @@ const ITEMS_PER_PAGE = 10
 export default function SuratPage() {
   const { user, userData, loading: userLoading } = useUser()
   const supabase = createClient()
+  const toast = useToast()
+  const confirm = useConfirm()
 
   const [activeTab, setActiveTab] = useState<TipeSurat>('keluar')
   const [suratList, setSuratList] = useState<Surat[]>([])
@@ -64,16 +68,24 @@ export default function SuratPage() {
   }
 
   const handleDelete = async (surat: Surat) => {
-    if (!confirm(`Hapus surat "${surat.perihal}"? Data akan dihapus permanen.`)) return
+    const confirmed = await confirm({
+      title: 'Hapus Surat',
+      message: `Hapus surat "${surat.perihal}"? Data akan dihapus permanen.`,
+      confirmLabel: 'Ya, Hapus',
+      variant: 'danger',
+    })
+    if (!confirmed) return
+
     setDeleting(surat.id)
     try {
       // Delete via API (handles file deletion + bypass RLS)
       const res = await fetch(`/api/surat?id=${surat.id}`, { method: 'DELETE' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
+      toast.success('Surat berhasil dihapus')
       fetchSurat()
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Gagal menghapus surat')
+      toast.error(err instanceof Error ? err.message : 'Gagal menghapus surat')
     } finally {
       setDeleting(null)
     }
@@ -94,7 +106,7 @@ export default function SuratPage() {
 
       if (error) throw error
       if (!data || data.length === 0) {
-        alert('Tidak ada data untuk diexport')
+        toast.warning('Tidak ada data untuk diexport')
         return
       }
 
@@ -132,7 +144,7 @@ export default function SuratPage() {
       XLSX.writeFile(wb, fileName)
     } catch (err) {
       console.error('Download error:', err)
-      alert('Gagal mengunduh data')
+      toast.error('Gagal mengunduh data')
     } finally {
       setDownloading(false)
     }
@@ -211,90 +223,151 @@ export default function SuratPage() {
               </p>
             </div>
           ) : (
-            <div className="table-responsive">
-              <table className="table table-hover mb-0">
-                <thead className="table-light">
-                  <tr>
-                    <th style={{ width: '120px' }}>Tanggal</th>
-                    <th style={{ width: '160px' }}>Nomor Surat</th>
-                    {activeTab === 'keluar' && <th style={{ width: '120px' }}>Kategori</th>}
-                    {activeTab === 'masuk' && <th style={{ width: '180px' }}>Pengirim</th>}
-                    <th>Perihal</th>
-                    <th style={{ width: '100px' }}>Lampiran</th>
-                    <th style={{ width: '140px' }}>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {suratList.map((surat) => (
-                    <tr key={surat.id}>
-                      <td className="small">{formatTanggal(surat.tanggal_rilis)}</td>
-                      <td>
-                        <Link href={`/surat/${surat.id}`} className="text-primary fw-bold text-decoration-none">
-                          {surat.nomor_surat}
-                        </Link>
-                      </td>
-                      {activeTab === 'keluar' && (
+            <>
+              {/* Desktop Table */}
+              <div className="table-responsive desktop-table">
+                <table className="table table-hover mb-0">
+                  <thead className="table-light">
+                    <tr>
+                      <th style={{ width: '120px' }}>Tanggal</th>
+                      <th style={{ width: '160px' }}>Nomor Surat</th>
+                      {activeTab === 'keluar' && <th style={{ width: '120px' }}>Kategori</th>}
+                      {activeTab === 'masuk' && <th style={{ width: '180px' }}>Pengirim</th>}
+                      <th>Perihal</th>
+                      <th style={{ width: '100px' }}>Lampiran</th>
+                      <th style={{ width: '140px' }}>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {suratList.map((surat) => (
+                      <tr key={surat.id}>
+                        <td className="small">{formatTanggal(surat.tanggal_rilis)}</td>
                         <td>
-                          {surat.kategori_surat ? (
-                            <span className="badge bg-info text-dark">{surat.kategori_surat}</span>
+                          <Link href={`/surat/${surat.id}`} className="text-primary fw-bold text-decoration-none">
+                            {surat.nomor_surat}
+                          </Link>
+                        </td>
+                        {activeTab === 'keluar' && (
+                          <td>
+                            {surat.kategori_surat ? (
+                              <span className="badge bg-info text-dark">{surat.kategori_surat}</span>
+                            ) : (
+                              <span className="text-muted small">-</span>
+                            )}
+                          </td>
+                        )}
+                        {activeTab === 'masuk' && (
+                          <td>{surat.pengirim || <span className="text-muted small">-</span>}</td>
+                        )}
+                        <td>{surat.perihal}</td>
+                        <td>
+                          {surat.lampiran_url ? (
+                            <a
+                              href={surat.lampiran_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-outline-primary btn-sm"
+                            >
+                              <FiExternalLink size={14} className="me-1" /> PDF
+                            </a>
                           ) : (
                             <span className="text-muted small">-</span>
                           )}
                         </td>
+                        <td>
+                          <div className="d-flex gap-1">
+                            <Link
+                              href={`/surat/${surat.id}`}
+                              className="btn btn-outline-secondary btn-sm"
+                              title="Lihat Detail"
+                            >
+                              <FiEye size={14} />
+                            </Link>
+                            {isRW && (
+                              <>
+                                <Link
+                                  href={`/surat/${surat.id}/edit`}
+                                  className="btn btn-outline-primary btn-sm"
+                                  title="Edit"
+                                >
+                                  <FiEdit2 size={14} />
+                                </Link>
+                                <button
+                                  className="btn btn-outline-danger btn-sm"
+                                  title="Hapus"
+                                  onClick={() => handleDelete(surat)}
+                                  disabled={deleting === surat.id}
+                                >
+                                  <FiTrash2 size={14} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card List */}
+              <div className="mobile-card-list">
+                {suratList.map((surat) => (
+                  <div key={surat.id} className="mobile-card-item">
+                    {/* Header: Badge + Date */}
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                      {activeTab === 'keluar' && surat.kategori_surat ? (
+                        <span className="badge bg-info text-dark" style={{ fontSize: '0.65rem' }}>{surat.kategori_surat}</span>
+                      ) : activeTab === 'masuk' && surat.pengirim ? (
+                        <span className="text-muted" style={{ fontSize: '0.72rem' }}>{surat.pengirim}</span>
+                      ) : (
+                        <span />
                       )}
-                      {activeTab === 'masuk' && (
-                        <td>{surat.pengirim || <span className="text-muted small">-</span>}</td>
+                      <small className="text-muted" style={{ fontSize: '0.72rem' }}>{formatTanggal(surat.tanggal_rilis)}</small>
+                    </div>
+
+                    {/* Nomor Surat */}
+                    <Link href={`/surat/${surat.id}`} className="text-primary fw-bold text-decoration-none" style={{ fontSize: '0.85rem' }}>
+                      {surat.nomor_surat}
+                    </Link>
+
+                    {/* Perihal */}
+                    <div className="mc-title" style={{ marginTop: '2px' }}>{surat.perihal}</div>
+
+                    {/* Actions */}
+                    <div className="mc-actions">
+                      {surat.lampiran_url && (
+                        <a
+                          href={surat.lampiran_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-outline-primary btn-sm"
+                        >
+                          <FiExternalLink size={12} className="me-1" /> PDF
+                        </a>
                       )}
-                      <td>{surat.perihal}</td>
-                      <td>
-                        {surat.lampiran_url ? (
-                          <a
-                            href={surat.lampiran_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-outline-primary btn-sm"
-                          >
-                            <FiExternalLink size={14} className="me-1" /> PDF
-                          </a>
-                        ) : (
-                          <span className="text-muted small">-</span>
-                        )}
-                      </td>
-                      <td>
-                        <div className="d-flex gap-1">
-                          <Link
-                            href={`/surat/${surat.id}`}
-                            className="btn btn-outline-secondary btn-sm"
-                            title="Lihat Detail"
-                          >
-                            <FiEye size={14} />
+                      <Link href={`/surat/${surat.id}`} className="btn btn-outline-secondary btn-sm">
+                        <FiEye size={12} className="me-1" /> Lihat
+                      </Link>
+                      {isRW && (
+                        <>
+                          <Link href={`/surat/${surat.id}/edit`} className="btn btn-outline-primary btn-sm">
+                            <FiEdit2 size={12} />
                           </Link>
-                          {isRW && (
-                            <>
-                              <Link
-                                href={`/surat/${surat.id}/edit`}
-                                className="btn btn-outline-primary btn-sm"
-                                title="Edit"
-                              >
-                                <FiEdit2 size={14} />
-                              </Link>
-                              <button
-                                className="btn btn-outline-danger btn-sm"
-                                title="Hapus"
-                                onClick={() => handleDelete(surat)}
-                                disabled={deleting === surat.id}
-                              >
-                                <FiTrash2 size={14} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          <button
+                            className="btn btn-outline-danger btn-sm"
+                            onClick={() => handleDelete(surat)}
+                            disabled={deleting === surat.id}
+                          >
+                            <FiTrash2 size={12} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
 

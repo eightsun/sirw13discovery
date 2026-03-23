@@ -670,6 +670,17 @@ body {
     font-size: 0.75rem;
     padding: 0.3rem;
   }
+
+  /* Touch target sizing for mobile */
+  .btn-sm {
+    min-height: 36px;
+    padding: 0.4rem 0.75rem;
+  }
+
+  /* Full-width search on mobile */
+  .input-group-sm {
+    max-width: 100% !important;
+  }
 }
 
 /* Sidebar Overlay for Mobile */
@@ -698,6 +709,13 @@ body {
 .bg-warning-light { background-color: rgba(246, 194, 62, 0.1); }
 .bg-danger-light { background-color: rgba(231, 74, 59, 0.1); }
 
+/* Semantic Status Badges */
+.badge-status-pending { background: rgba(246,194,62,0.15) !important; color: #b7791f !important; font-weight: 600; }
+.badge-status-success { background: rgba(28,200,138,0.15) !important; color: #0d7a5f !important; font-weight: 600; }
+.badge-status-danger  { background: rgba(231,74,59,0.15) !important; color: #c53030 !important; font-weight: 600; }
+.badge-status-info    { background: rgba(54,185,204,0.15) !important; color: #1a6e7a !important; font-weight: 600; }
+.badge-status-neutral { background: rgba(100,116,139,0.12) !important; color: #475569 !important; font-weight: 600; }
+
 /* Animation */
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -706,6 +724,11 @@ body {
 
 .fade-in {
   animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 /* Form Section Headers */
