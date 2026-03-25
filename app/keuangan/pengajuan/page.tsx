@@ -6,15 +6,20 @@ import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
 import { formatRupiah } from '@/utils/helpers'
 import { PengajuanPembelian, StatusPengajuan } from '@/types'
-import { 
-  FiPlus, 
-  FiEye, 
-  FiEdit2, 
-  FiTrash2, 
-  FiCheck, 
-  FiX, 
+import {
+  FiPlus,
+  FiEye,
+  FiEdit2,
+  FiTrash2,
+  FiCheck,
+  FiX,
   FiRefreshCw,
-  FiFilter
+  FiFilter,
+  FiCalendar,
+  FiChevronLeft,
+  FiChevronRight,
+  FiChevronsLeft,
+  FiChevronsRight
 } from 'react-icons/fi'
 
 export default function PengajuanListPage() {
@@ -25,6 +30,9 @@ export default function PengajuanListPage() {
   const [pengajuan, setPengajuan] = useState<PengajuanPembelian[]>([])
   const [filterStatus, setFilterStatus] = useState<string>('')
   const [filterWilayah, setFilterWilayah] = useState<string>('')
+  const [filterBulan, setFilterBulan] = useState<string>('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 15
   const [showApprovalModal, setShowApprovalModal] = useState(false)
   const [selectedPengajuan, setSelectedPengajuan] = useState<PengajuanPembelian | null>(null)
   const [approvalAction, setApprovalAction] = useState<'setujui' | 'tolak' | 'revisi' | null>(null)
@@ -39,8 +47,9 @@ export default function PengajuanListPage() {
   const isBendaharaRW = userData?.role === 'bendahara_rw'
 
   useEffect(() => {
+    setCurrentPage(1)
     fetchPengajuan()
-  }, [filterStatus, filterWilayah])
+  }, [filterStatus, filterWilayah, filterBulan])
 
   const fetchPengajuan = async () => {
     try {
@@ -60,6 +69,13 @@ export default function PengajuanListPage() {
       }
       if (filterWilayah) {
         query = query.eq('wilayah', filterWilayah)
+      }
+      if (filterBulan) {
+        const [year, month] = filterBulan.split('-')
+        const startDate = `${year}-${month}-01`
+        const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate()
+        const endDate = `${year}-${month}-${lastDay}`
+        query = query.gte('tanggal_pengajuan', startDate).lte('tanggal_pengajuan', endDate)
       }
 
       const { data, error } = await query
@@ -85,6 +101,27 @@ export default function PengajuanListPage() {
     }
     const badge = badges[status] || { color: 'secondary', label: status }
     return <span className={`badge bg-${badge.color}`}>{badge.label}</span>
+  }
+
+  // Pagination
+  const totalPages = Math.ceil(pengajuan.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedPengajuan = pengajuan.slice(startIndex, startIndex + itemsPerPage)
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = []
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      pages.push(1)
+      if (currentPage > 3) pages.push('...')
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pages.push(i)
+      }
+      if (currentPage < totalPages - 2) pages.push('...')
+      pages.push(totalPages)
+    }
+    return pages
   }
 
   const handleApprovalClick = (item: PengajuanPembelian, action: 'setujui' | 'tolak' | 'revisi') => {
@@ -289,8 +326,8 @@ export default function PengajuanListPage() {
       <div className="card mb-4">
         <div className="card-body">
           <div className="row g-3">
-            <div className="col-md-4">
-              <label className="form-label">
+            <div className="col-md-3">
+              <label className="form-label small">
                 <FiFilter className="me-1" /> Status
               </label>
               <select
@@ -307,8 +344,8 @@ export default function PengajuanListPage() {
                 <option value="selesai">Selesai</option>
               </select>
             </div>
-            <div className="col-md-4">
-              <label className="form-label">Wilayah</label>
+            <div className="col-md-3">
+              <label className="form-label small">Wilayah</label>
               <select
                 className="form-select"
                 value={filterWilayah}
@@ -319,12 +356,25 @@ export default function PengajuanListPage() {
                 <option value="Barat">Discovery Barat</option>
               </select>
             </div>
-            <div className="col-md-4 d-flex align-items-end">
-              <button 
-                className="btn btn-outline-secondary"
+            <div className="col-md-3">
+              <label className="form-label small">
+                <FiCalendar className="me-1" /> Bulan
+              </label>
+              <input
+                type="month"
+                className="form-control"
+                value={filterBulan}
+                onChange={(e) => setFilterBulan(e.target.value)}
+              />
+            </div>
+            <div className="col-md-3 d-flex align-items-end">
+              <button
+                className="btn btn-outline-secondary w-100"
                 onClick={() => {
                   setFilterStatus('')
                   setFilterWilayah('')
+                  setFilterBulan('')
+                  setCurrentPage(1)
                 }}
               >
                 <FiRefreshCw className="me-2" />
@@ -365,7 +415,7 @@ export default function PengajuanListPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {pengajuan.map((item) => (
+                  {paginatedPengajuan.map((item) => (
                     <tr key={item.id}>
                       <td className="fw-bold">{item.nomor_pengajuan}</td>
                       <td>{new Date(item.tanggal_pengajuan).toLocaleDateString('id-ID')}</td>
@@ -453,7 +503,7 @@ export default function PengajuanListPage() {
 
             {/* Mobile Card View */}
             <div className="mobile-card-list">
-              {pengajuan.map((item) => (
+              {paginatedPengajuan.map((item) => (
                 <div key={item.id} className="mobile-card-item">
                   <div className="d-flex justify-content-between align-items-start">
                     <div className="mc-title" style={{flex:1,whiteSpace:'normal'}}>{item.deskripsi_pembelian}</div>
@@ -485,6 +535,59 @@ export default function PengajuanListPage() {
               ))}
             </div>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="card-footer d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+            <small className="text-muted">
+              Menampilkan {startIndex + 1}-{Math.min(startIndex + itemsPerPage, pengajuan.length)} dari {pengajuan.length} pengajuan
+              {filterBulan && ` untuk bulan ${new Date(filterBulan + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`}
+            </small>
+            <nav>
+              <ul className="pagination pagination-sm mb-0">
+                <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                  <button className="page-link" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+                    <FiChevronsLeft />
+                  </button>
+                </li>
+                <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                  <button className="page-link" onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1}>
+                    <FiChevronLeft />
+                  </button>
+                </li>
+                {getPageNumbers().map((page, idx) => (
+                  <li key={idx} className={`page-item ${page === currentPage ? 'active' : ''} ${page === '...' ? 'disabled' : ''}`}>
+                    <button
+                      className="page-link"
+                      onClick={() => typeof page === 'number' && setCurrentPage(page)}
+                      disabled={page === '...'}
+                    >
+                      {page}
+                    </button>
+                  </li>
+                ))}
+                <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                  <button className="page-link" onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages}>
+                    <FiChevronRight />
+                  </button>
+                </li>
+                <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                  <button className="page-link" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>
+                    <FiChevronsRight />
+                  </button>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        )}
+        {totalPages <= 1 && pengajuan.length > 0 && (
+          <div className="card-footer">
+            <small className="text-muted">
+              Menampilkan {pengajuan.length} pengajuan
+              {filterBulan && ` untuk bulan ${new Date(filterBulan + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`}
+            </small>
+          </div>
+        )}
       </div>
 
 
