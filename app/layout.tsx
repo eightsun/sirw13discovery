@@ -5,6 +5,10 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'SIRW13 - Sistem Informasi RW 13 Permata Discovery',
   description: 'Sistem Informasi Manajemen Warga RW 13 Permata Discovery',
+  icons: {
+    icon: '/icon.svg',
+    apple: '/apple-icon.png',
+  },
 }
 
 export default function RootLayout({
