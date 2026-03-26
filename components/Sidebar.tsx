@@ -19,7 +19,8 @@ import {
   FiUserCheck,
   FiBell,
   FiChevronDown,
-  FiX
+  FiX,
+  FiAlertOctagon,
 } from 'react-icons/fi'
 
 interface MenuItem {
@@ -27,6 +28,7 @@ interface MenuItem {
   label: string
   icon: React.ReactNode
   roles?: string[]
+  badge?: number
 }
 
 interface MenuSection {
@@ -43,6 +45,16 @@ interface SidebarProps {
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname()
   const { role, isRW, isPengurus } = useUser()
+
+  const [openInsidenCount, setOpenInsidenCount] = useState(0)
+
+  useEffect(() => {
+    if (!isPengurus) return
+    fetch('/api/insiden/stats')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.open) setOpenInsidenCount(d.open) })
+      .catch(() => {})
+  }, [isPengurus])
 
   const menuSections: MenuSection[] = [
     {
@@ -82,6 +94,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         { href: '/surat', label: 'Arsip Surat', icon: <FiFileText /> },
         { href: '/usaha', label: 'Direktori Usaha', icon: <FiBriefcase /> },
         { href: '/keluhan', label: 'Keluhan Warga', icon: <FiMessageSquare /> },
+        { href: '/insiden', label: 'Insiden & Keselamatan', icon: <FiAlertOctagon />, badge: openInsidenCount },
       ],
     },
     {
@@ -218,7 +231,25 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                         onClick={onClose}
                       >
                         <span className="nav-icon">{item.icon}</span>
-                        <span>{item.label}</span>
+                        <span className="flex-grow-1">{item.label}</span>
+                        {item.badge && item.badge > 0 ? (
+                          <span
+                            style={{
+                              background: '#ef4444',
+                              color: '#fff',
+                              fontSize: '0.6rem',
+                              fontWeight: 700,
+                              borderRadius: '10px',
+                              padding: '1px 5px',
+                              lineHeight: '1.4',
+                              minWidth: '16px',
+                              textAlign: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {item.badge > 99 ? '99+' : item.badge}
+                          </span>
+                        ) : null}
                       </Link>
                     </div>
                   ))}

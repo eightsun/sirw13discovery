@@ -841,7 +841,7 @@ export interface KeluhanTimeline {
 }
 
 // ==================== NOTIFIKASI ====================
-export type TipeNotifikasi = 'info' | 'pengajuan' | 'pembayaran' | 'keluhan' | 'kegiatan' | 'verifikasi' | 'umum' | 'surat'
+export type TipeNotifikasi = 'info' | 'pengajuan' | 'pembayaran' | 'keluhan' | 'kegiatan' | 'verifikasi' | 'umum' | 'surat' | 'insiden'
 
 export interface Notifikasi {
   id: string;
@@ -900,3 +900,191 @@ export interface SuratBaca {
   read_at: string;
   user?: { nama_lengkap: string; email: string };
 }
+
+// ==========================================
+// INSIDEN & INVESTIGASI (Phase 7)
+// Modul Pelaporan Insiden & Hampir Celaka
+// Terinspirasi dari Shell Near Miss / Incident Investigation System
+// ==========================================
+
+export type JenisInsiden = 'insiden' | 'hampir_celaka';
+
+export type DampakInsiden =
+  | 'tidak_ada'
+  | 'cedera_ringan'
+  | 'cedera_serius'
+  | 'kerusakan_properti'
+  | 'gangguan_lingkungan';
+
+export type TingkatKeparahan = 'rendah' | 'sedang' | 'tinggi' | 'kritis';
+
+export type StatusInsiden =
+  | 'dilaporkan'
+  | 'dalam_investigasi'
+  | 'menunggu_tindakan'
+  | 'selesai'
+  | 'ditutup';
+
+export type MetodeAnalisis = '5_whys' | 'fishbone' | 'lainnya';
+
+export type StatusTindakan = 'belum_dimulai' | 'dalam_proses' | 'selesai' | 'batal';
+
+export type JenisTindakan = 'korektif' | 'preventif';
+
+export type StatusInvestigasi = 'draft' | 'final';
+
+export interface Insiden {
+  id: string;
+  kode_insiden: string;
+  jenis: JenisInsiden;
+  tanggal_kejadian: string;
+  waktu_kejadian?: string | null;
+  lokasi: string;
+  deskripsi: string;
+  dampak: DampakInsiden;
+  tingkat_keparahan: TingkatKeparahan;
+  foto_urls: string[];
+  status: StatusInsiden;
+  pelapor_id?: string | null;
+  warga_id?: string | null;
+  is_anonim: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InsidenInvestigasi {
+  id: string;
+  insiden_id: string;
+  investigator_id?: string | null;
+  tanggal_investigasi?: string | null;
+  kronologi?: string | null;
+  akar_penyebab?: string | null;
+  metode_analisis?: MetodeAnalisis | null;
+  analisis_5why?: { why: string; jawaban: string }[] | null;
+  faktor_manusia?: string | null;
+  faktor_lingkungan?: string | null;
+  faktor_sistem?: string | null;
+  tindakan_segera?: string | null;
+  kesimpulan?: string | null;
+  status: StatusInvestigasi;
+  created_at: string;
+  updated_at: string;
+  // Joined
+  investigator?: { nama_lengkap: string; email: string };
+}
+
+export interface InsidenTindakan {
+  id: string;
+  insiden_id: string;
+  jenis: JenisTindakan;
+  deskripsi: string;
+  penanggung_jawab_id?: string | null;
+  target_selesai?: string | null;
+  status: StatusTindakan;
+  tanggal_selesai?: string | null;
+  catatan_penyelesaian?: string | null;
+  bukti_urls: string[];
+  created_at: string;
+  updated_at: string;
+  // Joined
+  penanggung_jawab?: { nama_lengkap: string; email: string };
+}
+
+export interface InsidenTimeline {
+  id: string;
+  insiden_id: string;
+  status_lama?: string | null;
+  status_baru: string;
+  catatan?: string | null;
+  dibuat_oleh?: string | null;
+  created_at: string;
+  // Joined
+  pembuat?: { nama_lengkap: string; email: string };
+}
+
+// Full incident detail with all relations
+export interface InsidenDetail extends Insiden {
+  investigasi?: InsidenInvestigasi | null;
+  tindakan: InsidenTindakan[];
+  timeline: InsidenTimeline[];
+  pelapor?: { nama_lengkap: string; no_hp: string } | null;
+}
+
+// Form input types
+export interface InsidenFormInput {
+  jenis: JenisInsiden;
+  tanggal_kejadian: string;
+  waktu_kejadian?: string;
+  lokasi: string;
+  deskripsi: string;
+  dampak: DampakInsiden;
+  tingkat_keparahan: TingkatKeparahan;
+  is_anonim: boolean;
+  foto_urls?: string[];
+}
+
+export interface InvestigasiFormInput {
+  tanggal_investigasi: string;
+  kronologi: string;
+  metode_analisis: MetodeAnalisis;
+  analisis_5why: { why: string; jawaban: string }[];
+  faktor_manusia?: string;
+  faktor_lingkungan?: string;
+  faktor_sistem?: string;
+  tindakan_segera?: string;
+  akar_penyebab: string;
+  kesimpulan: string;
+}
+
+export interface TindakanFormInput {
+  jenis: JenisTindakan;
+  deskripsi: string;
+  penanggung_jawab_id?: string;
+  target_selesai?: string;
+}
+
+// Dashboard stats
+export interface InsidenDashboardStats {
+  total_insiden: number;
+  total_hampir_celaka: number;
+  dalam_investigasi: number;
+  menunggu_tindakan: number;
+  selesai_bulan_ini: number;
+  per_tingkat_keparahan: { tingkat: TingkatKeparahan; jumlah: number }[];
+}
+
+// Label helpers
+export const JENIS_INSIDEN_LABELS: Record<JenisInsiden, string> = {
+  insiden: 'Insiden',
+  hampir_celaka: 'Hampir Celaka (Near Miss)',
+};
+
+export const DAMPAK_INSIDEN_LABELS: Record<DampakInsiden, string> = {
+  tidak_ada: 'Tidak Ada Dampak',
+  cedera_ringan: 'Cedera Ringan',
+  cedera_serius: 'Cedera Serius',
+  kerusakan_properti: 'Kerusakan Properti',
+  gangguan_lingkungan: 'Gangguan Lingkungan',
+};
+
+export const TINGKAT_KEPARAHAN_LABELS: Record<TingkatKeparahan, string> = {
+  rendah: 'Rendah',
+  sedang: 'Sedang',
+  tinggi: 'Tinggi',
+  kritis: 'Kritis',
+};
+
+export const STATUS_INSIDEN_LABELS: Record<StatusInsiden, string> = {
+  dilaporkan: 'Dilaporkan',
+  dalam_investigasi: 'Dalam Investigasi',
+  menunggu_tindakan: 'Menunggu Tindakan',
+  selesai: 'Selesai',
+  ditutup: 'Ditutup',
+};
+
+export const STATUS_TINDAKAN_LABELS: Record<StatusTindakan, string> = {
+  belum_dimulai: 'Belum Dimulai',
+  dalam_proses: 'Dalam Proses',
+  selesai: 'Selesai',
+  batal: 'Dibatalkan',
+};

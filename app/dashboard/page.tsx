@@ -12,7 +12,7 @@ import {
   FiUsers, FiHome, FiUserCheck, FiTruck, FiBriefcase, FiAlertCircle,
   FiCalendar, FiMapPin, FiChevronRight, FiAlertTriangle,
   FiDollarSign, FiFileText, FiArrowRight, FiSettings,
-  FiCreditCard, FiMessageSquare, FiShield
+  FiCreditCard, FiMessageSquare, FiShield, FiAlertOctagon,
 } from 'react-icons/fi'
 
 // Dynamic import Recharts to avoid SSR issues
@@ -48,6 +48,11 @@ export default function DashboardPage() {
   const [kegiatanPage, setKegiatanPage] = useState(1)
   const KEGIATAN_PER_PAGE = 5
   const [keluhanStats, setKeluhanStats] = useState<{ bulan: string; label: string; total: number; selesai: number }[]>([])
+  const [insidenStats, setInsidenStats] = useState<{
+    total: number; dilaporkan: number; dalam_investigasi: number;
+    menunggu_tindakan: number; open: number;
+    selesai_bulan_ini: number; near_miss_bulan_ini: number; kritis_aktif: number;
+  } | null>(null)
 
   const supabase = createClient()
 
@@ -105,7 +110,15 @@ export default function DashboardPage() {
     supabase.rpc('get_keluhan_monthly_stats', { months_back: 6 }).then(({ data }: { data: { bulan: string; label: string; total: number; selesai: number }[] | null }) => {
       if (data) setKeluhanStats(data)
     })
-  }, [])
+
+    // Fetch insiden stats for officers
+    if (isPengurus) {
+      fetch('/api/insiden/stats')
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d && !d.error) setInsidenStats(d) })
+        .catch(() => {})
+    }
+  }, [isPengurus])
 
   const greeting = () => {
     const hour = new Date().getHours()
@@ -136,7 +149,7 @@ export default function DashboardPage() {
     if (role === 'ketua_rw') {
       return [
         { href: '/admin/verifikasi-warga', label: 'Verifikasi Warga', icon: FiUserCheck, color: '#f6c23e' },
-        { href: '/admin/roles', label: 'Kelola Pengurus', icon: FiShield, color: '#4e73df' },
+        { href: '/insiden', label: 'Insiden', icon: FiAlertOctagon, color: '#e74a3b' },
         { href: '/keuangan/pengajuan', label: 'Pengajuan', icon: FiFileText, color: '#36b9cc' },
         { href: '/admin/ipl/tarif', label: 'Generate Tagihan', icon: FiDollarSign, color: '#1cc88a' },
       ]
@@ -144,7 +157,7 @@ export default function DashboardPage() {
     if (role === 'ketua_rt') {
       return [
         { href: '/admin/verifikasi-warga', label: 'Verifikasi Warga', icon: FiUserCheck, color: '#f6c23e' },
-        { href: '/keluhan/buat', label: 'Buat Keluhan', icon: FiMessageSquare, color: '#e74a3b' },
+        { href: '/insiden', label: 'Insiden', icon: FiAlertOctagon, color: '#e74a3b' },
         { href: '/warga', label: 'Daftar Warga', icon: FiUsers, color: '#4e73df' },
         { href: '/keuangan/laporan', label: 'Laporan', icon: FiFileText, color: '#36b9cc' },
       ]
@@ -152,17 +165,17 @@ export default function DashboardPage() {
     if (isPengurus) {
       return [
         { href: '/ipl/verifikasi', label: 'Verifikasi IPL', icon: FiCreditCard, color: '#4e73df' },
-        { href: '/keluhan', label: 'Keluhan Warga', icon: FiMessageSquare, color: '#e74a3b' },
-        { href: '/warga', label: 'Daftar Warga', icon: FiUsers, color: '#1cc88a' },
+        { href: '/insiden', label: 'Insiden', icon: FiAlertOctagon, color: '#e74a3b' },
+        { href: '/keluhan', label: 'Keluhan Warga', icon: FiMessageSquare, color: '#6366f1' },
         { href: '/keuangan/laporan', label: 'Laporan', icon: FiFileText, color: '#36b9cc' },
       ]
     }
     // Warga biasa
     return [
       { href: '/ipl', label: 'Bayar IPL', icon: FiDollarSign, color: '#f6c23e' },
-      { href: '/keluhan/buat', label: 'Buat Keluhan', icon: FiMessageSquare, color: '#e74a3b' },
+      { href: '/insiden/laporkan', label: 'Laporkan Insiden', icon: FiAlertOctagon, color: '#e74a3b' },
       { href: '/kegiatan', label: 'Kegiatan', icon: FiCalendar, color: '#4e73df' },
-      { href: '/pengaturan', label: 'Pengaturan', icon: FiSettings, color: '#36b9cc' },
+      { href: '/keluhan/buat', label: 'Buat Keluhan', icon: FiMessageSquare, color: '#6366f1' },
     ]
   }
 
@@ -378,6 +391,63 @@ export default function DashboardPage() {
           </div>
         )
       })()}
+
+      {/* ── Insiden & Keselamatan widget (officers only) ─────────────────── */}
+      {isPengurus && insidenStats && (
+        <div className="mb-3">
+          <SectionCard
+            title="Insiden &amp; Keselamatan"
+            icon={<FiAlertOctagon size={14} />}
+            action={
+              <Link href="/insiden" className="btn btn-sm btn-outline-danger" style={{ fontSize: '0.75rem', borderRadius: '6px' }}>
+                Lihat Semua <FiArrowRight className="ms-1" size={12} />
+              </Link>
+            }
+          >
+            {/* Stat counters */}
+            <div className="row g-2 mb-3">
+              {[
+                { label: 'Total Insiden', value: insidenStats.total, color: '#6b7280', bg: '#f3f4f6' },
+                { label: 'Belum Ditangani', value: insidenStats.open, color: '#dc2626', bg: '#fef2f2', bold: true },
+                { label: 'Dalam Investigasi', value: insidenStats.dalam_investigasi, color: '#d97706', bg: '#fffbeb' },
+                { label: 'Selesai Bulan Ini', value: insidenStats.selesai_bulan_ini, color: '#059669', bg: '#f0fdf4' },
+              ].map((s, i) => (
+                <div key={i} className="col-6 col-md-3">
+                  <div
+                    className="rounded-3 text-center py-2 px-1"
+                    style={{ background: s.bg, border: `1px solid ${s.color}20` }}
+                  >
+                    <div style={{ fontSize: '1.5rem', fontWeight: s.bold ? 800 : 700, color: s.color, lineHeight: 1 }}>
+                      {s.value}
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: 2 }}>{s.label}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Secondary row */}
+            <div className="d-flex gap-3 flex-wrap" style={{ fontSize: '0.78rem' }}>
+              <span className="d-flex align-items-center gap-1" style={{ color: '#6b7280' }}>
+                <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#7c3aed' }} />
+                Near Miss bulan ini:&nbsp;<strong style={{ color: '#7c3aed' }}>{insidenStats.near_miss_bulan_ini}</strong>
+              </span>
+              {insidenStats.kritis_aktif > 0 && (
+                <span className="d-flex align-items-center gap-1" style={{ color: '#dc2626' }}>
+                  <FiAlertTriangle size={12} />
+                  <strong>{insidenStats.kritis_aktif}</strong>&nbsp;insiden kritis aktif
+                </span>
+              )}
+              {insidenStats.dilaporkan > 0 && (
+                <span className="d-flex align-items-center gap-1" style={{ color: '#d97706' }}>
+                  <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#f59e0b' }} />
+                  {insidenStats.dilaporkan} menunggu investigasi
+                </span>
+              )}
+            </div>
+          </SectionCard>
+        </div>
+      )}
 
       {/* Kegiatan Akan Datang */}
       {upcomingKegiatan.length > 0 && (
