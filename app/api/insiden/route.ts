@@ -12,7 +12,7 @@ const PER_PAGE = 12
 // GET /api/insiden  — list incidents (role-filtered via RLS)
 // ─────────────────────────────────────────────
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(request)
   if (isAuthError(auth)) return auth
 
   const { searchParams } = new URL(request.url)
@@ -22,8 +22,9 @@ export async function GET(request: NextRequest) {
   const from     = (page - 1) * PER_PAGE
 
   try {
-    // Server client respects RLS — automatically filters by role
-    const supabase = await createClient()
+    // Server client respects RLS — pass request so cookies are read directly
+    // from the incoming request, ensuring auth.uid() is set for RLS policies
+    const supabase = await createClient(request)
 
     let query = supabase
       .from('insiden')
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
 // POST /api/insiden  — create new incident report
 // ─────────────────────────────────────────────
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(request)
   if (isAuthError(auth)) return auth
 
   try {

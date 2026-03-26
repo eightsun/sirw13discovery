@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -9,10 +9,12 @@ export type AuthResult = {
 
 /**
  * Require authenticated user for API routes.
+ * Pass `request` so the Supabase client reads cookies directly from the
+ * incoming request — required for RLS to work correctly in Route Handlers.
  * Returns user data or a 401 NextResponse.
  */
-export async function requireAuth(): Promise<AuthResult | NextResponse> {
-  const supabase = await createClient()
+export async function requireAuth(request?: NextRequest): Promise<AuthResult | NextResponse> {
+  const supabase = await createClient(request)
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -35,8 +37,8 @@ export async function requireAuth(): Promise<AuthResult | NextResponse> {
  * Require authenticated user with specific role(s).
  * Returns user data or a 401/403 NextResponse.
  */
-export async function requireRole(allowedRoles: string[]): Promise<AuthResult | NextResponse> {
-  const result = await requireAuth()
+export async function requireRole(allowedRoles: string[], request?: NextRequest): Promise<AuthResult | NextResponse> {
+  const result = await requireAuth(request)
   if (result instanceof NextResponse) return result
 
   if (!allowedRoles.includes(result.role)) {
