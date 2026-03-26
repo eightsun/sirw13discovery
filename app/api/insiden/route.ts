@@ -21,12 +21,16 @@ export async function GET(request: NextRequest) {
   const page     = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
   const from     = (page - 1) * PER_PAGE
 
-  try {
-    // Server client respects RLS — pass request so cookies are read directly
-    // from the incoming request, ensuring auth.uid() is set for RLS policies
-    const supabase = await createClient(request)
+  const isOfficer = ALL_PENGURUS_ROLES.includes(auth.role)
 
-    let query = supabase
+  try {
+    // Officers: use admin client to bypass RLS — guarantees all records visible.
+    // Warga: use server client (reads request cookies) so RLS filters correctly.
+    const queryClient = isOfficer
+      ? createAdminClient()
+      : await createClient(request)
+
+    let query = queryClient
       .from('insiden')
       .select(`
         id, kode_insiden, jenis, tanggal_kejadian, waktu_kejadian,
@@ -43,9 +47,6 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error
 
-    // For officers: attach pelapor name (masked if is_anonim)
-    // For warga: RLS already restricts to own + completed records
-    const isOfficer = ALL_PENGURUS_ROLES.includes(auth.role)
     let enriched = data || []
 
     if (isOfficer && enriched.length > 0) {
